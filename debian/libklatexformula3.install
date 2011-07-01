@@ -1,0 +1,5 @@
+usr/lib/libklfapp.so.3.2
+usr/lib/libklfbackend.so.3.2
+usr/lib/libklftools.so.3.2
+usr/lib/kde4/ktexteditor_klf.so
+usr/lib/klatexformula/rccresources/*

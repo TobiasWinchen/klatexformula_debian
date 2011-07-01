@@ -1,0 +1,12 @@
+klatexformula (3.2.4-1) unstable; urgency=low
+
+  * New upstream release 
+    - Fixes FTBFS on some architectures (Closes: #630324)
+
+ -- Tobias Winchen <winchen@physik.rwth-aachen.de>  Fri, 01 Jul 2011 23:03:10 +0200
+
+klatexformula (3.2.3-1) unstable; urgency=low
+
+  * Initial upload (Closes: #551335).
+
+ -- Tobias Winchen <winchen@physik.rwth-aachen.de>  Sun, 15 May 2011 17:55:27 +0100

@@ -1,3 +1,9 @@
+klatexformula (3.2.4-2) unstable; urgency=low
+
+  * Fixes FTBFS on amd64 (Closes: #640620)
+
+ -- Tobias Winchen <winchen@physik.rwth-aachen.de>  Thu, 15 Sep 2011 10:23:49 +0200
+
 klatexformula (3.2.4-1) unstable; urgency=low
 
   * New upstream release 

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfbackend.cpp 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfbackend.cpp 748 2012-01-01 15:06:40Z phfaist $ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -655,6 +655,11 @@ KLFBackend::klfOutput KLFBackend::getLatexFormula(const klfInput& in, const klfS
 
 void KLFBackend::cleanup(QString tempfname)
 {
+  const char *skipcleanup = getenv("KLFBACKEND_LEAVE_TEMP_FILES");
+  if (skipcleanup != NULL && (*skipcleanup == '1' || *skipcleanup == 't' || *skipcleanup == 'T' ||
+			      *skipcleanup == 'y' || *skipcleanup == 'Y'))
+    return; // skip cleaning up temp files
+
   if (QFile::exists(tempfname+".tex")) QFile::remove(tempfname+".tex");
   if (QFile::exists(tempfname+".dvi")) QFile::remove(tempfname+".dvi");
   if (QFile::exists(tempfname+".aux")) QFile::remove(tempfname+".aux");

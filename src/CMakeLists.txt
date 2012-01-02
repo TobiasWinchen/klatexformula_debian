@@ -1,7 +1,7 @@
 # ######################################## #
 # CMake project file for klatexformula/src #
 # ######################################## #
-# $Id: CMakeLists.txt 641 2011-06-02 14:41:23Z phfaist $
+# $Id: CMakeLists.txt 742 2011-10-09 11:02:08Z phfaist $
 # ######################################## #
 
 if(KLF_MACOSX_BUNDLES)
@@ -243,6 +243,7 @@ set(klatexformula_SRCS
 # Translations
 set(klatexformula_TSS
 	i18n/klf_fr.ts
+	i18n/klf_cs.ts
 )
 # Resources
 set(klatexformula_QRCS

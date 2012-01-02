@@ -19,12 +19,13 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: main.cpp 631 2011-04-14 10:14:00Z phfaist $ */
+/* $Id: main.cpp 744 2011-10-09 12:21:06Z phfaist $ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <time.h>
 
 #include <signal.h>
 

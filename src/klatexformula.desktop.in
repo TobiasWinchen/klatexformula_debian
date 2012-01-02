@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=KLatexFormula
+GenericName=KLatexFormula
+Comment=Generate images from LaTeX equations
+Comment[fr]=Générez une image d'une équation LaTeX
+Categories=@KLF_INSTALL_DESKTOP_CATEGORIES@
+MimeType=application/x-klatexformula;application/x-klatexformula-db;
+Exec=@KLF_ABS_INSTALL_BIN_DIR@/klatexformula %F
+Icon=@KLF_INSTALL_DESKTOP_ICON@
+Type=Application
+Terminal=false
+X-KDE-StartupNotify=true
+X-KDE-AuthorizeAction=shell_access

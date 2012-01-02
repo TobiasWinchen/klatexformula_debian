@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <author>Ph. Faist</author>
+ <class>KLFLibBrowser</class>
+ <widget class="QWidget" name="KLFLibBrowser">
+  <property name="windowModality">
+   <enum>Qt::NonModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>795</width>
+    <height>516</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>KLatexFormula Library</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="klfres.qrc">
+    <normaloff>:/pics/klatexformula-128.png</normaloff>:/pics/klatexformula-128.png</iconset>
+  </property>
+  <layout class="QGridLayout" name="lyt_KLFLibBrowser">
+   <item row="0" column="0">
+    <widget class="KLFSearchBar" name="searchBar">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>15</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QFrame" name="frmButtons">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="lineWidth">
+      <number>0</number>
+     </property>
+     <layout class="QHBoxLayout" name="lyt_frmButtons">
+      <property name="margin">
+       <number>0</number>
+      </property>
+      <item>
+       <widget class="QPushButton" name="btnRestore">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="toolTip">
+         <string>Restore current selected formula to KLatexFormula editor, with style</string>
+        </property>
+        <property name="text">
+         <string>&amp;Restore Formula</string>
+        </property>
+        <property name="icon">
+         <iconset resource="klfres.qrc">
+          <normaloff>:/pics/restore.png</normaloff>:/pics/restore.png</iconset>
+        </property>
+        <property name="shortcut">
+         <string>Alt+U</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnDelete">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="toolTip">
+         <string>Delete de selected history items</string>
+        </property>
+        <property name="text">
+         <string>&amp;Delete item(s)</string>
+        </property>
+        <property name="icon">
+         <iconset resource="klfres.qrc">
+          <normaloff>:/pics/delete.png</normaloff>:/pics/delete.png</iconset>
+        </property>
+        <property name="shortcut">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnImportExport">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>&amp;Import/Export</string>
+        </property>
+        <property name="icon">
+         <iconset resource="klfres.qrc">
+          <normaloff>:/pics/importexport.png</normaloff>:/pics/importexport.png</iconset>
+        </property>
+        <property name="shortcut">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnClose">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <horstretch>1</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="toolTip">
+         <string>Close this window</string>
+        </property>
+        <property name="text">
+         <string>Close</string>
+        </property>
+        <property name="icon">
+         <iconset resource="klftoolsres.qrc">
+          <normaloff>:/pics/closehide.png</normaloff>:/pics/closehide.png</iconset>
+        </property>
+        <property name="shortcut">
+         <string>Alt+O</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QSplitter" name="splitViewsEditor">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <widget class="QFrame" name="frmViews">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+        <horstretch>1</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Plain</enum>
+      </property>
+      <layout class="QVBoxLayout" name="lyt_frmViews">
+       <property name="margin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="KLFLibBrowserTabWidget" name="tabResources">
+         <property name="currentIndex">
+          <number>0</number>
+         </property>
+         <widget class="QWidget" name="tabWelcome">
+          <attribute name="icon">
+           <iconset resource="klfres.qrc">
+            <normaloff>:/pics/library.png</normaloff>:/pics/library.png</iconset>
+          </attribute>
+          <attribute name="title">
+           <string>Library Browser</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="lyt_tabWelcome">
+           <property name="spacing">
+            <number>20</number>
+           </property>
+           <property name="leftMargin">
+            <number>10</number>
+           </property>
+           <property name="topMargin">
+            <number>25</number>
+           </property>
+           <property name="rightMargin">
+            <number>10</number>
+           </property>
+           <property name="bottomMargin">
+            <number>10</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="lblNoResLoaded">
+             <property name="font">
+              <font>
+               <pointsize>16</pointsize>
+               <weight>50</weight>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>No Library Resource is currently loaded.</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btnOpenRes">
+             <property name="text">
+              <string>Open a library resource ...</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btnCreateRes">
+             <property name="text">
+              <string>Create a new library resource ...</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="verticalSpacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="KLFLibEntryEditor" name="wEntryEditor" native="true"/>
+    </widget>
+   </item>
+  </layout>
+  <action name="aRename">
+   <property name="text">
+    <string>Rename Resource</string>
+   </property>
+   <property name="toolTip">
+    <string>Rename this resource</string>
+   </property>
+  </action>
+  <action name="aProperties">
+   <property name="text">
+    <string>Properties ...</string>
+   </property>
+   <property name="toolTip">
+    <string>Edit properties for this resource</string>
+   </property>
+  </action>
+  <action name="aNewSubRes">
+   <property name="text">
+    <string>New Sub-Resource...</string>
+   </property>
+   <property name="toolTip">
+    <string>Create a new sub-resource in the current resource</string>
+   </property>
+  </action>
+  <action name="aSaveTo">
+   <property name="text">
+    <string>Save As Copy...</string>
+   </property>
+   <property name="toolTip">
+    <string>Save the current resource under a different name</string>
+   </property>
+  </action>
+  <action name="aViewType">
+   <property name="text">
+    <string>View Mode</string>
+   </property>
+   <property name="toolTip">
+    <string>Select View Type</string>
+   </property>
+  </action>
+  <action name="aNew">
+   <property name="text">
+    <string>New Resource...</string>
+   </property>
+   <property name="toolTip">
+    <string>Create a new resource</string>
+   </property>
+  </action>
+  <action name="aOpen">
+   <property name="text">
+    <string>Open...</string>
+   </property>
+   <property name="toolTip">
+    <string>Open an existing resource</string>
+   </property>
+  </action>
+  <action name="aClose">
+   <property name="text">
+    <string>Close</string>
+   </property>
+   <property name="toolTip">
+    <string>Close the current resource tab</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+W</string>
+   </property>
+  </action>
+  <action name="aRestoreWithStyle">
+   <property name="icon">
+    <iconset resource="klfres.qrc">
+     <normaloff>:/pics/restoreall.png</normaloff>:/pics/restoreall.png</iconset>
+   </property>
+   <property name="text">
+    <string>Restore Formula with Style</string>
+   </property>
+   <property name="toolTip">
+    <string>Restore the selected formula with its corresponding style to the latex editor</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Return</string>
+   </property>
+  </action>
+  <action name="aRestoreLatexOnly">
+   <property name="icon">
+    <iconset resource="klfres.qrc">
+     <normaloff>:/pics/restore.png</normaloff>:/pics/restore.png</iconset>
+   </property>
+   <property name="text">
+    <string>Restore Formula Only</string>
+   </property>
+   <property name="toolTip">
+    <string>Restore the latex code of the selected formula to the main latex editor.</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+Return</string>
+   </property>
+  </action>
+  <action name="aDelete">
+   <property name="icon">
+    <iconset resource="klfres.qrc">
+     <normaloff>:/pics/delete.png</normaloff>:/pics/delete.png</iconset>
+   </property>
+   <property name="text">
+    <string>Delete</string>
+   </property>
+   <property name="toolTip">
+    <string>Delete the selected items</string>
+   </property>
+   <property name="shortcut">
+    <string>Del</string>
+   </property>
+  </action>
+  <action name="aRenameSubRes">
+   <property name="text">
+    <string>Rename Sub-Resource</string>
+   </property>
+   <property name="toolTip">
+    <string>Rename this resource</string>
+   </property>
+  </action>
+  <action name="aOpenAll">
+   <property name="text">
+    <string>Open All</string>
+   </property>
+   <property name="toolTip">
+    <string>Open all a resource's sub-resources</string>
+   </property>
+  </action>
+  <action name="aExport">
+   <property name="text">
+    <string>Export ...</string>
+   </property>
+   <property name="toolTip">
+    <string>Export a selection of the currently open resources</string>
+   </property>
+  </action>
+  <action name="aOpenSubRes">
+   <property name="text">
+    <string>Open Sub-Resource</string>
+   </property>
+   <property name="toolTip">
+    <string>Open a sub-resource of an already open resource</string>
+   </property>
+  </action>
+  <action name="aDelSubRes">
+   <property name="text">
+    <string>Delete Sub-Resource</string>
+   </property>
+   <property name="toolTip">
+    <string>Permanently delete the current sub-resource</string>
+   </property>
+  </action>
+  <action name="aExportSelection">
+   <property name="text">
+    <string>Export Selection ...</string>
+   </property>
+   <property name="toolTip">
+    <string>Export the current selection to a .klf file</string>
+   </property>
+  </action>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>KLFLibEntryEditor</class>
+   <extends>QWidget</extends>
+   <header location="global">klflibentryeditor.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>KLFLibBrowserTabWidget</class>
+   <extends>QTabWidget</extends>
+   <header location="global">QTabWidget</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>KLFSearchBar</class>
+   <extends>QFrame</extends>
+   <header location="global">klfsearchbar.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>tabResources</tabstop>
+  <tabstop>btnOpenRes</tabstop>
+  <tabstop>btnCreateRes</tabstop>
+  <tabstop>btnRestore</tabstop>
+  <tabstop>btnDelete</tabstop>
+  <tabstop>btnImportExport</tabstop>
+  <tabstop>btnClose</tabstop>
+ </tabstops>
+ <resources>
+  <include location="klfres.qrc"/>
+  <include location="klftoolsres.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>btnClose</sender>
+   <signal>clicked()</signal>
+   <receiver>KLFLibBrowser</receiver>
+   <slot>hide()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>833</x>
+     <y>509</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>676</x>
+     <y>627</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

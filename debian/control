@@ -4,8 +4,8 @@ Priority: extra
 Maintainer: Tobias Winchen <winchen@physik.rwth-aachen.de> 
 Build-Depends: cdbs, debhelper (>= 7), docbook-to-man, cmake, libqt4-dev, pkg-kde-tools, kdelibs5-dev, libx11-dev
 Standards-Version: 3.9.2
-Vcs-hg: https://bitbucket.org/tobias.winchen/klatexformula_debian
-Vcs-Browser: https://bitbucket.org/tobias.winchen/klatexformula_debian/changesets
+Vcs-git: git://github.com/winchen/klatexformula_debian.git
+Vcs-Browser: https://github.com/winchen/klatexformula_debian
 Homepage: http://klatexformula.sourceforge.net/
 
 Package: klatexformula
@@ -32,7 +32,7 @@ Description: Runtime libraries for klatexformula
 Package: libklatexformula3-dev
 Architecture: any
 Section: libdevel
-Depends: ${shlibs:Depends}, ${misc:Depends} 
+Depends: ${shlibs:Depends}, ${misc:Depends}, libklatexformula3 (= ${binary:Version}) 
 Description: Runtime libraries for klatexformula, development files 
  With Klatexformula, just enter a formula and click "Evaluate" to get an image
  of a LaTeX formula. You can drag&drop, copy or save the resulting image

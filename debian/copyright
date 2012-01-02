@@ -1,4 +1,4 @@
-Format: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?op=file&rev=135
+Format: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?op=file&rev=174
 Upstream-Name: klatexformula 
 Upstream-Contact: Philippe Faist <philippe.faist@bluewin.ch>
 Source: http://klatexformula.sourceforge.net/ 
@@ -12,10 +12,16 @@ Files: qtcolortriangle.cpp and qtcolortriangle.h
 Copyright: 2009, Nokia Corporation and/or its subsidiary(-ies) <qt-info@nokia.com>
 					 2009, Philippe Faist <philippe.faist@bluewin.ch> 
 License: GPL-2.1 or higher
+ On Debian systems, the full text of the GNU General Public
+ License version 2 can be found in the file
+ `/usr/share/common-licenses/GPL-2'.
 
 Files: modeltest.h modeltest.cpp
 Copyright: 2007. Trolltech ASA <sales@trolltech.com>
 License: GPL-2.0 or higher
+ On Debian systems, the full text of the GNU General Public
+ License version 2 can be found in the file
+ `/usr/share/common-licenses/GPL-2'.
 
 Files: *.otf
 Copyright: 2005, Andrey V. Panov
@@ -54,7 +60,7 @@ License: X11 License
 Files: bg_galaxy.jpg
 Copyright: Public Domain
 License: public-domain
-Comment: The image is comming from from NASA's "image of
+  The image is comming from from NASA's "image of
   the day" at http://www.nasa.gov/images/content/190590main_GPN-2000-000895.jpg
   Image usage guidelines:
     http://www.nasa.gov/audience/formedia/features/MP_Photo_Guidelines.html
@@ -62,3 +68,6 @@ Comment: The image is comming from from NASA's "image of
 Files: debian/*
 Copyright: 2010, Tobias Winchen <tobias.winchen@physik.rwth-aachen.de>
 License: GPL-3+
+ On Debian systems, the full text of the GNU General Public
+ License version 2 can be found in the file
+ `/usr/share/common-licenses/GPL-3'.

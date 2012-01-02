@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdebug.h 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfdebug.h 748 2012-01-01 15:06:40Z phfaist $ */
 
 #ifndef KLFDEBUG_H
 #define KLFDEBUG_H
@@ -104,12 +104,11 @@ private:
 };
 
 
+#ifdef KLFBACKEND_QT4
+#  include <QDebug>
+#endif
 
 #ifdef KLF_DEBUG
-
-#  ifdef KLFBACKEND_QT4
-#    include <QDebug>
-#  endif
 
 template<class T>
 inline const T& __klf_debug_tee(const T& expr)

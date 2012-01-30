@@ -3,6 +3,7 @@ Upstream-Name: klatexformula
 Upstream-Contact: Philippe Faist <philippe.faist@bluewin.ch>
 Source: http://klatexformula.sourceforge.net/ 
 
+Files: *
 Copyright: 2005, Philippe Faist <philippe.faist@bluewin.ch>
 License: GPL-2+
 	On Debian systems, the complete text of the GNU General

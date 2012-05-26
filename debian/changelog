@@ -1,3 +1,12 @@
+klatexformula (3.2.6-1) unstable; urgency=low
+
+  * New upstream release
+    - Fixes FTBFS with GCC-4.7 (Closes: #667228)
+  * Bump standards version to 3.9.3
+    - Adapted copyright to dep5, version 1.0
+
+ -- Tobias Winchen <winchen@physik.rwth-aachen.de>  Sat, 26 May 2012 18:38:09 +0200
+
 klatexformula (3.2.5-1) unstable; urgency=low
 
   * New upstream release 

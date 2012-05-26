@@ -1,4 +1,4 @@
-Format: http://svn.debian.org/wsvn/dep/web/deps/dep5.mdwn?op=file&rev=174
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/ 
 Upstream-Name: klatexformula 
 Upstream-Contact: Philippe Faist <philippe.faist@bluewin.ch>
 Source: http://klatexformula.sourceforge.net/ 

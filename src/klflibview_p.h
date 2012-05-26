@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibview_p.h 627 2011-04-12 12:36:22Z phfaist $ */
+/* $Id: klflibview_p.h 754 2012-01-05 21:56:47Z phfaist $ */
 
 
 /** \file
@@ -172,7 +172,7 @@ public:
       }
       if (insertPos == QList<N>::size()) {
 	pContainsNonAllocated = false;
-	append(n);
+	this->append(n);
 	return insertPos;
       }
       QList<N>::operator[](insertPos) = n;

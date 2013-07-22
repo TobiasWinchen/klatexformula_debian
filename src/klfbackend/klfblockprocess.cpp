@@ -19,7 +19,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfblockprocess.cpp 748 2012-01-01 15:06:40Z phfaist $ */
+/* $Id: klfblockprocess.cpp 856 2013-06-23 10:38:35Z phfaist $ */
+
+#include <ctype.h>
 
 #include <qprocess.h>
 #include <qapplication.h>
@@ -79,7 +81,8 @@ bool KLFBlockProcess::startProcess(QStringList cmd, QByteArray stdindata, QStrin
   // ** epstopdf bug in ubuntu: peek into executable, see if it is script. if it is, run with 'sh' on *nix's.
   // this is a weird bug with QProcess that will not execute some script files like epstopdf.
 
-  { QString fn = cmd[0];
+  {
+    QString fn = cmd[0];
     if (!QFile::exists(fn))
       fn = klfSearchPath(cmd[0]);
     QFile fpeek(fn);
@@ -91,7 +94,7 @@ bool KLFBlockProcess::startProcess(QStringList cmd, QByteArray stdindata, QStrin
       bool isbinary = false;
       while (n++ < 3 && (line = fpeek.readLine()).size()) {
 	for (j = 0; j < line.size(); ++j) {
-	  if ((int)line[j] > 127 || (int)line[j] < 0) {
+          if ( ! isascii(line[j]) ) {
 	    isbinary = true;
 	    break;
 	  }
@@ -100,8 +103,8 @@ bool KLFBlockProcess::startProcess(QStringList cmd, QByteArray stdindata, QStrin
 	  break;
       }
       if (!isbinary) {
-	// explicitely add the shell (we're on *nix, so OK)
-	cmd.prepend("sh");
+	// explicitely run with /usr/bin/env (we're on *nix, so OK)
+	cmd.prepend("/usr/bin/env");
       }
     }
   }

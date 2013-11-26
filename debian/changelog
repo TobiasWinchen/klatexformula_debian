@@ -1,3 +1,12 @@
+klatexformula (3.2.7-1) unstable; urgency=low
+
+  * New upstream release
+    - Fixes check on epstopdf (Closes: #712019)
+  * Update standards ersion to 3.9.4
+  * Added libklatexformula3 to section libs
+
+ -- Tobias Winchen <winchen@physik.rwth-aachen.de>  Mon, 22 Jul 2013 17:50:27 +0200
+
 klatexformula (3.2.6-1) unstable; urgency=low
 
   * New upstream release

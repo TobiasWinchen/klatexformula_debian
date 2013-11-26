@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdebug.h 748 2012-01-01 15:06:40Z phfaist $ */
+/* $Id: klfdebug.h 862 2013-11-23 11:10:54Z phfaist $ */
 
 #ifndef KLFDEBUG_H
 #define KLFDEBUG_H
@@ -235,7 +235,7 @@ inline QString __klf_debug_ref_instance() { return QString(); }
 #else
 #define KLF_ASSERT_CONDITION(expr, msg, failaction)			\
   if ( !(expr) ) {							\
-    qWarning("In function %s:\n\t%s", (QString("")+msg).local8Bit().data()); \
+    qWarning("In function %s:\n\t%s", KLF_FUNC_NAME, (QString("")+msg).local8Bit().data()); \
     failaction;								\
   }
 #endif

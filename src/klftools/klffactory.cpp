@@ -19,10 +19,11 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klffactory.cpp 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klffactory.cpp 673 2011-07-27 13:45:42Z phfaist $ */
 
-#include <QDebug>
 #include <QStringList>
+
+#include <klfdefs.h>
 
 #include "klffactory.h"
 
@@ -30,12 +31,16 @@
 KLFFactoryBase::KLFFactoryBase(KLFFactoryManager *factoryManager)
   : pFactoryManager(factoryManager)
 {
+  KLF_ASSERT_NOT_NULL(pFactoryManager, "NULL factory manager given!", return; ) ;
   pFactoryManager->registerFactory(this);
 }
 KLFFactoryBase::~KLFFactoryBase()
 {
+  KLF_ASSERT_NOT_NULL(pFactoryManager, "NULL factory manager!", return; ) ;
   pFactoryManager->unRegisterFactory(this);
 }
+
+// --
 
 KLFFactoryManager::KLFFactoryManager()
 {

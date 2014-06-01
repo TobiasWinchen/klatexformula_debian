@@ -1,13 +1,15 @@
 # CMake definitions for building doxygen API documentation
 # ========================================================
-# $Id: klfdoxygen.cmake 507 2010-09-22 02:04:08Z philippe $
+# $Id: klfdoxygen.cmake 679 2011-07-30 12:17:10Z phfaist $
 
 
 # Configure doxygen targets
 # -------------------------
 
 if(NOT DEFINED DOXYGEN OR DOXYGEN STREQUAL "")
-  find_program(DOXYGEN "doxygen")
+  #  find_program(DOXYGEN "doxygen" /Applications/Doxygen.app/Contents/Resources)
+  include(FindDoxygen)
+  set(DOXYGEN "${DOXYGEN_EXECUTABLE}" CACHE FILEPATH "Path to doxygen executable (optional)")
 endif(NOT DEFINED DOXYGEN OR DOXYGEN STREQUAL "")
 
 if(DOXYGEN)
@@ -90,6 +92,7 @@ if(DOXYGEN)
   add_custom_target(doc
     COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/apidoc/index.html" "${KLF_APIDOC_DIR}/index.html"
     COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/apidoc/f.gif" "${KLF_APIDOC_DIR}/f.gif"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/apidoc/headerbg.jpg" "${KLF_APIDOC_DIR}/headerbg.jpg"
     COMMAND "${CMAKE_COMMAND}" -E create_symlink "${klfapidocdirname}" "${klf_tar_dirname}"
     COMMAND tar cvhfj "${klf_tar_dirname}.tar.bz2" "${klf_tar_dirname}"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"

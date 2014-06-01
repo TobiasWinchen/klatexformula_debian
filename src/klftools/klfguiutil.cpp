@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfguiutil.cpp 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfguiutil.cpp 709 2011-08-26 14:26:33Z phfaist $ */
 
 #include <math.h>
 
@@ -30,6 +30,7 @@
 #include <QDebug>
 
 #include "klfutil.h"
+#include "klfrelativefont.h"
 #include "klfguiutil.h"
 
 
@@ -58,7 +59,7 @@ void KLFProgressReporter::doReportProgress(int value)
     return;
   }
   emit progress(value);
-  if (value == pMax) {
+  if (value >= pMax) {
     emit finished();
     pFinished = true;
   }
@@ -166,9 +167,9 @@ KLFPleaseWaitPopup::KLFPleaseWaitPopup(const QString& text, QWidget *parent, boo
     pParentWidget(parent), pDisableUi(false), pGotPaintEvent(false), pDiscarded(false)
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
-  QFont f = font();
-  f.setPointSize(QFontInfo(f).pointSize() + 2);
-  setFont(f);
+  KLFRelativeFont *relfont = new KLFRelativeFont(this);
+  relfont->setRelPointSize(+2);
+
   setAlignment(Qt::AlignHCenter|Qt::AlignVCenter);
   setWindowModality(Qt::ApplicationModal);
   // let this window be styled by skins
@@ -487,4 +488,147 @@ KLF_EXPORT void klfDrawGlowedImage(QPainter *p, const QImage& foreground, const 
   }
   if (also_draw_image)
     p->drawImage(QPoint(0,0), fg);
+}
+
+
+
+// --------------------------
+
+QImage klfImageScaled(const QImage& source, const QSize& newSize)
+{
+  QImage img = source.scaled(newSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+  // set text attributes
+  QStringList keys = source.textKeys();
+  int k;
+  for (k = 0; k < keys.size(); ++k) {
+    img.setText(keys[k], source.text(keys[k]));
+  }
+  return img;
+}
+
+
+// --------------------
+
+KLF_EXPORT QRect klf_get_window_geometry(QWidget *w)
+{
+#if defined(Q_WS_X11)
+  QRect g = w->frameGeometry();
+#else
+  QRect g = w->geometry();
+#endif
+  return g;
+}
+
+KLF_EXPORT void klf_set_window_geometry(QWidget *w, QRect g)
+{
+  if ( ! g.isValid() )
+    return;
+
+  w->setGeometry(g);
+}
+
+
+KLFWindowGeometryRestorer::KLFWindowGeometryRestorer(QWidget *window)
+  : QObject(window), pWindow(window)
+{
+  window->installEventFilter(this);
+}
+
+KLFWindowGeometryRestorer::~KLFWindowGeometryRestorer()
+{
+}
+
+bool KLFWindowGeometryRestorer::eventFilter(QObject *obj, QEvent *event)
+{
+  if (obj == pWindow) {
+    if (event->type() == QEvent::Hide) {
+      // save geometry
+      pWindow->setProperty("klf_saved_geometry", klf_get_window_geometry(pWindow));
+    } else if (event->type() == QEvent::Show) {
+      QVariant val;
+      if ((val = pWindow->property("klf_saved_geometry")).isValid())
+	klf_set_window_geometry(pWindow, val.value<QRect>());
+    }
+  }
+
+  return false;
+}
+
+
+
+/** \internal
+ * Important: remember that the keys in the hash windowShownStates may be a dangling pointer.
+ * do _not_ reference it explicitely but use to find info for existing widgets!
+ */
+static QHash<QWidget*,bool> windowShownStates;
+
+/*
+inline bool has_ancestor_of_type(QObject *testobj, const char * type)
+{
+  klfDbg("testing if "<<testobj<<" is (grand-)child of object inheriting "<<type) ;
+  if (testobj == NULL)
+    return false;
+  do {
+    if (testobj->inherits(type)) {
+      klfDbg("inherits "<<type<<"!") ;
+      return true;
+    }
+  } while ((testobj = testobj->parent()) != NULL) ;
+  klfDbg("no.") ;
+  return false;
+}
+*/
+
+KLF_EXPORT void klfHideWindows()
+{
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  //  / ** \todo don't _FORCE_ this setting, remember and restore it.... * /
+  //  qApp->setQuitOnLastWindowClosed(false);
+
+  // save the window states, while checking that not all the windows are already hidden
+  QHash<QWidget*,bool> states;
+  bool allalreadyhidden = true;
+  QWidgetList wlist = QApplication::topLevelWidgets();
+  foreach (QWidget *w, wlist) {
+    //    if (w->inherits("QMenu"))
+    //      continue;
+    uint wflags = w->windowFlags();
+    klfDbg("next widget in line: "<<w<<", wflags="<<wflags) ;
+    if ((wflags & Qt::Window) == 0) {
+      continue;
+    }
+    if (wflags & Qt::X11BypassWindowManagerHint) {
+      /** \todo THIS IS A WORKAROUND to avoid "hiding" the system tray icon when hiding all windows (which
+       *    is of course not what we want!). This also has the undesirable effect of not hiding all windows
+       *    which have the x11-bypass-window-manager flag on. TODO: write some more intelligent code. */
+      continue;
+    }
+    klfDbg("dealing with widget "<<w) ;
+    bool shown = w->isVisible();
+    states[w] = shown;
+    if (shown) {
+      klfDbg("hiding window "<<w<<", wflags="<<w->windowFlags()) ;
+      w->hide();
+      allalreadyhidden = false;
+    }
+  }
+  if (!allalreadyhidden) {
+    // don't overwrite the saved status list with an all-hidden state list
+    windowShownStates = states;
+  }
+}
+
+KLF_EXPORT void klfRestoreWindows()
+{
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  QWidgetList wlist = QApplication::topLevelWidgets();
+  foreach (QWidget *w, wlist) {
+    if (!windowShownStates.contains(w))
+      continue;
+    // restore this window
+    if (!w->isVisible()) {
+      klfDbg("Restoring window "<<w) ;
+      w->setVisible(windowShownStates[w]);
+    }
+  }
 }

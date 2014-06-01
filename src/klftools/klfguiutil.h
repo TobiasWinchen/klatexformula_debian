@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfguiutil.h 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfguiutil.h 698 2011-08-08 08:28:12Z phfaist $ */
 
 #ifndef KLFGUIUTIL_H
 #define KLFGUIUTIL_H
@@ -521,6 +521,26 @@ private:
 
 
 
+/** \brief An abstract handler for when data is dropped.
+ */
+class KLF_EXPORT KLFDropDataHandler
+{
+public:
+  enum OpenDataError {
+    OpenDataOk = 0, //!< Opened the data Ok.
+    OpenDataFailed = 1, //!< Could handle data format, but failed to open (no further processing)
+    OpenDataCantHandle = 2 //!< Couldn't handle the given data. Try further processing
+  };
+
+  virtual bool canOpenDropData(const QMimeData * data) = 0;
+  /** Should return one of \ref OpenDataError codes */
+  virtual int openDropData(const QMimeData *data) = 0;
+};
+
+
+
+
+
 
 /** \brief Draws the given image with a glow effect.
  *
@@ -542,6 +562,36 @@ KLF_EXPORT void klfDrawGlowedImage(QPainter *painter, const QImage& foreground,
 				   int radius = 4, bool also_draw_image = true);
 
 
+
+/** \brief Scale image, preserve aspect ratio and meta-information
+ *
+ * Calls QImage::scaled(), with instruction to keep aspect ratio, to scale
+ * to new size, with a smooth (not fast) transformation.
+ *
+ * Then copies the original image's meta-information to the returned image
+ * with QImage::setText().
+ */
+KLF_EXPORT QImage klfImageScaled(const QImage& source, const QSize& newSize);
+
+
+
+/** \brief Helper class that restores window geometry after show/hide events.
+ */
+class KLFWindowGeometryRestorer : public QObject
+{
+  Q_OBJECT
+public:
+  KLFWindowGeometryRestorer(QWidget *window);
+  virtual ~KLFWindowGeometryRestorer();
+
+  virtual bool eventFilter(QObject *obj, QEvent *event);
+private:
+  QWidget *pWindow;
+};
+
+
+KLF_EXPORT void klfHideWindows();
+KLF_EXPORT void klfRestoreWindows();
 
 
 

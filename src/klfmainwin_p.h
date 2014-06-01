@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmainwin_p.h 631 2011-04-14 10:14:00Z phfaist $ */
+/* $Id: klfmainwin_p.h 821 2012-08-15 23:59:58Z phfaist $ */
 
 #ifndef KLFMAINWIN_P_H
 #define KLFMAINWIN_P_H
@@ -39,11 +39,14 @@
 #include <QBuffer>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QTextCodec>
 
 #include <klfutil.h>
+#include <klflatexpreviewthread.h>
 #include "klflibview.h"
 #include "klfmain.h"
 #include "klfsettings.h"
+#include "klfmime.h"
 
 #include "klfmainwin.h"
 
@@ -155,6 +158,13 @@ private:
 
 
 
+// -------------------------------------------
+
+#ifdef Q_WS_MAC
+void klf_mac_win_show_without_activating(QWidget *w);
+#endif
+
+
 /** \internal */
 class KLFMainWinPopup : public QLabel
 {
@@ -162,7 +172,12 @@ class KLFMainWinPopup : public QLabel
 public:
   KLFMainWinPopup(KLFMainWin *mainwin)
     : QLabel(mainwin, Qt::Window|Qt::FramelessWindowHint|Qt::CustomizeWindowHint|
-	     Qt::WindowStaysOnTopHint|Qt::X11BypassWindowManagerHint)
+	     Qt::WindowStaysOnTopHint
+#ifdef Q_WS_X11
+	     |Qt::X11BypassWindowManagerHint
+#endif
+	     ),
+      _mainWin(mainwin)
   {
     setObjectName("KLFMainWinPopup");
     setFocusPolicy(Qt::NoFocus);
@@ -170,7 +185,6 @@ public:
     if (frmMain)
       setGeometry(QRect(mainwin->geometry().topLeft()+QPoint(25,mainwin->height()*2/3),
 			QSize(frmMain->width()+15, 0)));
-    setAttribute(Qt::WA_ShowWithoutActivating, true);
     setProperty("klfTopLevelWidget", QVariant(true));
     setAttribute(Qt::WA_StyledBackground, true);
     setStyleSheet(mainwin->window()->styleSheet());
@@ -179,6 +193,11 @@ public:
     f.setPointSize(QFontInfo(f).pointSize() - 1);
     setFont(f);
     setWordWrap(true);
+
+#ifdef Q_WS_X11
+    setAttribute(Qt::WA_X11DoNotAcceptFocus, true);
+#endif
+    setAttribute(Qt::WA_ShowWithoutActivating, true);
 
     connect(this, SIGNAL(linkActivated(const QString&)),
 	    this, SLOT(internalLinkActivated(const QString&)));
@@ -222,6 +241,11 @@ public slots:
   {
     QLabel::show();
     setStyleSheet(styleSheet());
+
+#ifdef Q_WS_MAC
+    //    klf_mac_win_show_without_activating(this);
+    _mainWin->activateWindow();
+#endif
   }
 
 private slots:
@@ -255,6 +279,8 @@ private slots:
   }
 
 private:
+  KLFMainWin *_mainWin;
+
   QStringList msgKeys;
   QStringList messages;
 };
@@ -264,6 +290,10 @@ private:
 
 
 // -------------------------------------------------
+
+
+// from klfbackend.cpp
+QByteArray klf_escape_ps_string(const QString& v);
 
 
 class KLFBasicDataOpener : public QObject, public KLFAbstractDataOpener
@@ -279,6 +309,8 @@ public:
     types << "image/png"
 	  << "image/jpeg"
 	  << "text/uri-list"
+	  << "text/plain"
+	  << "application/pdf" // new!
 	  << "application/x-klf-libentries"
 	  << "application/x-klatexformula"
 	  << "application/x-klatexformula-db" ;
@@ -302,6 +334,13 @@ public:
     if (!r) {
       klfDbg(" ... file cannot be accessed.") ;
       return false;
+    }
+    if (file.endsWith(".klfcommands")) {
+      return true;
+    }
+    if (file.endsWith(".pdf")) {
+      /// \todo ONLY IF FILE HAS THE RELEVANT META-INFO. .....
+      return true;
     }
     bool isimage = false;
     if (isKlfImage(&f, &isimage)) {
@@ -329,6 +368,11 @@ public:
     buf.setData(data);
     buf.open(QIODevice::ReadOnly);
     bool isimg = false;
+    if (data.startsWith("%PDF")) {
+      if (data.contains("/KLFApplication("))
+	return true;
+      return false;
+    }
     if (isKlfImage(&buf, &isimg))
       return true;
     if (isimg) // no try going further, we can't otherwise read image ...
@@ -358,6 +402,16 @@ public:
       return false;
     }
     QString ext = fi.suffix().trimmed().toLower();
+
+    if (ext == "klfcommands") {
+      // execute commands
+      return mainWin()->executeURLCommandsFromFile(file);
+    }
+
+    if (ext == "pdf") {
+      // read from PDF
+      return openPDF(file);
+    }
 
     { // try to open image
       QFile f(file);
@@ -421,6 +475,23 @@ public:
 	return true;
       }
       return  mainWin()->openFiles(flist);
+    }
+
+    if (mimetype == "text/plain") {
+      if (!mainWin()->currentInputLatex().isEmpty()) {
+	// do NOT overwrite current editing text with local copy/paste operations
+	// inside editor!! (i.e. normal editing inside editor will generate an event here)
+	// Simply put, only paste if the editor is empty!
+	return false;
+      }
+      //  mainWin()->loadDefaultStyle(); // this can be annoying if pasting into empty editor...
+      mainWin()->slotSetLatex(QString::fromLocal8Bit(data));
+      return true;
+    }
+
+    if (mimetype == "application/pdf") {
+      // can only open file via GS
+      return false;
     }
 
     bool isimage = false;
@@ -495,13 +566,16 @@ private:
 	continue;
 
       // read meta-information
-      QString latex = img.text("InputLatex");
+      KLFImageLatexMetaInfo metainfo(&img);
+      
+      QString latex = metainfo.loadField("InputLatex");
+
       KLFStyle style;
-      style.fg_color = read_color(img.text("InputFgColor"));
-      style.bg_color = read_color(img.text("InputBgColor"));
-      style.mathmode = img.text("InputMathMode");
-      style.preamble = img.text("InputPreamble");
-      style.dpi = img.text("InputDPI").toInt();
+      style.fg_color = read_color(metainfo.loadField("InputFgColor"));
+      style.bg_color = read_color(metainfo.loadField("InputBgColor"));
+      style.mathmode = metainfo.loadField("InputMathMode");
+      style.preamble = metainfo.loadField("InputPreamble");
+      style.dpi = metainfo.loadField("InputDPI").toInt();
 
       mainWin()->slotLoadStyle(style);
       mainWin()->slotSetLatex(latex);
@@ -522,6 +596,107 @@ private:
     // try named color format
     QColor c(text);
     return c.rgba();
+  }
+
+  bool openPDF(const QString& fname)
+  {
+    if (!QFile::exists(fname)) {
+      klfWarning("File "<<fname<<" does not exist!") ;
+      return false;
+    }
+
+    // Execute gs to extract meta-info
+    KLFBackend::klfSettings s = mainWin()->backendSettings();
+    KLFFilterProcess p("gs PDF meta-info extraction", &s);
+
+    p.addArgv(s.gsexec);
+    p.setProgramCwd(".");
+    p.addArgv(QStringList() << "-q" << "-dNOPROMPT" << "-dNODISPLAY" << "-dNOPAUSE");
+    p.setOutputStdout(true);
+    //    p.setOutputStderr(true);
+    
+    QByteArray psmetacode =
+      klf_escape_ps_string(fname) + " (r) file runpdfbegin Trailer /Info knownoget_safe pop "
+      " {exch " // 'Name, Value' becomes 'Value, Name'
+      " 64 string cvs print (\\n) print " // print the name, converted to string, along with a newline
+      " dup " // twice the name
+      " length 16 string cvs print (\\n) print " // print the string length followed by a newline
+      " print (\\n) print }" // and print the string itself, followed by a newline.
+      " forall\n";
+    klfDbg("PS code is "<<QString::fromLatin1(psmetacode)) ;
+    QByteArray metaoutput;
+    bool ok = p.run(psmetacode, QString(), &metaoutput);
+    klfDbg("got output "<<metaoutput) ;
+    if (!ok) {
+      klfWarning("Failed to read PDF meta-information from file "<<fname<<".\n"
+		 "\tError message is "<<p.resultErrorString());
+      QMessageBox::critical(mainWin(), tr("Error"), tr("Can't read latex equation information from PDF file."));
+      return false;
+    }
+
+    // parse all info
+    QMap<QString,QString> pdfmeta;
+
+    QBuffer buf(&metaoutput);
+    if (!buf.open(QIODevice::ReadOnly)) {
+      klfWarning("Can't open internal buffer!");
+      return false;
+    }
+
+    QTextCodec *u_codec = QTextCodec::codecForName("UTF-16BE");
+
+    QByteArray pdfmetaline;
+    while (!(pdfmetaline = buf.readLine()).isEmpty()) {
+      QByteArray key = pdfmetaline.trimmed();
+      if (key.isEmpty())
+	continue;
+      // now, read the value length
+      bool intok;
+      QByteArray vallenstr = buf.readLine().trimmed();
+      int vallen = vallenstr.toInt(&intok);
+      if (!intok) {
+	klfWarning("Internal error: expected value length information after key "<<key<<": "<<vallenstr) ;
+	continue;
+      }
+      QByteArray value = buf.read(vallen);
+      /*QByteArray discardline =*/
+      buf.readLine(); // discard the following newline.
+      /*klfDbg("discarding "<<discardline) ;*/
+      // now we got value.
+      klfDbg("key="<<key<<" value="<<value) ;
+      // get now the string value.
+      QString valstr;
+      klfDbg("Value[0]=="<<(uchar)value[0]<<" value[1]=="<<(uchar)value[1]<<" 0376="<<(int)(uchar)0376<<".");
+      if ((uchar)value[0] == (uchar)0376 && (uchar)value[1] == (uchar)0377) {
+	klfDbg("Unicode marks.");
+	// unicode marks
+	valstr = u_codec->toUnicode(value);
+      } else {
+	valstr = QString::fromLocal8Bit(value);
+      }
+      klfDbg("valstr is "<<klfDataToEscaped(valstr.toLocal8Bit()));
+      
+      pdfmeta[QString::fromLatin1(key)] = valstr;
+    }
+
+    if (!pdfmeta.contains("KLFApplication")) {
+      klfWarning("The PDF file "<<fname<<" doesn't seem to have KLatexFormula meta-information.");
+      return false;
+    }
+
+    // now, act according to read meta-information
+
+    QString latex = pdfmeta.value("KLFInputLatex");
+    KLFStyle style;
+    style.fg_color = read_color(pdfmeta.value("KLFInputFgColor"));
+    style.bg_color = read_color(pdfmeta.value("KLFInputBgColor"));
+    style.mathmode = pdfmeta.value("KLFInputMathMode");
+    style.preamble = pdfmeta.value("KLFInputPreamble");
+    style.dpi = pdfmeta.value("KLFInputDPI").toInt();
+
+    mainWin()->slotLoadStyle(style);
+    mainWin()->slotSetLatex(latex);
+    return true;
   }
 
   bool tryOpenKlfLibEntries(QIODevice *dev)
@@ -615,6 +790,421 @@ public:
     return false;
   }
 };
+
+
+/** \todo WRITEME!!!!!!!!! */
+class KLFKLFOutputSaver : public QObject, public KLFAbstractOutputSaver
+{
+  Q_OBJECT
+public:
+};
+
+
+class KLFTexDataOpener : public QObject, public KLFAbstractDataOpener
+{
+  Q_OBJECT
+public:
+  KLFTexDataOpener(KLFMainWin *mainwin)
+    : QObject(mainwin), KLFAbstractDataOpener(mainwin)
+  {
+  }
+
+  virtual ~KLFTexDataOpener()
+  {
+  }
+
+  virtual QStringList supportedMimeTypes()
+  {
+    return QStringList();
+  }
+
+  virtual bool canOpenFile(const QString& file)
+  {
+    QFileInfo fi(file);
+    if (fi.suffix() == "tex" || fi.suffix() == "latex" || fi.suffix() == "klftex")
+      return true;
+    // not a TeX file
+    return false;
+  }
+
+  virtual bool canOpenData(const QByteArray& /*data*/)
+  {
+    // Dropped files are opened by the basic data opener, which handles "text/uri-list"
+    // by calling the main window's openFiles()
+    return false;
+  }
+
+  virtual bool openFile(const QString& file)
+  {
+    KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+    klfDbg("file="<<file);
+
+    if (!canOpenFile(file)) {
+      klfDbg("file is not openable by us: "<<file);
+      return false;
+    }
+
+    // filter out and parse our special comments
+    // the rest is LaTeX code to paste
+
+    QFile f(file);
+    if (!f.open(QIODevice::ReadOnly)) {
+      QMessageBox::critical(mainWin(), tr("Error"), tr("Can't open file %1. Read Error.").arg(file));
+      return false;
+    }
+
+    QByteArray latexdata;
+    QByteArray styledata;
+    KLFStyle style;
+
+    QByteArray line;
+    while (!(line = f.readLine()).isNull()) {
+      // see if it is one of our special comments
+      if (line.startsWith("%%KLF:style: ")) {
+	// extract style data line
+	styledata += line.mid(strlen("%%KLF:style: "));
+      } else if (line.startsWith("%%KLF:")) {
+	// ignore this unused KLF comment
+      } else {
+	// LaTeX line
+	latexdata += line;
+      }
+    }
+
+    bool ok = klfLoad(styledata, &style); //,"XML");  ... format is guessed from data
+    if (!ok) {
+      klfWarning("Unable to load style from comment data: "<<styledata) ;
+    }
+
+    mainWin()->slotLoadStyle(style);
+    mainWin()->slotSetLatex(QString::fromLocal8Bit(latexdata));
+
+    return true;
+  }
+
+  virtual bool openData(const QByteArray& /*data*/, const QString& /*mimetype*/)
+  {
+    return false;
+  }
+
+  
+};
+
+
+class KLFTexOutputSaver : public QObject, public KLFAbstractOutputSaver
+{
+  Q_OBJECT
+public:
+  KLFTexOutputSaver(QObject *parent)
+    : QObject(parent), KLFAbstractOutputSaver()
+  {
+  }
+
+  virtual ~KLFTexOutputSaver()
+  {
+  }
+
+  virtual QStringList supportedMimeFormats(KLFBackend::klfOutput * output)
+  {
+    Q_UNUSED(output);
+
+    KLF_ASSERT_NOT_NULL(output, "output pointer is NULL!", return QStringList() );
+
+    return QStringList() << QLatin1String("text/tex");
+  }
+
+  /** Returns the human-readable, (possibly translated,) label to display in save dialog that
+   * the user can select to save in this format.
+   *
+   * \param key is a mime-type returned by \ref supportedMimeFormats().
+   */
+  virtual QString formatTitle(const QString& key)
+  {
+    Q_UNUSED(key);
+    return tr("LaTeX source");
+  }
+
+  virtual QStringList formatFilePatterns(const QString& key)
+  {
+    Q_UNUSED(key);
+    return QStringList() << "*.klftex" << "*.tex";
+  }
+
+  virtual bool saveToFile(const QString& key, const QString& fileName, const KLFBackend::klfOutput& output)
+  {
+    Q_UNUSED(key);
+
+    QByteArray data = "%%KLF:LaTeX-save\n";
+    data += "%%KLF:date: "+QDateTime::currentDateTime().toString(Qt::ISODate) + "\n%%KLF: \n";
+
+    data += output.input.latex.toUtf8();
+    if (!data.endsWith("\n"))
+      data += "\n";
+    data += "%%KLF: \n";
+    data += "%%KLF: ";
+
+    // save style now as a LaTeX comment
+    KLFStyle style(output.input);
+    style.userScript = QFileInfo(style.userScript).fileName(); // only save file name as script path may differ
+    QByteArray styledata = klfSave(&style, "XML");
+    styledata = "\n"+styledata;
+    styledata.replace("\n", "\n%%KLF:style: ");
+
+    data += styledata + "\n";
+
+
+    // and write to file:
+
+    QFile f(fileName);
+    bool r = f.open(QIODevice::WriteOnly);
+    if (!r) {
+      QMessageBox::critical(NULL, tr("Error"), tr("Failed to write file %1").arg(fileName));
+      qWarning()<<KLF_FUNC_NAME<<": Failed to write to file "<<fileName;
+      return false;
+    }
+    f.write(data);
+    return true;
+  }
+
+};
+
+
+
+
+class KLFUserScriptOutputSaver : public QObject, public KLFAbstractOutputSaver
+{
+  Q_OBJECT
+public:
+  KLFUserScriptOutputSaver(const QString& userscript, QObject *parent)
+    : QObject(parent), KLFAbstractOutputSaver(), pUserScript(userscript, NULL)
+  {
+  }
+
+  virtual ~KLFUserScriptOutputSaver()
+  {
+  }
+
+  virtual QStringList supportedMimeFormats(KLFBackend::klfOutput * output)
+  {
+    return pUserScript.availableMimeTypes(output);
+  }
+
+  /** Returns the human-readable, (possibly translated,) label to display in save dialog that
+   * the user can select to save in this format.
+   *
+   * \param key is a mime-type returned by \ref supportedMimeFormats().
+   */
+  virtual QString formatTitle(const QString& key)
+  {
+    int i = pUserScript.info().findMimeType(key);
+    return pUserScript.info().outputFormatDescription(i);
+  }
+
+  virtual QStringList formatFilePatterns(const QString& key)
+  {
+    int i = pUserScript.info().findMimeType(key);
+    return QStringList() << "*."+pUserScript.info().outputFilenameExtension(i);
+  }
+
+  virtual bool saveToFile(const QString& key, const QString& fileName, const KLFBackend::klfOutput& output)
+  {
+    QByteArray data = pUserScript.getData(key, output);
+    if (!data.size()) {
+      klfWarning("User Script "<<pUserScript.info().scriptName()<<": Error occurred while trying to get data.") ;
+      return false;
+    }
+
+    QFile f(fileName);
+    bool r = f.open(QIODevice::WriteOnly);
+    if (!r) {
+      QMessageBox::critical(NULL, tr("Error"), tr("Failed to write file %1").arg(fileName));
+      qWarning()<<KLF_FUNC_NAME<<": Failed to write to file "<<fileName;
+      return false;
+    }
+    f.write(data);
+    return true;
+  }
+
+private:
+  KLFExportUserScript pUserScript;
+};
+
+
+
+
+
+
+
+
+// --------------------------------------------------------------------------
+
+
+class KLFMainWinPrivate : public QObject
+{
+  Q_OBJECT
+public:
+  KLF_PRIVATE_QOBJ_HEAD(KLFMainWin, QObject)
+  {
+  }
+
+
+  KLFLibBrowser *mLibBrowser;
+  KLFLatexSymbols *mLatexSymbols;
+  KLFStyleManager *mStyleManager;
+  KLFSettings *mSettingsDialog;
+  KLFAboutDialog *mAboutDialog;
+  KLFWhatsNewDialog *mWhatsNewDialog;
+
+  KLFMainWinPopup *mPopup;
+
+  QShortcut * mShortcutNextParenType;
+  QShortcut * mShortcutNextParenModifierType;
+
+  /** \internal */
+  struct HelpLinkAction {
+    HelpLinkAction(const QString& p, QObject *obj, const char *func, bool param)
+      : path(p), reciever(obj), memberFunc(func), wantParam(param) { }
+    QString path;
+    QObject *reciever;
+    QByteArray memberFunc;
+    bool wantParam;
+  };
+  QList<HelpLinkAction> mHelpLinkActions;
+
+  KLFLibResourceEngine *mHistoryLibResource;
+
+  KLFStyleList styles;
+
+  bool try_load_style_list(const QString& fileName);
+
+  QMenu *mStyleMenu;
+
+  bool loadedlibrary;
+  bool firstshow;
+
+  KLFBackend::klfSettings settings; // settings we pass to KLFBackend
+  bool settings_altered;
+
+  KLFBackend::klfOutput output; // output from KLFBackend
+
+  /** If TRUE, then the output contained in _output is up-to-date, meaning that we favor displaying
+   * _output.result instead of the image given by mPreviewBuilderThread. */
+  bool evaloutput_uptodate;
+  /** The Thread that will create real-time previews of formulas. */
+  KLFLatexPreviewThread *pLatexPreviewThread;
+  KLFContLatexPreview *pContLatexPreview;
+
+  QLabel *mExportMsgLabel;
+  void showExportMsgLabel(const QString& msg, int timeout = 3000);
+  int pExportMsgLabelTimerId;
+
+  KLFUserScriptSettings * pUserScriptSettings;
+
+  QHash<QString,QWidget*> userScriptInputWidgets;
+  QString userScriptCurrentInfo;
+  QWidget * getUserScriptInputWidget(const QString& uifile);
+  QVariantMap collectUserScriptInput() const;
+
+  /**
+   * Use \ref currentInputState() instead for "public" use.
+   *
+   * Returns the input corresponding to the current GUI state. If \c isFinal is TRUE, then
+   * the input data may be "remembered" as used (the exact effect depends on the setting), eg.
+   * math mode is memorized into combo box choices. Typically \c isFinal is TRUE when called
+   * from slotEvaluate() and FALSE when called to update the preview builder thread. */
+  KLFBackend::klfInput collectInput(bool isFinal);
+
+  QList<QAction*> pExportProfileQuickMenuActionList;
+
+  bool ignore_close_event;
+
+  //   /** "last" window status flags are used in eventFilter() to detect individual dialog
+  //    * geometries resetting */
+  //   QHash<QWidget*,bool> pLastWindowShownStatus;
+  //   QHash<QWidget*,QRect> pLastWindowGeometries;
+  //   /** "saved" window status flags are used in hideEvent() to save the individual dialog visible
+  //    * states, as the "last" status flags will be overridden by all the windows hiding. */
+  //   QHash<QWidget*,bool> pSavedWindowShownStatus;
+
+  QString widgetstyle;
+
+  void getMissingCmdsFor(const QString& symbol, QStringList * missingCmds, QString *guiText,
+			 bool wantHtmlText = true);
+
+  QList<KLFAbstractOutputSaver*> pOutputSavers;
+  QList<KLFAbstractDataOpener*> pDataOpeners;
+
+  KLFCmdIface *pCmdIface;
+
+  QVariantMap parseLatexEditPosParenInfo(KLFLatexEdit *editor, int pos);
+
+
+
+signals:
+
+  void saveApplicationState(QSettings * settings);
+
+
+
+public slots: // .. but in private API
+
+  // private : only as slot to an action containing the style # as user data
+  void slotLoadStyleAct();
+
+  void slotDetailsSideWidgetShown(bool shown);
+
+  /** controls the enabled state of the 'see larger preview button' widget */
+  void slotSetViewControlsEnabled(bool enabled);
+  /** controls the enabled state of the DRAG/COPY/SAVE & Format widgets */
+  void slotSetSaveControlsEnabled(bool enabled);
+
+  void slotOpenHistoryLibraryResource();
+
+  void refreshShowCorrectClearButton();
+
+  void refreshExportTypesMenu();
+
+  void refreshStylePopupMenus();
+
+  void slotLibraryButtonRefreshState(bool on);
+  void slotSymbolsButtonRefreshState(bool on);
+
+  void slotPresetDPISender();
+
+  void showRealTimeReset();
+  void showRealTimePreview(const QImage& preview, const QImage& largePreview);
+  void showRealTimeError(const QString& errorstr, int errcode);
+
+  void updatePreviewThreadInput();
+  void updatePreviewThreadSettings();
+
+  void displayError(const QString& errormsg);
+
+  void slotNewSymbolTyped(const QString& symbol);
+  void slotPopupClose();
+  void slotPopupAction(const QUrl& helpLinkUrl);
+  void slotPopupAcceptAll();
+
+  void slotEditorContextMenuInsertActions(const QPoint& pos, QList<QAction*> *actionList);
+  void slotInsertMissingPackagesFromActionSender();
+  void slotChangeParenFromActionSender();
+  void slotChangeParenFromVariantMap(const QVariantMap& data);
+
+  void slotCycleParenModifiers(bool forward = true);
+  void slotCycleParenModifiersBack() { slotCycleParenModifiers(false); }
+  void slotCycleParenTypes(bool forward = true);
+  void slotCycleParenTypesBack() { slotCycleParenTypes(false); }
+
+  void slotEncloseRegionInDelimiterFromActionSender();
+  void slotEncloseRegionInDelimiter(const QVariantMap& vmap);
+
+  void latexEditReplace(int pos, int len, const QString& text);
+
+  void slotUserScriptSet(int index);
+  void slotUserScriptShowInfo();
+  void slotUserScriptDisableInputs(KLFUserScriptInfo * info);
+};
+
 
 
 

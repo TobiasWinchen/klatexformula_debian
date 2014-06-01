@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfliblegacyengine_p.h 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfliblegacyengine_p.h 624 2011-04-06 13:03:43Z phfaist $ */
 
 
 /** \file
@@ -124,6 +124,9 @@ public:
   /** upon modification, DON'T FORGET to set \ref haschanges ! */
   KLFLegacyData::KLFLibraryResourceList resources;
 
+  /** eg. if we read a corrupt file, leave it corrupt. */
+  bool flagForceReadOnly;
+
   /** Metadata, may be used for any purpose.
    *
    * upon modification, DON'T FORGET to set \ref haschanges !
@@ -209,6 +212,8 @@ private:
   KLFLibLegacyFileDataPrivate(const QString& fname) : refcount(0), filename(fname)
   {
     klfDbg(" filename is "<<filename ) ;
+
+    flagForceReadOnly = true;
 
     staticFileDataObjects[filename] = this;
 

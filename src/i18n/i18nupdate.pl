@@ -5,7 +5,7 @@
 #
 # Usage: i18nupdate.pl <filename_XX.ts>
 #
-# $Id: i18nupdate.pl 631 2011-04-14 10:14:00Z phfaist $
+# $Id: i18nupdate.pl 624 2011-04-06 13:03:43Z phfaist $
 
 use Getopt::Long qw /:config bundling /;
 
@@ -41,8 +41,8 @@ $xmltrrules =
    "../conf/export_mime_profiles.d/*.xml" => { SCOPE => "exportprofiles" ,
 					       TAGS => [ "description" ]
 					     } ,
-   "../data/latexsymbols.xml"		=> { SCOPE => "latexsymbols" ,
-					     TAGS => [ "category-title" ]
+   "../conf/latexsymbols.d/latexsymbols.xml" => { SCOPE => "klfsymbollist" ,
+						  TAGS => [ "category-title", "keywords" ]
 					   } ,
    "../plugins/skin/skins/*.xml" => { SCOPE => "pluginskins" ,
 				      TAGS => [ "name", "description" ] }

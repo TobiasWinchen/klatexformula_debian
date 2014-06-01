@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibview.cpp 627 2011-04-12 12:36:22Z phfaist $ */
+/* $Id: klflibview.cpp 853 2013-03-27 14:24:38Z phfaist $ */
 
 
 #include <QApplication>
@@ -514,6 +514,22 @@ void KLFLibModelCache::rebuildCache()
       insertCategoryStringInSuggestionCache(catelements);
     }
     klfDbgT("... ins catnodes done.") ;
+
+    /** \bug This does not work as expected. TODO: * Make sure the root elements are prefetched
+     *    * Maybe translate these few lines of code in NodeId's instead of QModelIndex'es
+     */
+    // prefetch root items if they contain little number of children
+    // or if there are little number of root items
+    int numRootItems = pModel->rowCount(QModelIndex());
+    int k;
+    for (k = 0; k < pModel->rowCount(QModelIndex()); ++k) {
+      QModelIndex i = pModel->index(k, 0, QModelIndex());
+      if (pModel->rowCount(i) < 6 || numRootItems < 6) {
+	if (pModel->canFetchMore(i))
+	  pModel->fetchMore(i);
+      }
+    }
+
   }
 
   fullDump(); // DEBUG
@@ -2779,7 +2795,7 @@ void KLFLibViewDelegate::paintText(PaintPrivate *p, const QString& text, uint fl
       //      klfDbg( "Processing char "<<text[i]<<"; i="<<i<<"; ci="<<ci ) ;
       if (ci >= c.size() && appliedfmts.size() == 0) {
 	// insert all remaining text (no more formatting needed)
-	cur.insertText(Qt::escape(text.mid(i)), QTextCharFormat());
+	cur.insertText(text.mid(i), QTextCharFormat());
 	break;
       }
       while (ci < c.size() && c[ci].start == i) {
@@ -2796,7 +2812,7 @@ void KLFLibViewDelegate::paintText(PaintPrivate *p, const QString& text, uint fl
 	}
 	f.merge(appliedfmts[j].fmt);
       }
-      cur.insertText(Qt::escape(text[i]), f);
+      cur.insertText(text[i], f);
     }
 
     QSizeF s = textDocument.size();
@@ -2994,6 +3010,8 @@ KLFLibDefaultView::KLFLibDefaultView(QWidget *parent, ViewType view)
   lyt->setSpacing(0);
   pDelegate = new KLFLibViewDelegate(this);
 
+  pSearchable = new KLFLibViewSearchable(this);
+
   // set icon size
   switch (pViewType) {
   case CategoryTreeView:
@@ -3022,6 +3040,7 @@ KLFLibDefaultView::KLFLibDefaultView(QWidget *parent, ViewType view)
     listView->setMovement(QListView::Free);
     // icon view flow is set later with setIconViewFlow()
     listView->setResizeMode(QListView::Adjust);
+    listView->setFrameStyle(QFrame::NoFrame|QFrame::Plain);
     klfDbg( "prepared list view." ) ;
     pView = listView;
     break;
@@ -3032,6 +3051,7 @@ KLFLibDefaultView::KLFLibDefaultView(QWidget *parent, ViewType view)
     treeView->setSortingEnabled(true);
     treeView->setIndentation(16);
     treeView->setAllColumnsShowFocus(true);
+    treeView->setFrameStyle(QFrame::NoFrame|QFrame::Plain);
     //    treeView->setUniformRowHeights(true);   // optimization, but is ugly...
     pDelegate->setTheTreeView(treeView);
     pView = treeView;
@@ -3060,6 +3080,7 @@ KLFLibDefaultView::KLFLibDefaultView(QWidget *parent, ViewType view)
 }
 KLFLibDefaultView::~KLFLibDefaultView()
 {
+  delete pSearchable;
 }
 
 QUrl KLFLibDefaultView::url() const
@@ -3498,30 +3519,11 @@ QStringList KLFLibDefaultView::getCategorySuggestions()
   return pModel->categoryList();
 }
 
-// bool KLFLibDefaultView::writeEntryProperty(int property, const QVariant& value)
-// {
-//   return pModel->changeEntries(selectedEntryIndexes(), property, value);
-// }
-// bool KLFLibDefaultView::deleteSelected(bool requireConfirm)
-// {
-//   QModelIndexList sel = selectedEntryIndexes();
-//   if (sel.size() == 0)
-//     return true;
-//   if (requireConfirm) {
-//     QMessageBox::StandardButton res
-//       = QMessageBox::question(this, tr("Delete?"),
-// 			      tr("Delete %n selected item(s) from resource \"%1\"?", "", sel.size())
-// 			      .arg(pModel->resource()->title()),
-// 			      QMessageBox::Yes|QMessageBox::Cancel, QMessageBox::Cancel);
-//     if (res != QMessageBox::Yes)
-//       return false; // abort action
-//   }
-//   return pModel->deleteEntries(sel);
-// }
-// bool KLFLibDefaultView::insertEntries(const KLFLibEntryList& entries)
-// {
-//   return pModel->insertEntries(entries);
-// }
+KLFPosSearchable * KLFLibDefaultView::searchable()
+{
+  return pSearchable;
+}
+
 bool KLFLibDefaultView::selectEntries(const QList<KLFLib::entryId>& idList)
 {
   klfDbg("selecting entries: "<<idList) ;
@@ -3685,7 +3687,7 @@ void KLFLibDefaultView::slotPreviewSizeActionsRefreshChecked()
   KLF_ASSERT_NOT_NULL(pPreviewSizeMenu, "pPreviewSizeMenu is NULL!", return ) ;
 
   int curPreviewSizePercent
-    = pDelegate->previewSize().width() * 100 / klfconfig.UI.labelOutputFixedSize.width();
+    = pDelegate->previewSize().width() * 100 / klfconfig.UI.labelOutputFixedSize().width();
   // round off to 5 units (for comparision with some threshold)
   curPreviewSizePercent = (int)(curPreviewSizePercent/5 +0.5)*5;
 
@@ -3731,60 +3733,6 @@ void KLFLibDefaultView::updateDisplay()
 {
   KLF_ASSERT_NOT_NULL(pView, "view is NULL!", return ) ;
   pView->viewport()->update();
-}
-
-bool KLFLibDefaultView::searchFind(const QString& queryString, bool forward)
-{
-  QModelIndex fromIndex = currentVisibleIndex();
-  // take one index above in case it's partially shown
-  fromIndex = pModel->walkPrevIndex(fromIndex);
-  QModelIndex i = pModel->searchFind(queryString, fromIndex, forward);
-  pDelegate->setSearchString(queryString);
-  //  for (int col = 0; i.isValid() && col < pModel->columnCount(); ++col)
-  //    pView->update(pModel->index(i.row(), col, i.parent())); // searchFound will call updateDisplay()
-  searchFound(i);
-  return i.isValid();
-}
-
-bool KLFLibDefaultView::searchFindNext(bool forward)
-{
-  QModelIndex i = pModel->searchFindNext(forward);
-  searchFound(i);
-  return i.isValid();
-}
-
-void KLFLibDefaultView::searchAbort()
-{
-  pModel->searchAbort();
-  pDelegate->setSearchString(QString());
-  pDelegate->setSearchIndex(QModelIndex());
-  updateDisplay(); // repaint widget to update search underline
-
-  // don't un-select the found index...
-  //  searchFound(QModelIndex());
-}
-
-// private
-void KLFLibDefaultView::searchFound(const QModelIndex& i)
-{
-  pDelegate->setSearchIndex(i);
-  if ( ! i.isValid() ) {
-    pView->scrollToTop();
-    // unselect all
-    pView->selectionModel()->setCurrentIndex(QModelIndex(), QItemSelectionModel::Clear);
-    return;
-  } else {
-    pView->scrollTo(i, QAbstractItemView::EnsureVisible);
-  }
-  if (pViewType == CategoryTreeView) {
-    // if tree view, expand item
-    qobject_cast<QTreeView*>(pView)->expand(i);
-  }
-  // select the item
-  pView->selectionModel()->setCurrentIndex(i,
-					   QItemSelectionModel::ClearAndSelect|
-					   QItemSelectionModel::Rows);
-  updateDisplay();
 }
 
 

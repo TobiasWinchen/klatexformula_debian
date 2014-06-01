@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmain.h 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfmain.h 707 2011-08-24 09:12:19Z phfaist $ */
 
 #ifndef KLFMAIN_H
 #define KLFMAIN_H
@@ -49,6 +49,8 @@
 #endif
 
 
+class KLFMainWin;
+class QApplication;
 
 // SOME DECLARATIONS FOR ADD-ONS
 
@@ -73,7 +75,8 @@ public:
     QString klfminversion;
     /** The required value of \ref KLFSysInfo::osString() */
     QString os;
-    /** The required value of \ref KLFSysInfo::arch() */
+    /** The architecture(s) on which this plugin can run \ref KLFSysInfo::arch(). For
+     * Mac OS X universal binaries this can be comma-separated list of architectures. */
     QString arch;
 
     bool isCompatibleWithCurrentSystem() const;
@@ -82,25 +85,25 @@ public:
   ~KLFAddOnInfo();
 
   /** Directory in which the RCC file resides */
-  QString dir() { return d->dir; }
+  QString dir() const;
   /** Name of the RCC file (no path) */
-  QString fname() { return d->fname; };
+  QString fname() const;
   /** in principle: <tt>absdir(dir()) + "/" + fname()</tt> */
-  QString fpath() { return d->fpath; }
+  QString fpath() const;
   /** local file: can be removed (e.g. not in a global path /usr/share/... ) */
-  bool islocal() { return d->islocal; }
+  bool islocal() const;
 
   /** the info in the add-on's info.xml file */
-  QString title() { return d->title; }
+  QString title() const;
   /** the info in the add-on's info.xml file */
-  QString author() { return d->author; }
+  QString author() const;
   /** the info in the add-on's info.xml file */
-  QString description() { return d->description; }
+  QString description() const;
   /** the info in the add-on's info.xml file */
-  QString klfminversion() { return d->klfminversion; }
+  QString klfminversion() const;
 
   //! where in the resource tree this rcc resource data is mounted
-  QString rccmountroot() { return d->rccmountroot; }
+  QString rccmountroot() const;
     
   /** The list of plugins provided by this add-on (list of files
    * \c ":/plugins/[<dir>/]<plugin-name>*.so|dll").
@@ -110,16 +113,11 @@ public:
    *
    * See also \ref localPluginList().
    */
-  QStringList pluginList() const { return d->pluginList; }
+  QStringList pluginList() const;
 
-  PluginSysInfo pluginSysInfo(const QString& plugin) const { return d->plugins[plugin]; }
+  PluginSysInfo pluginSysInfo(const QString& plugin) const;
 
-  QString pluginLocalSubDirName(const QString& plugin) const
-  {
-    if ( ! d->plugins[plugin].klfminversion.isEmpty() )
-      return QString("klf%1").arg(d->plugins[plugin].klfminversion);
-    return QString(".");
-  }
+  QString pluginLocalSubDirName(const QString& plugin) const;
 
   /** A list of locally (ie. in <tt>~/.klatexformula/plugins/</tt>) installed plugins coming
    * from this add-on.
@@ -132,40 +130,32 @@ public:
 
   /** The list of translation files provided by this add-on (list of files <tt>:/i18n/<b></b>*.qm</tt>)
    * This list stores full file names without the path (e.g. \c "klf_fr.qm") */
-  QStringList translations() { return d->translations; }
+  QStringList translations() const;
+
+  /** The list of user scripts provided by the add-on. User scripts are located at
+   * <tt>:/userscripts/</tt>, and are installed to the main system (to be executable!).
+   * This lists the filenames only without the directory name. */
+  QStringList userScripts() const;
 
   /** Fresh file: add-on imported during this execution; ie. KLatexFormula needs to be restarted
    * for this add-on to take effect. The constructor sets this value to \c FALSE, set it manually
    * to \c TRUE if needed (e.g. in KLFSettings). */
-  bool isfresh() { return d->isfresh; }
+  bool isfresh() const;
+
+  /** List of errors that occurred with this add-on (now only used for reporting plugin load errors) */
+  QStringList errors() const;
+
+
+  /** \internal
+   * */
+  void addError(const QString& s);
 
 private:
 
-  /** \internal */
-  struct Private {
-    int ref; // number of times this data structure is referenced
-
-    QString dir;
-    QString fname;
-    QString fpath;
-    bool islocal;
-
-    QString title;
-    QString author;
-    QString description;
-    QString klfminversion;
-
-    QString rccmountroot;
-    
-    QStringList pluginList;
-    QMap<QString,PluginSysInfo> plugins;
-    
-    QStringList translations;
-    
-    bool isfresh;
-  };
-
+  class Private;
   Private *d;
+
+  //  friend void main_load_plugins(QApplication *app, KLFMainWin *mainWin);
 
   void initPlugins();
 };
@@ -277,13 +267,13 @@ KLF_EXPORT QString klfFindTranslatedDataFile(const QString& baseFileName, const 
  *
  * \note This does NOT affect legacy \c ".klf" library files
  */
-#define KLF_DATA_STREAM_APP_VERSION  "3.2"
+#define KLF_DATA_STREAM_APP_VERSION  "3.3"
 //                                --- don't forget to update below too! ---
 
 /** \brief 'Major' version part of \ref KLF_DATA_STREAM_APP_VERSION. */
 #define KLF_DATA_STREAM_APP_VERSION_MAJ  3
 /** \brief 'Minor' version part of \ref KLF_DATA_STREAM_APP_VERSION. */
-#define KLF_DATA_STREAM_APP_VERSION_MIN  2
+#define KLF_DATA_STREAM_APP_VERSION_MIN  3
 
 
 /** \brief Obtain the KLF version stream operations on \c d have to be compatible with.
@@ -308,6 +298,12 @@ KLF_EXPORT void klfDataStreamWriteHeader(QDataStream& stream, const QString head
 KLF_EXPORT bool klfDataStreamReadHeader(QDataStream& stream, const QStringList possibleHeaders,
 					QString * readHeader = NULL, QString * readCompatKLFVersion = NULL) ;
 
+
+// -- 
+// user scripts
+
+KLF_EXPORT void klf_reload_user_scripts();
+extern QStringList klf_user_scripts;
 
 
 #endif 

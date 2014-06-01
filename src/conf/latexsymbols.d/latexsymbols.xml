@@ -1,0 +1,941 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Latex Symbol List for KLatexFormula symbol palette -->
+<!-- $Id: latexsymbols.xml 724 2011-09-04 20:22:37Z phfaist $ -->
+<klf-symbol-list minklfversion="3.3.0a">
+  <!-- Notes   ** note format changes since version 3.3 **
+    * Symbols are grouped in categories, which will be shown on different
+      pages in the symbols palette.
+    * Generally the order of the different element types inside a
+      <sym>...</sym> declaration isn't important
+    * <latex>...</latex> should contain the basic symbol code without any
+      arguments, eg. `\frac'.
+    * Specify the number of latex arguments to given with <latex numargs="N">
+      eg. <latex numargs="2">\frac</latex> or <latex numargs="1">\sqrt</latex>
+    * Specify if the symbol needs an option argument (eg. \sqrt[]{}) with
+      <latex option="yes">, eg. <latex option="yes" numargs="1">\sqrt</latex>
+    * Packages can be included with a <usepackage name="...">
+    * Arbitrary lines in the preamble can be inserted with
+      <preambleline>...</preambleline>
+    * BBox settings can be altered for the symbol pixmap generation,
+      see symbol "\int" for an example. (values are "top,right,bottom,left"
+      margins in posctscript points)
+    * <sym textmode="true">...</sym> specifies a symbol that is to be inserted
+      in text mode, not math mode
+    * Symbols that are marked <hidden/> won't display in the symbols palette,
+      however they will be recognized by the editor and a popup will suggest
+      to insert missing packages when that symbol is typed.
+    * Use <keywords>foo bar</keywords> to specify a space-separated list of
+      tags/keywords use for symbol search
+    -->
+  <category name="Relation Symbols">
+    <category-title>Relation Symbols</category-title>
+
+    <sym><latex>\pm</latex><keywords>plus minus error</keywords></sym>
+    <sym><latex>\cap</latex><keywords>set intersection</keywords></sym>
+    <sym><latex>\diamond</latex></sym>
+    <sym><latex>\oplus</latex><keywords>direct sum</keywords></sym>
+    <sym><latex>\mp</latex></sym>
+    <sym><latex>\cup</latex><keywords>set union</keywords></sym>
+    <sym><latex>\bigtriangleup</latex></sym>
+    <sym><latex>\ominus</latex></sym>
+    <sym><latex>\times</latex><keywords>multiplication product</keywords></sym>
+    <sym><latex>\uplus</latex></sym>
+    <sym><latex>\bigtriangledown</latex></sym>
+    <sym><latex>\otimes</latex><keywords>tensor product</keywords></sym>
+    <sym><latex>\div</latex></sym>
+    <sym><latex>\sqcap</latex></sym>
+    <sym><latex>\triangleleft</latex></sym>
+    <sym><latex>\oslash</latex></sym>
+    <sym><latex>\ast</latex></sym>
+    <sym><latex>\sqcup</latex></sym>
+    <sym><latex>\triangleright</latex></sym>
+    <sym><latex>\odot</latex></sym>
+    <sym><latex>\star</latex></sym>
+    <sym><latex>\vee</latex></sym>
+    <sym><latex>\bigcirc</latex></sym>
+    <sym><latex>\circ</latex></sym>
+    <sym><latex>\wedge</latex></sym>
+    <sym><latex>\dagger</latex><keywords>operator adjoint</keywords></sym>
+    <sym><latex>\bullet</latex></sym>
+    <sym><latex>\setminus</latex><keywords>set exclude subtract complement</keywords></sym>
+    <sym><latex>\ddagger</latex></sym>
+    <sym><latex>\cdot</latex><keywords>multiplication scalar product</keywords></sym>
+    <sym><latex>\wr</latex></sym>
+    <sym><latex>\amalg</latex></sym>
+    <sym><latex>\leq</latex><keywords>less smaller than equals</keywords></sym>
+    <sym><latex>\geq</latex><keywords>greater more larger than equals</keywords></sym>
+    <sym><latex>\equiv</latex></sym>
+    <sym><latex>\models</latex></sym>
+    <sym><latex>\prec</latex><keywords>majorization</keywords></sym>
+    <sym><latex>\succ</latex><keywords>majorization</keywords></sym>
+    <sym><latex>\sim</latex></sym>
+    <sym><latex>\perp</latex><keywords>perpendicular orthogonal normal</keywords></sym>
+    <sym><latex>\preceq</latex></sym>
+    <sym><latex>\succeq</latex></sym>
+    <sym><latex>\simeq</latex></sym>
+    <sym><latex>\mid</latex></sym>
+    <sym><latex>\ll</latex><keywords>much very smaller less order of magnitude</keywords></sym>
+    <sym><latex>\gg</latex><keywords>much very larger greater order of magnitude</keywords></sym>
+    <sym><latex>\asymp</latex></sym>
+    <sym><latex>\parallel</latex></sym>
+    <sym><latex>\subset</latex><keywords>set contained included</keywords></sym>
+    <sym><latex>\supset</latex><keywords>set contains includes</keywords></sym>
+    <sym><latex>\approx</latex><keywords>estimation about approximate approximation</keywords></sym>
+    <sym><latex>\bowtie</latex></sym>
+    <sym><latex>\subseteq</latex><keywords>set contained included equal</keywords></sym>
+    <sym><latex>\supseteq</latex><keywords>set contains includes equal</keywords></sym>
+    <sym><latex>\cong</latex><keywords>approximately equals</keywords></sym>
+    <sym><latex>\neq</latex></sym>
+    <sym><latex>\smile</latex></sym>
+    <sym><latex>\sqsubseteq</latex></sym>
+    <sym><latex>\sqsupseteq</latex></sym>
+    <sym><latex>\doteq</latex></sym>
+    <sym><latex>\frown</latex></sym>
+    <sym><latex>\in</latex><keywords>set element in</keywords></sym>
+    <sym><latex>\ni</latex><keywords>set element contains</keywords></sym>
+    <sym><latex>\propto</latex><keywords>proportional</keywords></sym>
+    <sym><latex>\vdash</latex></sym>
+    <sym><latex>\dashv</latex></sym>
+    <sym><latex>\sum</latex></sym>
+    <sym><latex>\bigcap</latex></sym>
+    <sym><latex>\bigcup</latex></sym>
+    <sym><latex>\bigoplus</latex></sym>
+    <sym><latex>\bigodot</latex></sym>
+    <sym><latex>\bigotimes</latex></sym>
+    <sym><latex>\prod</latex></sym>
+    <sym><latex>\coprod</latex></sym>
+    <sym><latex>\bigsqcup</latex></sym>
+    <sym><latex>\bigwedge</latex></sym>
+    <sym><latex>\bigvee</latex></sym>
+    <sym><latex>\biguplus</latex></sym>
+    <sym><bb expand="1,4,1,1"/><latex>\int</latex><keywords>integral</keywords></sym>
+    <sym><usepackage name="amsmath"/><bb expand="1,4,1,1"/><latex>\iint</latex></sym>
+    <sym><usepackage name="amsmath"/><bb expand="1,5,1,1"/><latex>\iiint</latex></sym>
+    <sym><usepackage name="amsmath"/><bb expand="1,4,1,1"/><latex>\iiiint</latex></sym>
+    <sym><usepackage name="amsmath"/><bb expand="1,4,1,1"/><latex>\idotsint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><latex>\oint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="wasysym"/><latex>\varoint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\dotsint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\fint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\int</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\iint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\iiint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\iiiint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\landdownint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\landupint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\oiint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\ointclockwise</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\ointctrclockwise</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\sqiint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\sqint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\varoiint</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\varointclockwise</latex></sym>
+    <sym><bb expand="1,4,1,1"/><usepackage name="esint"/><latex>\varointctrclockwise</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\leqslant</latex><keywords>less smaller than equals slant</keywords></sym>
+    <sym><usepackage name="amssymb"/><latex>\geqslant</latex><keywords>greater more larger than equals slant</keywords></sym>
+    <sym><usepackage name="amssymb"/><latex>\lhd</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\rhd</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\unlhd</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\unrhd</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Join</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\sqsubset</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\sqsupset</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\dotplus</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\smallsetminus</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Cap</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Cup</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\barwedge</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\veebar</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\doublebarwedge</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\boxminus</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\boxtimes</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\boxdot</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\boxplus</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\divideontimes</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\ltimes</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\rtimes</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\leftthreetimes</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\rightthreetimes</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\curlywedge</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\curlyvee</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\circleddash</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\circledast</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\circledcirc</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\centerdot</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\intercal</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\leqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\eqslantless</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lesssim</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lessapprox</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\approxeq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lessdot</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lll</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lessgtr</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lesseqgtr</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lesseqqgtr</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\doteqdot</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\risingdotseq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\fallingdotseq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\backsim</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\backsimeq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\subseteqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Subset</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\preccurlyeq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\curlyeqprec</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\precsim</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\precapprox</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\vartriangleleft</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\trianglelefteq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\vDash</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Vvdash</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\smallsmile</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\smallfrown</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\bumpeq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Bumpeq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\geqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\eqslantgtr</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\gtrsim</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\gtrapprox</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\gtrdot</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\ggg</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\gtrless</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\gtreqless</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\gtreqqless</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\eqcirc</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\circeq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\triangleq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\thicksim</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\thickapprox</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\supseteqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Supset</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\succcurlyeq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\curlyeqsucc</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\succsim</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\succapprox</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\vartriangleright</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\trianglerighteq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Vdash</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\shortmid</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\shortparallel</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\between</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\pitchfork</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\varpropto</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\blacktriangleleft</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\therefore</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\backepsilon</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\blacktriangleright</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\because</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nless</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nleq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nleqslant</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nleqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lneq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lneqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lvertneqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lnsim</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lnapprox</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nprec</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\npreceq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\precnsim</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\precnapprox</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nsim</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nshortmid</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nmid</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nvdash</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nvDash</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\ntriangleleft</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\ntrianglelefteq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nsubseteq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\subsetneq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\varsubsetneq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\subsetneqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\varsubsetneqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\ngtr</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\ngeq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\ngeqslant</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\ngeqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\gneq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\gneqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\gvertneqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\gnsim</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\gnapprox</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nsucc</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nsucceq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\succnsim</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\succnapprox</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\ncong</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nshortparallel</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nparallel</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nVDash</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\ntriangleright</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\ntrianglerighteq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nsupseteq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nsupseteqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\supsetneq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\varsupsetneq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\supsetneqq</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\varsupsetneqq</latex></sym>
+    <sym><preambleline>\newcommand{\dotcup}{\ensuremath{\mathaccent\cdot\cup}}</preambleline><latex>\dotcup</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\baro</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\bbslash</latex><keywords>double backslash slash</keywords></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\binampersand</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\bindnasrepma</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\boxast</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\boxbar</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\boxbox</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\boxbslash</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\boxcircle</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\boxdot</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\boxempty</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\boxslash</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\curlyveedownarrow</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\curlyveeuparrow</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\curlywedgedownarrow</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\curlywedgeuparrow</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\fatbslash</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\fatsemi</latex></sym>
+    <sym><usepackage name="stmaryrd"/><bb expand="1,2,1,1"/><latex>\fatslash</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\interleave</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\leftslice</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\merge</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\minuso</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\moo</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\nplus</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\obar</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\oblong</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\obslash</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\ogreaterthan</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\olessthan</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\ovee</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\owedge</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\rightslice</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\sslash</latex><keywords>parallel double slash</keywords></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\talloblong</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varbigcirc</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varcurlyvee</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varcurlywedge</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varoast</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varobar</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varobslash</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varocircle</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varodot</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varogreaterthan</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varolessthan</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varominus</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varoplus</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varoslash</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varotimes</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varovee</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\varowedge</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\vartimes</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\Ydown</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\Yleft</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\Yright</latex></sym>
+    <sym><usepackage name="stmaryrd"/><latex>\Yup</latex></sym>
+    <sym><usepackage name="wasysym"/><latex>\lhd</latex></sym>
+    <sym><usepackage name="wasysym"/><latex>\ocircle</latex></sym>
+    <sym><usepackage name="wasysym"/><latex>\RHD</latex></sym>
+    <sym><usepackage name="wasysym"/><latex>\unrhd</latex></sym>
+    <sym><usepackage name="wasysym"/><latex>\LHD</latex></sym>
+    <sym><usepackage name="wasysym"/><latex>\rhd</latex></sym>
+    <sym><usepackage name="wasysym"/><latex>\unlhd</latex></sym>
+  </category>
+  <category name="Operators">
+    <sym><latex>\sin</latex></sym>
+    <sym><latex>\cos</latex></sym>
+    <sym><latex>\tan</latex></sym>
+    <sym><latex>\ln</latex></sym>
+    <sym><latex>\log</latex></sym>
+    <sym><latex>\lim</latex><preview-latex>\lim_{n\rightarrow\infty}</preview-latex></sym>
+    <sym><usepackage name="amsmath"/><preambleline>\DeclareMathOperator{\tr}{tr}</preambleline><latex>\tr</latex><keywords>trace</keywords></sym>
+    <sym><usepackage name="amsmath"/><preambleline>\DeclareMathOperator{\supp}{supp}</preambleline><latex>\supp</latex><keywords>support</keywords></sym>
+    <sym><usepackage name="amsmath"/><preambleline>\DeclareMathOperator{\rank}{rank}</preambleline><latex>\rank</latex><keywords>rank operator matrix</keywords></sym>
+
+  </category>
+  <category name="Arrow Symbols">
+    <category-title>Arrow Symbols</category-title>
+
+    <sym><latex>\leftarrow</latex></sym>
+    <sym><latex>\longleftarrow</latex></sym>
+    <sym><latex>\uparrow</latex></sym>
+    <sym><latex>\Leftarrow</latex></sym>
+    <sym><latex>\Longleftarrow</latex></sym>
+    <sym><latex>\Uparrow</latex></sym>
+    <sym><latex>\rightarrow</latex></sym>
+    <sym><latex>\longrightarrow</latex></sym>
+    <sym><latex>\downarrow</latex></sym>
+    <sym><latex>\Rightarrow</latex></sym>
+    <sym><latex>\Longrightarrow</latex></sym>
+    <sym><latex>\Downarrow</latex></sym>
+    <sym><latex>\leftrightarrow</latex></sym>
+    <sym><latex>\longleftrightarrow</latex></sym>
+    <sym><latex>\updownarrow</latex></sym>
+    <sym><latex>\Leftrightarrow</latex></sym>
+    <sym><latex>\Longleftrightarrow</latex></sym>
+    <sym><latex>\Updownarrow</latex></sym>
+    <sym><latex>\mapsto</latex></sym>
+    <sym><latex>\longmapsto</latex></sym>
+    <sym><latex>\nearrow</latex></sym>
+    <sym><latex>\hookleftarrow</latex></sym>
+    <sym><latex>\hookrightarrow</latex></sym>
+    <sym><latex>\searrow</latex></sym>
+    <sym><latex>\leftharpoonup</latex></sym>
+    <sym><latex>\rightharpoonup</latex></sym>
+    <sym><latex>\swarrow</latex></sym>
+    <sym><latex>\leftharpoondown</latex></sym>
+    <sym><latex>\rightharpoondown</latex></sym>
+    <sym><latex>\nwarrow</latex></sym>
+    <sym><latex>\rightleftharpoons</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\dashrightarrow</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\dashleftarrow</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\leftleftarrows</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\leftrightarrows</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Lleftarrow</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\twoheadleftarrow</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\leftarrowtail</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\looparrowleft</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\leftrightharpoons</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\curvearrowleft</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\circlearrowleft</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Lsh</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\upuparrows</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\upharpoonleft</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\downharpoonleft</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\multimap</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\leftrightsquigarrow</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\rightrightarrows</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\rightleftarrows</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\twoheadrightarrow</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\rightarrowtail</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\looparrowright</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\curvearrowright</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\circlearrowright</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Rsh</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\downdownarrows</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\upharpoonright</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\downharpoonright</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\rightsquigarrow</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nleftarrow</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nrightarrow</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nLeftarrow</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nRightarrow</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nleftrightarrow</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nLeftrightarrow</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\leadsto</latex></sym>
+    <sym><usepackage name="amsmath"/><latex option="1" numargs="1">\xleftarrow</latex>
+         <preview-latex>\xleftarrow[xyz]{abc}</preview-latex></sym>
+    <sym><usepackage name="amsmath"/><latex option="1" numargs="1">\xrightarrow</latex>
+         <preview-latex>\xrightarrow[xyz]{abc}</preview-latex></sym>
+  </category>
+  <category name="Miscellaneous Symbols">
+    <category-title>Miscellaneous Symbols</category-title>
+
+    <sym><latex>\ldots</latex></sym>
+    <sym><latex>\cdots</latex></sym>
+    <sym><latex>\vdots</latex></sym>
+    <sym><latex>\ddots</latex></sym>
+    <sym><latex>\aleph</latex></sym>
+    <sym><latex>\prime</latex></sym>
+    <sym><latex>\forall</latex></sym>
+    <sym><latex>\infty</latex></sym>
+    <sym><latex>\hbar</latex></sym>
+    <sym><latex>\emptyset</latex></sym>
+    <sym><latex>\exists</latex></sym>
+    <sym><latex>\imath</latex></sym>
+    <sym><latex>\nabla</latex></sym>
+    <sym><latex>\neg</latex></sym>
+    <sym><latex>\jmath</latex></sym>
+    <sym><latex>\surd</latex></sym>
+    <sym><latex>\flat</latex></sym>
+    <sym><latex>\triangle</latex></sym>
+    <sym><latex>\ell</latex></sym>
+    <sym><latex>\top</latex></sym>
+    <sym><latex>\natural</latex></sym>
+    <sym><latex>\clubsuit</latex></sym>
+    <sym><latex>\wp</latex></sym>
+    <sym><latex>\bot</latex></sym>
+    <sym><latex>\sharp</latex></sym>
+    <sym><latex>\diamondsuit</latex></sym>
+    <sym><latex>\Re</latex></sym>
+    <sym><latex>\backslash</latex></sym>
+    <sym><latex>\heartsuit</latex></sym>
+    <sym><latex>\Im</latex></sym>
+    <sym><latex>\angle</latex></sym>
+    <sym><latex>\partial</latex></sym>
+    <sym><latex>\spadesuit</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\hslash</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\vartriangle</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\triangledown</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\square</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lozenge</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\circledS</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\measuredangle</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\nexists</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\mho</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Finv</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Game</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Bbbk</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\backprime</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\varnothing</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\blacktriangle</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\blacktriangledown</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\blacksquare</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\blacklozenge</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\bigstar</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\sphericalangle</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\complement</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\eth</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\diagup</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\diagdown</latex></sym>
+    <sym><preambleline>\DeclareSymbolFont{mylaplacian}{OT1}{txr}{m}{it}\DeclareMathSymbol{\laplacian}{\mathalpha}{mylaplacian}{"01}</preambleline><latex>\laplacian</latex></sym>
+    <sym><preambleline>\DeclareSymbolFont{myvarlaplacian}{OT1}{txr}{m}{sl}\DeclareMathSymbol{\varlaplacian}{\mathalpha}{myvarlaplacian}{"01}</preambleline><latex>\varlaplacian</latex></sym>
+    <sym><usepackage name="mathtools"/><latex>\coloneqq</latex></sym>
+    <sym><usepackage name="mathtools"/><latex>\Coloneqq</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\stackrel{\text{\tiny def}}{=}</latex><keywords>definition</keywords></sym>
+    <sym><usepackage name="amsmath"/><latex>\stackrel{\varepsilon}{\approx}</latex><keywords>epsilon close approximately</keywords></sym>
+  </category>
+  <category name="Delimiters and Accents">
+    <category-title>Delimiters and Accents</category-title>
+
+    <sym><latex>\vert</latex></sym>
+    <sym><latex>\Vert</latex></sym>
+    <sym><latex>\lbrace</latex></sym>
+    <sym><latex>\rbrace</latex></sym>
+    <sym><latex>\lfloor</latex></sym>
+    <sym><latex>\rfloor</latex></sym>
+    <sym><latex>\lceil</latex></sym>
+    <sym><latex>\rceil</latex></sym>
+    <sym><latex>\langle</latex></sym>
+    <sym><latex>\rangle</latex></sym>
+    <sym><latex numargs="1">\overbrace</latex><preview-latex>\overbrace{xyz}</preview-latex></sym>
+    <sym><latex numargs="1">\underbrace</latex><preview-latex>\underbrace{xyz}</preview-latex></sym>
+    <sym><latex numargs="1">\overline</latex><preview-latex>\overline{xyz}</preview-latex></sym>
+    <sym><latex numargs="1">\underline</latex><preview-latex>\underline{xyz}</preview-latex></sym>
+    <sym><latex numargs="1">\overleftarrow</latex><preview-latex>\overleftarrow{xyz}</preview-latex></sym>
+    <sym><latex numargs="1">\overrightarrow</latex><preview-latex>\overrightarrow{xyz}</preview-latex></sym>
+    <sym><latex numargs="1">\widehat</latex><preview-latex>\widehat{xyz}</preview-latex></sym>
+    <sym><latex numargs="1">\widetilde</latex><preview-latex>\widetilde{xyz}</preview-latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\ulcorner</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\urcorner</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\llcorner</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\lrcorner</latex></sym>
+    <sym><latex>\lmoustache</latex></sym>
+    <sym><latex>\rmoustache</latex></sym>
+    <sym><latex>\lgroup</latex></sym>
+    <sym><latex>\rgroup</latex></sym>
+    <sym><latex>\arrowvert</latex></sym>
+    <sym><latex>\Arrowvert</latex></sym>
+    <sym><latex>\bracevert</latex></sym>
+    <sym><latex numargs="1">\sqrt</latex><keywords>square root</keywords></sym>
+    <sym><latex option="yes" numargs="1">\sqrt</latex><keywords>root</keywords></sym>
+    <sym><latex numargs="2">\frac</latex><preview-latex>\frac{a}{b}</preview-latex>
+      <keywords>fraction bar over division</keywords>
+    </sym>
+    <sym><latex numargs="2">\nicefrac</latex><usepackage name="nicefrac"/><preview-latex>\nicefrac{a}{b}</preview-latex>
+      <keywords>slanted fraction bar over division</keywords>
+    </sym>
+    <sym><usepackage name="amsmath"/><preambleline>\newcommand{\abs}[1]{\left\lvert#1\right\rvert}</preambleline><latex numargs="1">\abs</latex><preview-latex>\abs{x}</preview-latex><keywords>absolute value magnitude modulus</keywords></sym>
+    <sym><latex numargs="1">\bar</latex><preview-latex>\bar{a}</preview-latex></sym>
+    <sym><latex numargs="1">\vec</latex><preview-latex>\vec{a}</preview-latex></sym>
+    <sym><latex numargs="1">\dot</latex><preview-latex>\dot{a}</preview-latex></sym>
+    <sym><latex numargs="1">\ddot</latex><preview-latex>\ddot{a}</preview-latex></sym>
+    <sym><latex numargs="1">\hat</latex><preview-latex>\hat{a}</preview-latex></sym>
+    <sym><latex numargs="1">\check</latex><preview-latex>\check{a}</preview-latex></sym>
+    <sym><latex numargs="1">\breve</latex><preview-latex>\breve{a}</preview-latex></sym>
+    <sym><latex numargs="1">\tilde</latex><preview-latex>\tilde{a}</preview-latex></sym>
+    <sym><latex numargs="1">\acute</latex><preview-latex>\acute{a}</preview-latex></sym>
+    <sym><latex numargs="1">\grave</latex><preview-latex>\grave{a}</preview-latex></sym>
+    <sym><usepackage name="amsmath"/><preambleline>\newcommand{\ket}[1]{\left\lvert#1\right\rangle}</preambleline><latex numargs="1">\ket</latex><preview-latex>\ket\psi</preview-latex><keywords>quantum mechanics Dirac ket</keywords></sym>
+    <sym><usepackage name="amsmath"/><preambleline>\newcommand{\sket}[1]{\vert#1\rangle}</preambleline><latex numargs="1">\sket</latex><preview-latex>\sket{\tilde\psi}</preview-latex><keywords>quantum mechanics Dirac ket</keywords></sym>
+    <sym><usepackage name="amsmath"/><preambleline>\newcommand{\bra}[1]{\left\langle#1\right\rvert}</preambleline><latex numargs="1">\bra</latex><preview-latex>\bra\psi</preview-latex><keywords>quantum mechanics Dirac bra</keywords></sym>
+    <sym><usepackage name="amsmath"/><preambleline>\newcommand{\sbra}[1]{\langle#1\vert}</preambleline><latex numargs="1">\sbra</latex><preview-latex>\sbra{\tilde\psi}</preview-latex><keywords>quantum mechanics Dirac bra</keywords></sym>
+    <sym><preambleline>\newcommand{\braket}[2]{\left\langle#1\vphantom{#2}\right|\hspace{-0.9mm}\left.#2\vphantom{#1}\right\rangle}</preambleline><latex numargs="2">\braket</latex><preview-latex>\braket\phi\psi</preview-latex><keywords>quantum mechanics Dirac</keywords></sym>
+    <sym><preambleline>\newcommand{\matrixel}[3]{\left\langle#1\vphantom{#2#3}\right| #2 \left|#3\vphantom{#1#2}\right\rangle}</preambleline><latex numargs="3">\matrixel</latex><preview-latex>\matrixel{\phi}{\mathcal H}{\psi}</preview-latex><keywords>quantum mechanics Dirac matrix element</keywords></sym>
+    <sym><preambleline>\newcommand{\ketbra}[2]{\left\vert#1\vphantom{#2}\right\rangle\hspace{-0.8mm}\left\langle#2\vphantom{#1}\right\vert}</preambleline><latex numargs="2">\ketbra</latex><preview-latex>\ketbra{\phi}{\psi}</preview-latex><keywords>quantum mechanics Dirac matrix element</keywords></sym>
+    <sym><preambleline>\newcommand{\sketbra}[2]{\vert#1\rangle\hspace{-0.2mm}\langle#2\vphantom{#1}\vert}</preambleline><latex numargs="2">\sketbra</latex><preview-latex>\sketbra{\tilde\phi}{\tilde\psi}</preview-latex><keywords>quantum mechanics Dirac matrix element</keywords></sym>
+    <sym><usepackage name="amsmath"/><hidden/><latex>\lvert</latex></sym>
+    <sym><usepackage name="amsmath"/><hidden/><latex>\rvert</latex></sym>
+    <sym><usepackage name="slashed"/><latex numargs="1">\slashed</latex><preview-latex>\slashed{\gamma}</preview-latex><keywords>Feynman slash quantum field theory QFT</keywords></sym>
+  </category>
+  <category name="Greek Alphabet">
+    <category-title>Greek Alphabet</category-title>
+
+    <sym><latex>\alpha</latex></sym>
+    <sym><latex>\beta</latex></sym>
+    <sym><latex>\gamma</latex></sym>
+    <sym><latex>\delta</latex></sym>
+    <sym><latex>\epsilon</latex></sym>
+    <sym><latex>\varepsilon</latex></sym>
+    <sym><latex>\zeta</latex></sym>
+    <sym><latex>\eta</latex></sym>
+    <sym><latex>\theta</latex></sym>
+    <sym><latex>\vartheta</latex></sym>
+    <sym><latex>\iota</latex></sym>
+    <sym><latex>\kappa</latex></sym>
+    <sym><latex>\lambda</latex></sym>
+    <sym><latex>\mu</latex></sym>
+    <sym><latex>\nu</latex></sym>
+    <sym><latex>\xi</latex></sym>
+    <sym><latex>\pi</latex></sym>
+    <sym><latex>\varpi</latex></sym>
+    <sym><latex>\rho</latex></sym>
+    <sym><latex>\varrho</latex></sym>
+    <sym><latex>\sigma</latex></sym>
+    <sym><latex>\varsigma</latex></sym>
+    <sym><latex>\tau</latex></sym>
+    <sym><latex>\upsilon</latex></sym>
+    <sym><latex>\phi</latex></sym>
+    <sym><latex>\varphi</latex></sym>
+    <sym><latex>\chi</latex></sym>
+    <sym><latex>\psi</latex></sym>
+    <sym><latex>\omega</latex></sym>
+    <sym><latex>\Gamma</latex></sym>
+    <sym><latex>\Delta</latex></sym>
+    <sym><latex>\Theta</latex></sym>
+    <sym><latex>\Lambda</latex></sym>
+    <sym><latex>\Xi</latex></sym>
+    <sym><latex>\Pi</latex></sym>
+    <sym><latex>\Sigma</latex></sym>
+    <sym><latex>\Upsilon</latex></sym>
+    <sym><latex>\Phi</latex></sym>
+    <sym><latex>\Psi</latex></sym>
+    <sym><latex>\Omega</latex></sym>
+  </category>
+  <category name="Math Alphabets">
+    <category-title>Math Alphabets and Fonts</category-title>
+
+    <sym><latex>\mathcal{A}</latex></sym>
+    <sym><latex>\mathcal{B}</latex></sym>
+    <sym><latex>\mathcal{C}</latex></sym>
+    <sym><latex>\mathcal{D}</latex></sym>
+    <sym><latex>\mathcal{E}</latex></sym>
+    <sym><latex>\mathcal{F}</latex></sym>
+    <sym><latex>\mathcal{G}</latex></sym>
+    <sym><latex>\mathcal{H}</latex></sym>
+    <sym><latex>\mathcal{I}</latex></sym>
+    <sym><latex>\mathcal{J}</latex></sym>
+    <sym><latex>\mathcal{K}</latex></sym>
+    <sym><latex>\mathcal{L}</latex></sym>
+    <sym><latex>\mathcal{M}</latex></sym>
+    <sym><latex>\mathcal{N}</latex></sym>
+    <sym><latex>\mathcal{O}</latex></sym>
+    <sym><latex>\mathcal{P}</latex></sym>
+    <sym><latex>\mathcal{Q}</latex></sym>
+    <sym><latex>\mathcal{R}</latex></sym>
+    <sym><latex>\mathcal{S}</latex></sym>
+    <sym><latex>\mathcal{T}</latex></sym>
+    <sym><latex>\mathcal{U}</latex></sym>
+    <sym><latex>\mathcal{V}</latex></sym>
+    <sym><latex>\mathcal{W}</latex></sym>
+    <sym><latex>\mathcal{X}</latex></sym>
+    <sym><latex>\mathcal{Y}</latex></sym>
+    <sym><latex>\mathcal{Z}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{A}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{B}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{C}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{D}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{E}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{F}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{G}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{H}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{I}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{J}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{K}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{L}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{M}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{N}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{O}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{P}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{Q}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{R}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{S}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{T}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{U}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{V}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{W}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{X}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{Y}</latex></sym>
+    <sym><usepackage name="[mathcal]{euscript}"/><latex>\mathcal{Z}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><hidden/><latex>\mathscr</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{A}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{B}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{C}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{D}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{E}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{F}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{G}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{H}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{I}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{J}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{K}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{L}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{M}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{N}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{O}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{P}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{Q}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{R}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{S}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{T}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{U}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{V}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{W}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{X}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{Y}</latex></sym>
+    <sym><usepackage name="mathrsfs"/><latex>\mathscr{Z}</latex></sym>
+    <sym><usepackage name="amsfonts"/><hidden/><latex>\mathbb</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{A}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{B}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{C}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{D}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{E}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{F}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{G}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{H}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{I}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{J}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{K}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{L}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{M}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{N}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{O}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{P}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{Q}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{R}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{S}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{T}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{U}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{V}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{W}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{X}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{Y}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathbb{Z}</latex></sym>
+    <sym><latex>\mathbf{A}</latex></sym>
+    <sym><latex>\mathbf{B}</latex></sym>
+    <sym><latex>\mathbf{C}</latex></sym>
+    <sym><latex>\mathbf{D}</latex></sym>
+    <sym><latex>\mathbf{E}</latex></sym>
+    <sym><latex>\mathbf{F}</latex></sym>
+    <sym><latex>\mathbf{G}</latex></sym>
+    <sym><latex>\mathbf{H}</latex></sym>
+    <sym><latex>\mathbf{I}</latex></sym>
+    <sym><latex>\mathbf{J}</latex></sym>
+    <sym><latex>\mathbf{K}</latex></sym>
+    <sym><latex>\mathbf{L}</latex></sym>
+    <sym><latex>\mathbf{M}</latex></sym>
+    <sym><latex>\mathbf{N}</latex></sym>
+    <sym><latex>\mathbf{O}</latex></sym>
+    <sym><latex>\mathbf{P}</latex></sym>
+    <sym><latex>\mathbf{Q}</latex></sym>
+    <sym><latex>\mathbf{R}</latex></sym>
+    <sym><latex>\mathbf{S}</latex></sym>
+    <sym><latex>\mathbf{T}</latex></sym>
+    <sym><latex>\mathbf{U}</latex></sym>
+    <sym><latex>\mathbf{V}</latex></sym>
+    <sym><latex>\mathbf{W}</latex></sym>
+    <sym><latex>\mathbf{X}</latex></sym>
+    <sym><latex>\mathbf{Y}</latex></sym>
+    <sym><latex>\mathbf{Z}</latex></sym>
+    <sym><usepackage name="bbm"/><hidden/><latex>\mathbbm</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{1}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{A}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{B}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{C}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{D}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{E}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{F}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{G}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{H}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{I}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{J}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{K}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{L}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{M}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{N}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{O}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{P}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{Q}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{R}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{S}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{T}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{U}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{V}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{W}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{X}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{Y}</latex></sym>
+    <sym><usepackage name="bbm"/><latex>\mathbbm{Z}</latex></sym>
+    <sym><usepackage name="amsfonts"/><hidden/><latex>\mathfrak</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{A}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{B}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{C}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{D}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{E}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{F}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{G}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{H}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{I}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{J}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{K}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{L}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{M}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{N}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{O}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{P}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{Q}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{R}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{S}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{T}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{U}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{V}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{W}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{X}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{Y}</latex></sym>
+    <sym><usepackage name="amsfonts"/><latex>\mathfrak{Z}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{A}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{B}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{C}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{D}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{E}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{F}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{G}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{H}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{I}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{J}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{K}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{L}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{M}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{N}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{O}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{P}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{Q}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{R}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{S}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{T}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{U}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{V}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{W}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{X}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{Y}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{Z}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\alpha}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\beta}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\gamma}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\delta}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\epsilon}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\varepsilon}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\zeta}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\eta}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\theta}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\vartheta}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\iota}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\kappa}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\lambda}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\mu}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\nu}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\xi}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\pi}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\varpi}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\rho}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\varrho}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\sigma}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\varsigma}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\tau}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\upsilon}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\phi}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\varphi}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\chi}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\psi}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\omega}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\Gamma}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\Delta}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\Theta}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\Lambda}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\Xi}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\Pi}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\Sigma}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\Upsilon}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\Phi}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\Psi}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\Omega}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\nabla}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex>\boldsymbol{\infty}</latex></sym>
+    <sym><usepackage name="amsmath"/><latex numargs="1">\boldsymbol</latex><preview-latex>\boldsymbol{[bold\ symbol]}</preview-latex></sym>
+    <sym><usepackage name="amsmath"/><hidden/><latex numargs="1">\text</latex><preview-latex>\text{[Regular text]}</preview-latex></sym>
+    <sym><latex numargs="1">\mathrm</latex></sym>
+    <sym><latex numargs="1">\mathit</latex></sym>
+    <sym><latex numargs="1">\textrm</latex></sym>
+    <sym><latex numargs="1">\textit</latex></sym>
+    <sym><latex numargs="1">\textsl</latex></sym>
+    <sym><latex numargs="1">\textbf</latex></sym>
+  </category>
+  <category name="Text Mode LaTeX Special Characters">
+    <category-title>Text Mode LaTeX Special Characters</category-title>
+
+    <sym textmode="true"><latex>\$</latex></sym>
+    <sym textmode="true"><latex>\%</latex></sym>
+    <sym textmode="true"><usepackage name="textcomp"/><latex>\textperthousand</latex></sym>
+    <sym textmode="true"><latex>\_</latex></sym>
+    <sym textmode="true"><latex>\{</latex></sym>
+    <sym textmode="true"><latex>\}</latex></sym>
+    <sym textmode="true"><latex>\&amp;</latex></sym>
+    <sym textmode="true"><latex>\#</latex></sym>
+    <sym textmode="true"><latex>\P</latex></sym>
+    <sym textmode="true"><latex>\S</latex></sym>
+    <sym textmode="true"><latex>\dag</latex></sym>
+    <sym textmode="true"><latex>\ddag</latex></sym>
+    <sym textmode="true"><latex>\dots</latex></sym>
+    <sym textmode="true"><latex>\pounds</latex></sym>
+    <sym textmode="true"><usepackage name="textcomp"/><latex>\copyright</latex></sym>
+    <sym textmode="true"><latex>\textasciicircum</latex></sym>
+    <sym textmode="true"><latex>\textasciitilde</latex></sym>
+    <sym textmode="true"><latex>\textasteriskcentered</latex></sym>
+    <sym textmode="true"><latex>\textbackslash</latex></sym>
+    <sym textmode="true"><latex>\textbar</latex></sym>
+    <sym textmode="true"><latex>\textbullet</latex></sym>
+    <sym textmode="true"><latex>\textemdash</latex></sym>
+    <sym textmode="true"><latex>\textendash</latex></sym>
+    <sym textmode="true"><latex>\textexclamdown</latex></sym>
+    <sym textmode="true"><latex>\textgreater</latex></sym>
+    <sym textmode="true"><latex>\textless</latex></sym>
+    <sym textmode="true"><usepackage name="textcomp"/><latex>\textordfeminine</latex></sym>
+    <sym textmode="true"><usepackage name="textcomp"/><latex>\textordmasculine</latex></sym>
+    <sym textmode="true"><latex>\textperiodcentered</latex></sym>
+    <sym textmode="true"><latex>\textquestiondown</latex></sym>
+    <sym textmode="true"><latex>\textquotedblleft</latex></sym>
+    <sym textmode="true"><latex>\textquotedblright</latex></sym>
+    <sym textmode="true"><latex>\textquoteleft</latex></sym>
+    <sym textmode="true"><latex>\textquoteright</latex></sym>
+    <sym textmode="true"><usepackage name="textcomp"/><latex>\textregistered</latex></sym>
+    <sym textmode="true"><usepackage name="textcomp"/><latex>\texttrademark</latex></sym>
+    <sym textmode="true"><latex>\textvisiblespace</latex></sym>
+    <sym textmode="true"><usepackage name="amssymb"/><latex>\checkmark</latex></sym>
+    <sym textmode="true"><usepackage name="amssymb"/><latex>\circledR</latex></sym>
+    <sym textmode="true"><usepackage name="amssymb"/><latex>\maltese</latex></sym>
+    <sym textmode="true"><latex>\aa</latex></sym>
+    <sym textmode="true"><latex>\AA</latex></sym>
+    <sym textmode="true"><latex>\AE</latex></sym>
+    <sym textmode="true"><latex>\ae</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\DH</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\dh</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\DJ</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\dj</latex></sym>
+    <sym textmode="true"><latex>\L</latex></sym>
+    <sym textmode="true"><latex>\l</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\NG</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\ng</latex></sym>
+    <sym textmode="true"><latex>\o</latex></sym>
+    <sym textmode="true"><latex>\O</latex></sym>
+    <sym textmode="true"><latex>\OE</latex></sym>
+    <sym textmode="true"><latex>\oe</latex></sym>
+    <sym textmode="true"><latex>\ss</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\TH</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\th</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\guillemotleft</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\guilsinglleft</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\quotedblbase</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\textquotedbl</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\guillemotright</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\guilsinglright</latex></sym>
+    <sym textmode="true"><preambleline>\usepackage[T1]{fontenc}</preambleline><latex>\quotesinglbase</latex></sym>
+  </category>
+</klf-symbol-list>

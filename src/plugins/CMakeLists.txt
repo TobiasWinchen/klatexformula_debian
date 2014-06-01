@@ -1,7 +1,7 @@
 # ################################################ #
 # CMake project file for klatexformula/src/plugins #
 # ################################################ #
-# $Id: CMakeLists.txt 549 2010-10-04 02:29:43Z philippe $
+# $Id: CMakeLists.txt 780 2012-05-12 13:41:36Z phfaist $
 # ################################################ #
 
 
@@ -9,18 +9,33 @@
 remove_definitions(-DKLF_SRC_BUILD)
 
 
-# Current Qt Version "MAJ.MIN"
-set(KLF_CMAKE_QTVERSION "${QT_VERSION_MAJOR}.${QT_VERSION_MINOR}" CACHE INTERNAL "Qt Version")
-
 # The subdir in which to put plugins
 set(KLF_CMAKE_BASEPLUGINSSUBDIR "${KLF_CMAKE_OS}-${KLF_CMAKE_ARCH}"
 					CACHE INTERNAL "(internal) Base Plugins RCC sub-dir")
 
 # THE PLUGIN TARGET/BASE NAMES
 
-set(KLF_LOCAL_PLUGINS skin systrayicon)
+set(KLF_LOCAL_PLUGINS skin systrayicon buffers)
+if(KLF_EXPERIMENTAL)
+  # set(KLF_LOCAL_PLUGINS ${KLF_LOCAL_PLUGINS} wikiscan)
+endif(KLF_EXPERIMENTAL)
+
 
 add_custom_target(klfbaseplugins ALL)
+
+#
+# e.g. Usage: KLFPluginUndefOrLink(skin  libklftools libklfbackend libklfapp)
+#
+macro(KLFPluginUndefOrLink  plugin)
+  KLFCMakeDebug("KLFPluginUndefOrLink: plugin=${plugin}")
+  if(UNIX)  #includes Apple
+    KLFCMakeDebug("UNIX.")
+    KLFNoShlibUndefined("${plugin}")
+  else(UNIX)
+    KLFCMakeDebug("NOT UNIX.")
+    target_link_libraries("${plugin}" ${ARGN})
+  endif(UNIX)
+endmacro(KLFPluginUndefOrLink)
 
 # Setup per plugin
 foreach(plugin ${KLF_LOCAL_PLUGINS})
@@ -30,11 +45,14 @@ foreach(plugin ${KLF_LOCAL_PLUGINS})
 
   # And set up a few more stuff
   string(TOUPPER "${plugin}" plugin_upper)
+  KLFGetTargetLocation(plugin_location ${plugin})
   KLFGetTargetFileName(plugin_libname ${plugin})
+  set(KLF_CMAKE_PLUGINS_LOCATION_${plugin_upper} "${plugin_location}")
   set(KLF_CMAKE_PLUGINS_LIBNAME_${plugin_upper} "${plugin_libname}")
-  set(KLF_CMAKE_PLUGINS_LOCAL_LIBNAME_${plugin_upper} "${CMAKE_CURRENT_BINARY_DIR}/${KLF_CMAKE_PLUGINS_LIBNAME_${plugin_upper}}")
+  set(KLF_CMAKE_PLUGINS_LOCAL_LIBNAME_${plugin_upper}
+    "${CMAKE_CURRENT_BINARY_DIR}/${KLF_CMAKE_PLUGINS_LIBNAME_${plugin_upper}}")
   add_custom_command(OUTPUT "${plugin_libname}"
-	COMMAND "${CMAKE_COMMAND}" -E copy "${plugin}/${plugin_libname}" "${plugin_libname}"
+	COMMAND "${CMAKE_COMMAND}" -E copy "${plugin_location}" "${plugin_libname}"
 	WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
         DEPENDS "${plugin}"
 	COMMENT "Copying ${plugin_libname} to build root plugins/"
@@ -50,24 +68,26 @@ endforeach(plugin)
 
 
 
-if(APPLE AND KLF_MACOSX_BUNDLE_PATH)
-  KLFMakeMacExtraBundledTarget(klfbaseplugins "${KLF_LOCAL_PLUGIN_LIBNAMES}")
+if(APPLE AND KLF_MACOSX_BUNDLES)
+  KLFMMakeMacExtraBundledTarget(klfbaseplugins klatexformula "${KLF_LOCAL_PLUGIN_LIBNAMES}")
 
   foreach(plugin_libname ${KLF_LOCAL_PLUGIN_LIBNAMES})
-    KLFBundlePrivateLibUpdateQtDep(klfbaseplugins "${KLF_MACOSX_BUNDLE_PATH}"
-	"../../plugins/${plugin_libname}" "Core;Gui;Xml;Sql;DBus")
-    KLFInstallNameToolChange(klfbaseplugins "../../plugins/${plugin_libname}"
-        "${KLF_MACOSX_BUNDLE_PATH}" "Frameworks/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend"
+    if(KLF_MACOSX_BUNDLE_EXTRAS_klatexformula)
+      KLFMBundlePrivateLibUpdateQtDep(klfbaseplugins
+	"${CMAKE_CURRENT_BINARY_DIR}/${plugin_libname}" "Core;Gui;Xml;Sql;DBus")
+    endif(KLF_MACOSX_BUNDLE_EXTRAS_klatexformula)
+    KLFMInstallNameToolChange(klfbaseplugins "${CMAKE_CURRENT_BINARY_DIR}/${plugin_libname}"
+        "Frameworks/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend"
         "${CMAKE_BINARY_DIR}/src/klfbackend/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend")
-    KLFInstallNameToolChange(klfbaseplugins "../../plugins/${plugin_libname}"
-	"${KLF_MACOSX_BUNDLE_PATH}" "Frameworks/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools"
+    KLFMInstallNameToolChange(klfbaseplugins "${CMAKE_CURRENT_BINARY_DIR}/${plugin_libname}"
+	"Frameworks/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools"
 	"${CMAKE_BINARY_DIR}/src/klftools/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools")
-    KLFInstallNameToolChange(klfbaseplugins "../../plugins/${plugin_libname}"
-        "${KLF_MACOSX_BUNDLE_PATH}" "Frameworks/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp"
+    KLFMInstallNameToolChange(klfbaseplugins "${CMAKE_CURRENT_BINARY_DIR}/${plugin_libname}"
+        "Frameworks/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp"
         "${CMAKE_BINARY_DIR}/src/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp")
   endforeach(plugin_libname)
 
-endif(APPLE AND KLF_MACOSX_BUNDLE_PATH)
+endif(APPLE AND KLF_MACOSX_BUNDLES)
 
 
 configure_file(
@@ -101,14 +121,14 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${KLF_BASEPLUGINS_FN_RCC}
 add_custom_target(klfbaseplugins_rcc ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${KLF_BASEPLUGINS_FN_RCC}")
 
 
-if(APPLE AND KLF_MACOSX_BUNDLE_PATH)
-  add_dependencies(klfbaseplugins_rcc klfbaseplugins_maclibpacked)
+if(APPLE AND KLF_MACOSX_BUNDLES)
+  add_dependencies(klfbaseplugins_rcc klatexformula klfbaseplugins_maclibpacked)
   add_custom_command(TARGET klfbaseplugins_rcc POST_BUILD
       COMMAND cp "${CMAKE_CURRENT_BINARY_DIR}/${KLF_BASEPLUGINS_FN_RCC}"
-		 "${KLF_MACOSX_BUNDLE_PATH}/Contents/Resources/rccresources/${KLF_BASEPLUGINS_FN_RCC}"
+		 "${klfbundlelocation_klatexformula}/Contents/Resources/rccresources/${KLF_BASEPLUGINS_FN_RCC}"
       COMMENT "Installing base plugins into application bundle"
       VERBATIM)
-endif(APPLE AND KLF_MACOSX_BUNDLE_PATH)
+endif(APPLE AND KLF_MACOSX_BUNDLES)
 
 
 if(WIN32)

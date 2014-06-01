@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfpathchooser.h 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfpathchooser.h 604 2011-02-27 23:34:37Z phfaist $ */
 
 
 #ifndef KLFPATHCHOOSER_H

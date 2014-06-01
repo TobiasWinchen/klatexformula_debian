@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfkateplugin.h 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfkateplugin.h 823 2012-08-18 17:12:25Z phfaist $ */
 
 #ifndef KLFKATEPLUGIN_H
 #define KLFKATEPLUGIN_H
@@ -43,6 +43,9 @@
 #include <kpluginfactory.h>
 
 #include <klfbackend.h>
+#include <klflatexpreviewthread.h>
+
+#include <klfkteparser.h>
 
 
 class KLFKtePluginView;
@@ -73,32 +76,6 @@ private:
 };
 
 
-class KLFKteLatexRunThread  :  public QThread
-{
-  Q_OBJECT
-public:
-  KLFKteLatexRunThread(QObject *parent = NULL);
-  virtual ~KLFKteLatexRunThread();
-  void run();
-
-signals:
-  void previewError(const QString& errorString, int errorCode);
-  void previewAvailable(const QImage& preview);
-
-public slots:
-  bool setNewInput(const KLFBackend::klfInput& input);
-  void setSettings(const KLFBackend::klfSettings& settings);
-
-protected:
-  KLFBackend::klfInput _input;
-  KLFBackend::klfSettings _settings;
-
-  QMutex _mutex;
-  QWaitCondition _condnewinfoavail;
-
-  bool _hasnewinfo;
-  bool _abort;
-};
 
 class KLFKtePixmapWidget : public QWidget
 {
@@ -150,6 +127,9 @@ private:
 
 
 
+// -----
+
+
 class KLFKtePluginView  :  public QObject, public KXMLGUIClient
 {
   Q_OBJECT
@@ -160,20 +140,19 @@ public:
 private:
   KTextEditor::View *pView;
   bool pIsGoodHighlightingMode;
+
+  KLFKteParser *pParser;
   
-  struct MathContext {
-    bool isValidMathContext;
-    QString latexequation;
-    QString mathmodebegin;
-    QString mathmodeend;
-    QString klfmathmode;
-  };
-  MathContext pCurMathContext;
+  MathModeContext pCurMathContext;
 
   KLFBackend::klfSettings klfsettings;
 
-  KLFKteLatexRunThread *pLatexRunThread;
+  static KLFLatexPreviewThread * staticLatexPreviewThread;
+  static KLFLatexPreviewThread * latexPreviewThreadInstance();
+  KLFContLatexPreview * pContLatexPreview;
   KLFKtePreviewWidget *pPreview;
+
+  QImage pLastPreview;
 
   KAction *aPreviewSel;
   KAction *aInvokeKLF;
@@ -187,7 +166,8 @@ private Q_SLOTS:
   void slotContextMenuAboutToShow(KTextEditor::View *view, QMenu * menu);
 
   void slotPreview();
-  void slotPreview(const MathContext& context);
+  void slotSamePreview();
+  void slotPreview(const MathModeContext& context);
   void slotHidePreview();
   void slotInvokeKLF();
 

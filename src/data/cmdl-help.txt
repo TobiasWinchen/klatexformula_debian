@@ -67,12 +67,16 @@ Options:
   -p, --preamble <LaTeX code>
       Any LaTeX code that will be inserted before \begin{document}. Useful for
       including custom packages with \usepackage{...}.
+  -s, --userscript <user script>
+      Call a specific user script instead of regular 'latex' executable. See the
+      documentation in libklfbackend for more information. The script must understand
+      and respond to the "--scriptinfo" option.
   -q, --quiet [<ON|Y[ES]|T[RUE]|1 or OFF|N[O]|F[ALSE]|0>]
       Disable console output of warnings and errors.
   --redirect-debug <file>
       Redirects debugging output to the given <file>. If the file name does not
-      end with .klfdebug, this suffix is enforced. If the file exists, it is
-      silently overwritten.
+      end with .klfdebug, this suffix is automatically appended to the file name.
+      If the file exists, it is silently overwritten.
   -d, --daemonize
       Run a separate, detached, klatexformula process and return immediately. All
       other options, like --latexinput, may still be given. They will be forwared
@@ -93,7 +97,7 @@ Options:
   --latex <latex executable>
   --dvips <dvips executable>
   --gs <gs executable>
-  --epstopdf <epstopdf executable>
+  --epstopdf <epstopdf executable>      [OBSOLETE: EPSTOPDF NO LONGER USED]
       Specifiy the executable for latex, dvips, gs or epstopdf. By default, they
       are searched for in $PATH and in common system directories.
 

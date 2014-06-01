@@ -19,26 +19,70 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfblockprocess.cpp 862 2013-11-23 11:10:54Z phfaist $ */
+/* $Id: klfblockprocess.cpp 870 2014-01-30 16:22:58Z phfaist $ */
 
-#include <ctype.h>
+#include <QProcess>
+#include <QApplication>
+#include <QEventLoop>
+#include <QFile>
 
-#include <qprocess.h>
-#include <qapplication.h>
-#include <qeventloop.h>
-#include <qfileinfo.h>
-
+#include <klfutil.h>
 #include "klfblockprocess.h"
+
+static bool is_binary_file(QString fn)
+{
+  if (!QFile::exists(fn)) {
+    fn = klfSearchPath(fn);
+  }
+  QFile fpeek(fn);
+  if (!fpeek.open(QIODevice::ReadOnly)) {
+    klfDbg("fn="<<fn<<", Can't peek into file "<<fn<<"!") ;
+  } else {
+    QByteArray line;
+    int n = 0, j;
+    while (n++ < 3 && (line = fpeek.readLine()).size()) {
+      for (j = 0; j < line.size(); ++j) {
+        if ((int)line[j] >= 127 || (int)line[j] <= 0) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  return false;
+}
+
+
+static QByteArray get_script_process(QString fn)
+{
+  fn = fn.toLower();
+  if (fn.endsWith(".py")) {
+    QByteArray path = qgetenv("KLF_PYTHON_EXECUTABLE");
+    if (path.size() > 0)
+      return path;
+    return QByteArray();
+  }
+  if (fn.endsWith(".sh")) {
+    QByteArray path = qgetenv("KLF_BASH_EXECUTABLE");
+    if (path.size() > 0)
+      return path;
+    return QByteArray();
+  }
+  if (fn.endsWith(".pl")) {
+    QByteArray path = qgetenv("KLF_PERL_EXECUTABLE");
+    if (path.size() > 0)
+      return path;
+    return QByteArray();
+  }
+  return QByteArray();
+}
+
+
 
 KLFBlockProcess::KLFBlockProcess(QObject *p)  : QProcess(p)
 {
-#ifdef KLFBACKEND_QT4
   mProcessAppEvents = true;
   connect(this, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(ourProcExited()));
-#else
-  connect(this, SIGNAL(wroteToStdin()), this, SLOT(ourProcGotOurStdinData()));
-  connect(this, SIGNAL(processExited()), this, SLOT(ourProcExited()));
-#endif
 }
 
 
@@ -48,21 +92,12 @@ KLFBlockProcess::~KLFBlockProcess()
 
 void KLFBlockProcess::ourProcGotOurStdinData()
 {
-#ifndef KLFBACKEND_QT4
-  closeStdin();
-#endif
 }
 
 void KLFBlockProcess::ourProcExited()
 {
   _runstatus = 1; // exited
 }
-#ifndef KLFBACKEND_QT4
-bool KLFBlockProcess::startProcess(QStringList cmd, QCString str, QStringList env)
-{
-  return startProcess(cmd, QByteArray().duplicate(str.data(), str.length()), env);
-}
-#endif
 bool KLFBlockProcess::startProcess(QStringList cmd, QStringList env)
 {
   return startProcess(cmd, QByteArray(), env);
@@ -70,87 +105,62 @@ bool KLFBlockProcess::startProcess(QStringList cmd, QStringList env)
 
 bool KLFBlockProcess::startProcess(QStringList cmd, QByteArray stdindata, QStringList env)
 {
-  //  klfDbg("Running: "<<cmd<<", stdindata/size="<<stdindata.size());
+  klfDbg("Running: "<<cmd<<", stdindata/size="<<stdindata.size());
 
   _runstatus = 0;
 
   KLF_ASSERT_CONDITION(cmd.size(), "Empty command list given.", return false;) ;
 
-#if defined(Q_OS_UNIX) && defined(KLFBACKEND_QT4)
+#if defined(Q_OS_UNIX)
 
-  // ** epstopdf bug in ubuntu: peek into executable, see if it is script. if it is, run with 'sh' on *nix's.
+  // for epstopdf bug in ubuntu: peek into executable, see if it is script. if it is, run with 'sh' on *nix's.
   // this is a weird bug with QProcess that will not execute some script files like epstopdf.
 
-  {
-    QString fn = cmd[0];
-    if (!QFile::exists(fn))
-      fn = klfSearchPath(cmd[0]);
-    QFile fpeek(fn);
-    if (!fpeek.open(QIODevice::ReadOnly)) {
-      //klfDbg("cmd[0]="<<cmd[0]<<", Can't peek into file "<<fn<<"!") ;
-    } else {
-      QByteArray line;
-      int n = 0, j;
-      bool isbinary = false;
-      while (n++ < 3 && (line = fpeek.readLine()).size()) {
-	for (j = 0; j < line.size(); ++j) {
-          if ( ! isascii(line[j]) ) {
-	    isbinary = true;
-	    break;
-	  }
-	}
-	if (isbinary)
-	  break;
-      }
-      if (!isbinary) {
-	// explicitely run with /usr/bin/env (we're on *nix, so OK)
-	cmd.prepend("/usr/bin/env");
-      }
+  if (!is_binary_file(cmd[0])) {
+    // explicitely add a wrapper ('sh' only works for bash shell scripts, so use 'env') (we're on *nix, so OK)
+    cmd.prepend("/usr/bin/env");
+  }
+
+#endif
+
+#if defined(Q_OS_WIN32)
+
+  if (!is_binary_file(cmd[0])) {
+    // check what script type it is, and try to use pre-defined executables in shell variables (HACK!!)
+    /// FIXME: This is ugly! Need better solution!
+    QByteArray exec_proc = get_script_process(cmd[0]);
+    if (exec_proc.size()) {
+      cmd.prepend(exec_proc);
     }
   }
-    
 
 #endif
 
   QString program = cmd[0];
 
-  //klfDbg("Running cmd="<<cmd);
-  //klfDbg("env="<<env<<", curenv="<<environment());
+  klfDbg("Running cmd="<<cmd);
+  klfDbg("env="<<env<<", curenv="<<environment());
 
-#ifdef KLFBACKEND_QT4
   if (env.size() > 0) {
     setEnvironment(env);
   }
 
   QStringList args = cmd;
   args.erase(args.begin());
-  //klfDbg("Starting "<<program<<", "<<args) ;
+  klfDbg("Starting "<<program<<", "<<args) ;
   start(program, args);
   if ( ! waitForStarted() ) {
-    //klfDbg("Can't wait for started! Error="<<error()) ;
+    klfDbg("Can't wait for started! Error="<<error()) ;
     return false;
   }
 
   write(stdindata.constData(), stdindata.size());
   closeWriteChannel();
 
-  //klfDbg("wrote input data (size="<<stdindata.size()<<")") ;
+  klfDbg("wrote input data (size="<<stdindata.size()<<")") ;
 
-#else
-  setArguments(cmd);
-  QStringList *e = &env;
-  if (e->size() == 0)
-    e = 0;
-
-  if (! start(e) )
-    return false;
-
-  writeToStdin(stdindata);
-  // slot ourProcGotOutStdinData() should be called, which closes input
-#endif
-
-#ifdef KLFBACKEND_QT4
   if (mProcessAppEvents) {
+    klfDbg("letting app process events ...") ;
     while (_runstatus == 0) {
       qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     }
@@ -161,33 +171,12 @@ bool KLFBlockProcess::startProcess(QStringList cmd, QByteArray stdindata, QStrin
     }
   }
   klfDbg("Process should have finished now.");
-#else
-  while (_runstatus == 0) {
-    qApp->processEvents(QEventLoop::ExcludeUserInput);
-  }
-#endif
 
   if (_runstatus < 0) { // some error occurred somewhere
-    klfDbg("some error occurred, _runstatus="+QString("%1").arg(_runstatus)) ;
+    klfDbg("some error occurred, _runstatus="<<_runstatus) ;
     return false;
   }
 
   return true;
 }
 
-
-
-KLF_EXPORT QStringList klf_cur_environ()
-{
-  QStringList curenvironment;
-#ifdef KLFBACKEND_QT4
-  curenvironment = QProcess::systemEnvironment();
-#else
-  extern char ** environ;
-  int k;
-  for (k = 0; environ[k] != NULL; ++k) {
-    curenvironment.append(QString::fromLocal8Bit(environ[k]));
-  }
-#endif
-  return curenvironment;
-}

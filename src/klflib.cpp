@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflib.cpp 627 2011-04-12 12:36:22Z phfaist $ */
+/* $Id: klflib.cpp 698 2011-08-08 08:28:12Z phfaist $ */
 
 #include <QDebug>
 #include <QString>
@@ -91,16 +91,21 @@ KLFLibEntry::~KLFLibEntry()
 
 int KLFLibEntry::setEntryProperty(const QString& propName, const QVariant& value)
 {
-  int propId = propertyIdForName(propName);
-  if (propId < 0) {
-    // register the property
-    propId = registerProperty(propName);
-    if (propId < 0)
-      return -1;
-  }
-  // and set the property
-  setProperty(propId, value);
-  return propId;
+  //   int propId = propertyIdForName(propName);
+  //   if (propId < 0) {
+  //     // register the property
+  //     propId = registerProperty(propName);
+  //     if (propId < 0)
+  //       return -1;
+  //   }
+  //   // and set the property
+  //   setProperty(propId, value);
+  //   return propId;
+  // call KLFPropertizedObject's setProperty() to do the job for us
+  bool ok = setProperty(propName, value);
+  if (!ok)
+    return -1;
+  return propertyIdForName(propName);
 }
 
 // private, static
@@ -742,7 +747,7 @@ bool KLFLibResourceEngine::setResourceProperty(int propId, const QVariant& value
     return false;
 
   // operation succeeded: set KLFPropertizedObject-based property.
-  KLFPropertizedObject::setProperty(propId, value);
+  KLFPropertizedObject::doSetProperty(propId, value);
   emit resourcePropertyChanged(propId);
   return true;
 }

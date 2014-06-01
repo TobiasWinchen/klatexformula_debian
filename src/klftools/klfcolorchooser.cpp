@@ -19,12 +19,13 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfcolorchooser.cpp 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfcolorchooser.cpp 866 2013-11-24 13:56:22Z phfaist $ */
 
 #include <stdio.h>
 
 #include <QAction>
 #include <QMenu>
+#include <QDebug>
 #include <QStylePainter>
 #include <QColorDialog>
 #include <QPaintEvent>
@@ -33,9 +34,12 @@
 #include <QStyleOptionButton>
 #include <QRegExp>
 
+#include <klfdefs.h>
+#include "klfflowlayout.h"
+#include "klfguiutil.h"
+#include "klfrelativefont.h"
 #include "klfcolorchooser.h"
 #include "klfcolorchooser_p.h"
-#include "klfguiutil.h"
 
 #include <ui_klfcolorchoosewidget.h>
 #include <ui_klfcolordialog.h>
@@ -70,30 +74,80 @@ QColor KLFColorDialog::getColor(QColor startwith, bool alphaenabled, QWidget *pa
   if ( r != QDialog::Accepted )
     return QColor();
   QColor color = dlg.u->mColorChooseWidget->color();
-  KLFColorChooseWidget::addRecentColor(color);
   return color;
+}
+
+QColor KLFColorDialog::color() const
+{
+  return u->mColorChooseWidget->color();
+}
+void KLFColorDialog::setColor(const QColor& color)
+{
+  u->mColorChooseWidget->setColor(color);
+}
+void KLFColorDialog::slotAccepted()
+{
+  KLFColorChooseWidget::addRecentColor(color());
 }
 
 // -------------------------------------------------------------------
 
 KLFColorClickSquare::KLFColorClickSquare(QColor color, int size, bool removable, QWidget *parent)
-  : QWidget(parent), _color(color), _size(size), _removable(removable)
+  : QWidget(parent), _color(color), _removable(removable)
+{
+  initwidget();
+  setSqSize(size);
+}
+KLFColorClickSquare::KLFColorClickSquare(QWidget *parent)
+  : QWidget(parent), _color(Qt::white), _removable(false)
+{
+  initwidget();
+  setSqSize(16);
+}
+void KLFColorClickSquare::initwidget()
 {
   setFocusPolicy(Qt::StrongFocus);
-  setFixedSize(_size, _size);
   setContextMenuPolicy(Qt::DefaultContextMenu);
+  //  setAutoFillBackground(true);
+  //  update();
 }
-void KLFColorClickSquare::paintEvent(QPaintEvent */*event*/)
+
+void KLFColorClickSquare::setSqSize(int sz)
 {
-  QStylePainter p(this);
-  p.fillRect(0, 0, width(), height(), QBrush(_color));
+  if (_size == sz)
+    return;
+
+  _size = sz;
+  setFixedSize(_size, _size);
+}
+
+void KLFColorClickSquare::setRemovable(bool removable)
+{
+  _removable = removable;
+}
+
+void KLFColorClickSquare::paintEvent(QPaintEvent *event)
+{
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  Q_UNUSED(event) ;
+  klfDbg("event->rect="<<event->rect()) ;
+  {
+    QPainter p(this);
+    p.fillRect(0, 0, width(), height(), QBrush(_color));
+  }
   if (hasFocus()) {
+    QStylePainter p(this);
     QStyleOptionFocusRect option;
     option.initFrom(this);
     option.backgroundColor = QColor(0,0,0,0);
     p.drawPrimitive(QStyle::PE_FrameFocusRect, option);
   }
 }
+void KLFColorClickSquare::resizeEvent(QResizeEvent *event)
+{
+  Q_UNUSED(event) ;
+}
+
 void KLFColorClickSquare::mousePressEvent(QMouseEvent */*event*/)
 {
   activate();
@@ -124,23 +178,53 @@ void KLFColorClickSquare::internalWantRemove()
 KLFColorChooseWidgetPane::KLFColorChooseWidgetPane(QWidget *parent)
   : QWidget(parent), _img()
 {
+  setPaneType("red+fix");
+  _color = Qt::black;
+}
+
+QSize KLFColorChooseWidgetPane::sizeHint() const
+{
+  return QSize((_colorcomponent == "fix") ? 16 : 50, (_colorcomponent_b == "fix") ? 16 : 50);
+}
+QSize KLFColorChooseWidgetPane::minimumSizeHint() const
+{
+  return QSize(16, 16);
 }
 
 void KLFColorChooseWidgetPane::setColor(const QColor& newcolor)
 {
+  if (_color == newcolor)
+    return;
+
   _color = newcolor;
   update();
   emit colorChanged(_color);
 }
 void KLFColorChooseWidgetPane::setPaneType(const QString& panetype)
 {
+  static QStringList okvals =
+    QStringList() << "hue"<<"sat"<<"val"<<"red"<<"green"<<"blue"<<"alpha"<<"fix";
+
   QStringList strlist = panetype.split("+");
+  if (strlist.size() != 2) {
+    qWarning()<<KLF_FUNC_NAME<<": expected a pane-type string \"<pane1type>+<pane2type>\"!";
+    return;
+  }
   _colorcomponent = strlist[0].toLower();
   _colorcomponent_b = strlist[1].toLower();
+  if (!okvals.contains(_colorcomponent))
+    _colorcomponent = "fix";
+  if (!okvals.contains(_colorcomponent_b))
+    _colorcomponent_b = "fix";
+
+  if (_colorcomponent == "fix" && _colorcomponent_b == "fix")
+    setFocusPolicy(Qt::NoFocus);
+  else
+    setFocusPolicy(Qt::WheelFocus);
 }
 void KLFColorChooseWidgetPane::paintEvent(QPaintEvent */*e*/)
 {
-  QPainter p(this);
+  QStylePainter p(this);
   // background: a checker grid to distinguish transparency
   p.fillRect(0,0,width(),height(), QBrush(QPixmap(":/pics/checker.png")));
   // then prepare an image for our gradients
@@ -151,23 +235,30 @@ void KLFColorChooseWidgetPane::paintEvent(QPaintEvent */*e*/)
   double yfac = (double)valueBMax() / (_img.height()-1);
   for (x = 0; x < _img.width(); ++x) {
     for (y = 0; y < _img.height(); ++y) {
-      _img.setPixel(x, y, colorFromValues(_color, (int)(xfac*x), (int)(yfac*y)).rgba());
+      _img.setPixel(x, _img.height()-y-1, colorFromValues(_color, (int)(xfac*x), (int)(yfac*y)).rgba());
     }
   }
   p.drawImage(0, 0, _img);
   // draw crosshairs
-  QColor hairscol = qGray(_color.rgb()) > 80 ? Qt::black : Qt::white;
-  if ( ! _colorcomponent.isEmpty() && _colorcomponent != "fix" ) {
+  QColor hairscol = qGray(_color.rgb()) > 80 ? QColor(0,0,0,180) : QColor(255,255,255,180);
+  if ( _colorcomponent != "fix" ) {
     p.setPen(QPen(hairscol, 1.f, Qt::DotLine));
     x = (int)(valueA()/xfac);
     if (x < 0) x = 0; if (x >= width()) x = width()-1;
     p.drawLine(x, 0, x, height());
   }
-  if ( ! _colorcomponent_b.isEmpty() && _colorcomponent_b != "fix" ) {
+  if ( _colorcomponent_b != "fix" ) {
     p.setPen(QPen(hairscol, 1.f, Qt::DotLine));
     y = (int)(valueB()/yfac);
     if (y < 0) y = 0; if (y >= height()) y = height()-1;
-    p.drawLine(0, y, width(), y);
+    p.drawLine(0, height()-y-1, width(), height()-y-1);
+  }
+  // draw a focus rectangle if we have focus
+  if (hasFocus()) {
+    QStyleOptionFocusRect option;
+    option.initFrom(this);
+    option.backgroundColor = QColor(0,0,0,0);
+    p.drawPrimitive(QStyle::PE_FrameFocusRect, option);
   }
 }
 void KLFColorChooseWidgetPane::mousePressEvent(QMouseEvent *e)
@@ -175,7 +266,7 @@ void KLFColorChooseWidgetPane::mousePressEvent(QMouseEvent *e)
   double xfac = (double)valueAMax() / (_img.width()-1);
   double yfac = (double)valueBMax() / (_img.height()-1);
   int x = e->pos().x();
-  int y = e->pos().y();
+  int y = height() - e->pos().y() - 1;
 
   setColor(colorFromValues(_color, (int)(x*xfac), (int)(y*yfac)));
 }
@@ -184,7 +275,7 @@ void KLFColorChooseWidgetPane::mouseMoveEvent(QMouseEvent *e)
   double xfac = (double)valueAMax() / (_img.width()-1);
   double yfac = (double)valueBMax() / (_img.height()-1);
   int x = e->pos().x();
-  int y = e->pos().y();
+  int y = height() - e->pos().y() - 1;
   if (x < 0) x = 0; if (x >= width()) x = width()-1;
   if (y < 0) y = 0; if (y >= height()) y = height()-1;
 
@@ -192,9 +283,14 @@ void KLFColorChooseWidgetPane::mouseMoveEvent(QMouseEvent *e)
 }
 void KLFColorChooseWidgetPane::wheelEvent(QWheelEvent *e)
 {
-  int step = - 10 * e->delta() / 120;
-  // isA: TRUE if we are modifying component A, if FALSE then modifying component B
+  double step = - 7.5 * e->delta() / 120;
 
+  if (e->modifiers() == Qt::ShiftModifier)
+    step = step / 5.0;
+  if (e->modifiers() == Qt::ControlModifier)
+    step = step * 2.5;
+
+  // isA: TRUE if we are modifying component A, if FALSE then modifying component B
   bool isA =  (e->orientation() == Qt::Horizontal);
   if (isA && _colorcomponent=="fix")
     isA = false;
@@ -202,11 +298,65 @@ void KLFColorChooseWidgetPane::wheelEvent(QWheelEvent *e)
     isA = true;
   if (isA) {
     // the first component
-    setColor(colorFromValues(_color, valueA()+step, valueB()));
+    int x = (int)(valueA()+step);
+    if (x < 0) x = 0;
+    if (x > valueAMax()) x = valueAMax();
+    setColor(colorFromValues(_color, x, valueB()));
   } else {
-    setColor(colorFromValues(_color, valueA(), valueB()+step));
+    int x = (int)(valueB() - step);
+    if (x < 0) x = 0;
+    if (x > valueBMax()) x = valueBMax();
+    setColor(colorFromValues(_color, valueA(), x));
   }
   e->accept();
+}
+void KLFColorChooseWidgetPane::keyPressEvent(QKeyEvent *e)
+{
+  const int dir_step = 5;
+  double xstep = 0;
+  double ystep = 0;
+
+  if (e->key() == Qt::Key_Left)
+    xstep -= dir_step;
+  if (e->key() == Qt::Key_Right)
+    xstep += dir_step;
+  if (e->key() == Qt::Key_Up)
+    ystep += dir_step;
+  if (e->key() == Qt::Key_Down)
+    ystep -= dir_step;
+  if (e->key() == Qt::Key_Home)
+    xstep = -10000;
+  if (e->key() == Qt::Key_End)
+    xstep = 10000;
+  if (e->key() == Qt::Key_PageUp)
+    ystep = 10000;
+  if (e->key() == Qt::Key_PageDown)
+    ystep = -10000;
+
+  // if a component is set to 'fix', add the deltas to the other component...
+  if (_colorcomponent == "fix") {
+    ystep += xstep;
+    xstep = 0;
+  } else if (_colorcomponent_b == "fix") {
+    xstep += ystep;
+    ystep = 0;
+  }
+
+  if (e->modifiers() == Qt::ShiftModifier) {
+    xstep = xstep / 5; ystep = ystep / 5;
+  }
+  if (e->modifiers() == Qt::ControlModifier) {
+    xstep = xstep * 2.5; ystep = ystep * 2.5;
+  }
+
+  int x = (int)(valueA() + xstep);
+  int y = (int)(valueB() + ystep);
+  if (x < 0) x = 0;
+  if (x > valueAMax()) x = valueAMax();
+  if (y < 0) y = 0;
+  if (y > valueBMax()) y = valueBMax();
+
+  setColor(colorFromValues(_color, x, y));
 }
 
 
@@ -398,6 +548,8 @@ void KLFColorComponentSpinBox::internalChanged(int newvalue)
 
 void KLFColorComponentSpinBox::setColor(const QColor& color)
 {
+  if (_color == color)
+    return;
   int value = valueAFromNewColor(color);
   /*  printf("My components:(%s+%s); setColor(%s/alpha=%d); new value = %d\n",
       _colorcomponent.toLocal8Bit().constData(), _colorcomponent_b.toLocal8Bit().constData(),
@@ -426,11 +578,14 @@ void KLFColorChooseWidget::setRecentCustomColors(QList<QColor> recentcolors, QLi
 // static
 QList<QColor> KLFColorChooseWidget::recentColors()
 {
-  ensureColorListsInstance(); return _recentcolors->list;
+  ensureColorListsInstance();
+  return _recentcolors->list;
 }
 // static
-QList<QColor> KLFColorChooseWidget::customColors() {
-  ensureColorListsInstance(); return _customcolors->list;
+QList<QColor> KLFColorChooseWidget::customColors()
+{
+  ensureColorListsInstance();
+  return _customcolors->list;
 }
 
 
@@ -480,12 +635,22 @@ KLFColorChooseWidget::KLFColorChooseWidget(QWidget *parent)
   _connectedColorChoosers.append(u->spnBlue);
   _connectedColorChoosers.append(u->spnAlpha);
 
-  KLFGridFlowLayout *lytRecent = new KLFGridFlowLayout(12, u->mRecentColorsPalette);
-  lytRecent->setSpacing(2);
-  KLFGridFlowLayout *lytStandard = new KLFGridFlowLayout(12, u->mStandardColorsPalette);
-  lytStandard->setSpacing(2);
-  KLFGridFlowLayout *lytCustom = new KLFGridFlowLayout(12, u->mCustomColorsPalette);
-  lytCustom->setSpacing(2);
+  /*  KLFGridFlowLayout *lytRecent = new KLFGridFlowLayout(12, u->mRecentColorsPalette);
+      lytRecent->setSpacing(2);
+      //  lytRecent->setSizeConstraint(QLayout::SetMinAndMaxSize);
+      KLFGridFlowLayout *lytStandard = new KLFGridFlowLayout(12, u->mStandardColorsPalette);
+      lytStandard->setSpacing(2);
+      //  lytStandard->setSizeConstraint(QLayout::SetFixedSize);
+      KLFGridFlowLayout *lytCustom = new KLFGridFlowLayout(12, u->mCustomColorsPalette);
+      lytCustom->setSpacing(2);
+      //  lytCustom->setSizeConstraint(QLayout::SetFixedSize);
+      */
+  KLFFlowLayout *lytRecent = new KLFFlowLayout(u->mRecentColorsPalette, 11, 2, 2);
+  lytRecent->setFlush(KLFFlowLayout::FlushBegin);
+  KLFFlowLayout *lytStandard = new KLFFlowLayout(u->mStandardColorsPalette, 11, 2, 2);
+  lytStandard->setFlush(KLFFlowLayout::FlushBegin);
+  KLFFlowLayout *lytCustom = new KLFFlowLayout(u->mCustomColorsPalette, 11, 2, 2);
+  lytCustom->setFlush(KLFFlowLayout::FlushBegin);
 
   connect(_recentcolors, SIGNAL(listChanged()), this, SLOT(updatePaletteRecent()));
   connect(_standardcolors, SIGNAL(listChanged()), this, SLOT(updatePaletteStandard()));
@@ -503,6 +668,12 @@ KLFColorChooseWidget::KLFColorChooseWidget(QWidget *parent)
 	  this, SLOT(internalColorNameSelected(QListWidgetItem*)));
   connect(u->txtHex, SIGNAL(textChanged(const QString&)),
 	  this, SLOT(internalColorNameSet(const QString&)));
+
+  QPalette p = u->txtHex->palette();
+  u->txtHex->setProperty("paletteDefault", QVariant::fromValue<QPalette>(p));
+  p.setColor(QPalette::Base, QColor(255,169, 184,128));
+  u->txtHex->setProperty("paletteInvalidInput", QVariant::fromValue<QPalette>(p));
+  
 
   connect(u->btnAddCustomColor, SIGNAL(clicked()),
 	  this, SLOT(setCurrentToCustomColor()));
@@ -551,19 +722,58 @@ void KLFColorChooseWidget::internalColorNameSelected(QListWidgetItem *item)
 
 void KLFColorChooseWidget::internalColorNameSet(const QString& n)
 {
+  klfDbg("name set: "<<n) ;
   QString name = n;
-  static QRegExp rx("\\#?[0-9A-Za-z]{6}");
-  if (!rx.exactMatch(name)) {
-    u->txtHex->setProperty("invalidInput", true);
-    u->txtHex->setStyleSheet("background-color: rgb(255,128,128)");
-    return;
+  static QRegExp rx("\\#?[0-9A-Fa-f]{6}");
+  bool validinput = false;
+  bool setcolor = false;
+  int listselect = -1;
+  QColor color;
+  if (rx.exactMatch(name)) {
+    if (name[0] != QLatin1Char('#'))
+      name = "#"+name;
+    validinput = setcolor = true;
+    color = QColor(name);
+  } else {
+    // try to match a color name, or the beginning of a color name
+    int k;
+    for (k = 0; k < u->lstNames->count(); ++k) {
+      QString s = u->lstNames->item(k)->text();
+      if (s == name) {
+	// found an exact match. Select it and set color
+	validinput = true;
+	listselect = k;
+	setcolor = true;
+	color = QColor(name);
+	break;
+      }
+      if (s.startsWith(n)) {
+	// found a matching name. Just select it for user feedback
+	validinput = true;
+	listselect = k;
+	setcolor = false;
+	break;
+      }
+    }
   }
-  u->txtHex->setProperty("invalidInput", QVariant());
-  u->txtHex->setStyleSheet("");
-  if (name[0] != QLatin1Char('#'))
-    name = "#"+name;
-  QColor color(name);
-  internalColorChanged(color);
+  // now set the background color of the text input correctly (valid input or not)
+  if (!validinput) {
+    u->txtHex->setProperty("invalidInput", true);
+    u->txtHex->setStyleSheet(u->txtHex->styleSheet()); // style sheet recalc
+    u->txtHex->setPalette(u->txtHex->property("paletteInvalidInput").value<QPalette>());
+  } else {
+    u->txtHex->setProperty("invalidInput", QVariant());
+    u->txtHex->setStyleSheet(u->txtHex->styleSheet()); // style sheet recalc
+    u->txtHex->setPalette(u->txtHex->property("paletteDefault").value<QPalette>());
+  }
+  // select the appropriate list item if needed
+  if (listselect >= 0) {
+    u->lstNames->blockSignals(true);
+    u->lstNames->setCurrentRow(listselect, QItemSelectionModel::ClearAndSelect);
+    u->lstNames->blockSignals(false);
+  }
+  if (setcolor)
+    internalColorChanged(color);
 }
 
 void KLFColorChooseWidget::setColor(const QColor& color)
@@ -584,16 +794,26 @@ void KLFColorChooseWidget::setAlphaEnabled(bool enabled)
   u->mAlphaPane->setShown(enabled);
   u->lblsAlpha->setShown(enabled);
   u->mAlphaSlider->setShown(enabled);
-  _color.setAlpha(255);
-  setColor(_color);
+  if (!enabled) {
+    _color.setAlpha(255);
+    setColor(_color);
+  }
 }
 
 void KLFColorChooseWidget::fillPalette(KLFColorList *colorlist, QWidget *w)
 {
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  klfDbg("colorlist is "<<colorlist<<", _customcolors is "<<_customcolors<<", _recentcolors is "<<_recentcolors) ;
   int k;
-  KLFGridFlowLayout *lyt = dynamic_cast<KLFGridFlowLayout*>( w->layout() );
+  //  KLFGridFlowLayout *lyt = dynamic_cast<KLFGridFlowLayout*>( w->layout() );
+  // KLF_ASSERT_NOT_NULL(lyt, "Layout is not a KLFGridFlowLayout !", return; ) ;
+  KLFFlowLayout *lyt = dynamic_cast<KLFFlowLayout*>( w->layout() );
+  KLF_ASSERT_NOT_NULL(lyt, "Layout is not a KLFFlowLayout !", return; ) ;
+
   lyt->clearAll();
   for (k = 0; k < colorlist->list.size(); ++k) {
+    klfDbg("Adding a KLFColorClickSquare for color: "<<colorlist->list[k]) ;
+    
     KLFColorClickSquare *sq = new KLFColorClickSquare(colorlist->list[k], 12,
 						      (colorlist == _customcolors ||
 						       colorlist == _recentcolors),
@@ -601,11 +821,12 @@ void KLFColorChooseWidget::fillPalette(KLFColorList *colorlist, QWidget *w)
     connect(sq, SIGNAL(colorActivated(const QColor&)),
 	    this, SLOT(internalColorChanged(const QColor&)));
     connect(sq, SIGNAL(wantRemoveColor(const QColor&)),
-	      colorlist, SLOT(removeColor(const QColor&)));
-    lyt->insertGridFlowWidget(sq);
+    colorlist, SLOT(removeColor(const QColor&)));
+    // lyt->insertGridFlowWidget(sq);
+    lyt->addWidget(sq);
     sq->show();
   }
-  w->adjustSize();
+  w->adjustSize(); // the widget is inside a scroll area
 }
 
 void KLFColorChooseWidget::setCurrentToCustomColor()
@@ -705,7 +926,7 @@ QStyle *KLFColorChooser::mReplaceButtonStyle = NULL;
 KLFColorChooser::KLFColorChooser(QWidget *parent)
   : QPushButton(parent), _color(0,0,0,255), _pix(), _allowdefaultstate(false),
     _defaultstatestring(tr("[ Default ]")), _autoadd(true), _size(120, 20),
-    _xalignfactor(0.5f), _yalignfactor(0.5f), _alphaenabled(true), mMenu(0)
+    _xalignfactor(0.5f), _yalignfactor(0.5f), _alphaenabled(true), mMenu(NULL), menuRelFont(NULL)
 {
   ensureColorListInstance();
   connect(_colorlist, SIGNAL(listChanged()), this, SLOT(_makemenu()));
@@ -733,6 +954,8 @@ QColor KLFColorChooser::color() const
 
 QSize KLFColorChooser::sizeHint() const
 {
+  //KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+
   // inspired by QPushButton::sizeHint() in qpushbutton.cpp
 
   ensurePolished();
@@ -745,11 +968,18 @@ QSize KLFColorChooser::sizeHint() const
   w = _pix.width()+4;
   h = _pix.height()+2;
 
-  if (menu())
-    w += style()->pixelMetric(QStyle::PM_MenuButtonIndicator, &opt, this);
+  opt.rect.setSize(QSize(w,h));
 
-  return (style()->sizeFromContents(QStyle::CT_PushButton, &opt, QSize(w, h), this).
-	  expandedTo(QApplication::globalStrut()));
+  if (menu())
+    w += KLF_DEBUG_TEE( style()->pixelMetric(QStyle::PM_MenuButtonIndicator, &opt, this) );
+
+  //klfDbg("itermediate stage: w="<<w);
+
+  QSize hint = style()->sizeFromContents(QStyle::CT_PushButton, &opt, QSize(w, h), this);
+  //klfDbg("before expansion to app/globalstrut; hint="<<hint) ;
+  hint = hint.expandedTo(QApplication::globalStrut());
+  //klfDbg("mename="<<objectName()<<" _pix size="<<_pix.size()<<" _size="<<_size<<" color="<<_color<<"; sizeHint="<<hint) ;
+  return hint;
 }
 
 void KLFColorChooser::setColor(const QColor& col)
@@ -783,6 +1013,27 @@ void KLFColorChooser::setDefaultStateString(const QString& str)
 {
   _defaultstatestring = str;
   _makemenu();
+}
+
+void KLFColorChooser::setAutoAddToList(bool autoadd)
+{
+  _autoadd = autoadd;
+}
+void KLFColorChooser::setShowSize(const QSize& size)
+{
+  _size = size;
+  _setpix();
+  if (size.isValid())
+    setMinimumSize(sizeHint());
+  else
+    setMinimumSize(QSize());
+}
+void KLFColorChooser::setPixXAlignFactor(float xalignfactor)
+{
+  _xalignfactor = xalignfactor;
+}
+void KLFColorChooser::setPixYAlignFactor(float yalignfactor) {
+  _yalignfactor = yalignfactor;
 }
 
 void KLFColorChooser::setAlphaEnabled(bool on)
@@ -841,6 +1092,7 @@ void KLFColorChooser::_makemenu()
 
     QAction *a = mMenu->addAction(QIcon(colorPixmap(col, menuIconSize)), collabel,
 				  this, SLOT(setSenderPropertyColor()));
+    a->setIconVisibleInMenu(true);
     a->setProperty("setColor", QVariant::fromValue<QColor>(col));
   }
   if (k > 0)
@@ -848,6 +1100,10 @@ void KLFColorChooser::_makemenu()
 
   mMenu->addAction(tr("Custom ..."), this, SLOT(requestColor()));
 
+  if (menuRelFont != NULL)
+    delete menuRelFont;
+  menuRelFont = new KLFRelativeFont(this, mMenu);
+  menuRelFont->setRelPointSize(-1);
   setMenu(mMenu);
 }
 
@@ -888,11 +1144,74 @@ QPixmap KLFColorChooser::colorPixmap(const QColor& color, const QSize& size)
     p.fillRect(0,0,pix.width(),pix.height(), QBrush(color));
     //    pix.fill(color);
   } else {
-    // draw "transparent"-representing pixmap
-    pix.fill(QColor(127,127,127,80));
+    /*
+     // draw "transparent"-representing pixmap
+     pix.fill(QColor(127,127,127,80));
+     QPainter p(&pix);
+     p.setPen(QPen(QColor(255,0,0), 2));
+     p.drawLine(0,0,size.width(),size.height());
+    */
+    // draw "default"/"transparent" pixmap
     QPainter p(&pix);
-    p.setPen(QPen(QColor(255,0,0), 2));
-    p.drawLine(0,0,size.width(),size.height());
+    p.setRenderHint(QPainter::Antialiasing);
+    QLinearGradient pgrad(0, 0, 0, 1);
+    pgrad.setColorAt(0, QColor(160,160,185));
+    pgrad.setColorAt(1, QColor(220,220,230));
+    pgrad.setCoordinateMode(QGradient::StretchToDeviceMode);
+    p.fillRect(0, 0, pix.width(), pix.height(), pgrad);
+
+    QPen pen(QColor(127,0,0), 0.5f, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+    p.setPen(pen);
+    p.drawLine(QPointF(0,0), QPointF(pix.width(), pix.height()));
+    p.drawLine(QPointF(0,pix.height()), QPointF(pix.width(), 0));
+
+    /*
+     //    p.scale((qreal)pix.width(), (qreal)pix.height());
+     
+     QRectF dashrect(QPointF(0.34*pix.width(), 0.40*pix.height()),
+     QPointF(0.67*pix.width(), 0.60*pix.height()));
+     //    QRectF dashrect(QPointF(0.1*pix.width(), 0.10*pix.height()),
+     //    		    QPointF(0.9*pix.width(), 0.90*pix.height()));
+     p.setClipRect(dashrect);
+     p.translate(dashrect.topLeft());
+     p.scale(dashrect.width(), dashrect.height());
+     
+     p.drawLine(0,0,1,1);
+     
+     QRadialGradient dashgrad(QPointF(0.75, 0.3), 0.4, QPointF(0.95, 0.2));
+     dashgrad.setColorAt(0, QColor(180, 180, 240));
+     dashgrad.setColorAt(1, QColor(40, 40, 50));
+     dashgrad.setCoordinateMode(QGradient::LogicalMode);
+     p.setPen(Qt::NoPen);
+     p.setBrush(dashgrad);
+     p.fillRect(QRectF(0,0,1,1), dashgrad);
+    */
+
+    //    qreal yrad = 2;
+    //    qreal xrad = 2;//yrad * dashrect.height()/dashrect.width();
+    //    p.drawRoundedRect(QRectF(0,0,1,1), xrad, yrad, Qt::AbsoluteSize);
+
+    /*
+    //    QLinearGradient pdashgrad(0, 0, 1, 0);
+    //    pdashgrad.setColorAt(0, QColor(120, 0, 40));
+    //    pdashgrad.setColorAt(1, QColor(120, 0, 40));
+    QRadialGradient dashgrad(QPointF(1.75, 1.9), 0.6, QPointF(1.9, 1.8));
+    //    QLinearGradient dashgrad(QPointF(0,0), QPointF(1,0));
+    dashgrad.setColorAt(0, QColor(255, 0, 0));
+    dashgrad.setColorAt(1, QColor(0, 255, 0));
+    dashgrad.setCoordinateMode(QGradient::StretchToDeviceMode);
+    //    dashgrad.setColorAt(0, QColor(255, 255, 255));
+    //    dashgrad.setColorAt(1, QColor(40, 40, 50));
+    //    QPen pen(QBrush(dashgrad), pix.height()/5.f, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+    p.setPen(Qt::NoPen);
+    p.setBrush(dashgrad);
+    QRectF dashrect(QPointF(0.34*pix.width(), 0.40*pix.height()),
+		    QPointF(0.67*pix.width(), 0.65*pix.height()));
+    qreal rad = pix.height()/8.;
+    p.drawRoundedRect(dashrect, 1.2*rad, rad, Qt::AbsoluteSize);
+    //    p.drawLine(pix.width()*3./8., pix.height()/2., pix.width()*5./8., pix.height()/2.);
+    //    p.fillRect(0, 0, pix.width(), pix.height(), dashgrad); // debug this gradient
+    */
   }
   return pix;
 }

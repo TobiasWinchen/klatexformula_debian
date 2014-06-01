@@ -1,7 +1,7 @@
 # ############################################################ #
 # CMake project file for klatexformula/src/plugins/systrayicon #
 # ############################################################ #
-# $Id: CMakeLists.txt 627 2011-04-12 12:36:22Z phfaist $
+# $Id: CMakeLists.txt 733 2011-09-16 15:41:13Z phfaist $
 # ############################################################ #
 
 set(systrayicon_SRCS
@@ -18,10 +18,5 @@ set(systrayicon_UIS
 qt4_wrap_cpp(systrayicon_MOC_CPPS ${systrayicon_HEADERS})
 qt4_wrap_ui(systrayicon_UIS_H ${systrayicon_UIS})
 add_library(systrayicon MODULE ${systrayicon_SRCS} ${systrayicon_MOC_CPPS} ${systrayicon_UIS_H})
-target_link_libraries(systrayicon ${QT_LIBRARIES})
-if(NOT KLF_LIBKLFTOOLS_STATIC)
-  target_link_libraries(systrayicon klftools)
-endif(NOT KLF_LIBKLFTOOLS_STATIC)
-if(NOT KLF_LIBKLFAPP_STATIC)
-  target_link_libraries(systrayicon klfapp)
-endif(NOT KLF_LIBKLFAPP_STATIC)
+
+KLFPluginUndefOrLink(systrayicon  klftools klfbackend klfapp)

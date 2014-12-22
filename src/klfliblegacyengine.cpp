@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfliblegacyengine.cpp 779 2012-05-11 13:02:50Z phfaist $ */
+/* $Id: klfliblegacyengine.cpp 627 2011-04-12 12:36:22Z phfaist $ */
 
 
 #include <QString>
@@ -186,9 +186,7 @@ bool KLFLibLegacyFileDataPrivate::load(const QString& fnm)
 {
   KLF_DEBUG_TIME_BLOCK(KLF_FUNC_NAME+"("+fnm+")") ;
 
-  QString fname = (!fnm.isEmpty() ? fnm : filename);
-
-  flagForceReadOnly = false;
+  QString fname = (!fnm.isEmpty() ? fnm : filename);    
 
   klfDbg("loading from file "<<fname<<" (our filename="<<filename<<")") ;
 
@@ -249,7 +247,6 @@ bool KLFLibLegacyFileDataPrivate::load(const QString& fnm)
 	  
   } else {
     qWarning("Error: Library file `%s' is invalid library file or corrupt!", qPrintable(fname));
-    flagForceReadOnly = true;
     return false;
   }
 
@@ -269,12 +266,7 @@ bool KLFLibLegacyFileDataPrivate::load(const QString& fnm)
 
 bool KLFLibLegacyFileDataPrivate::save(const QString& fnm)
 {
-  KLF_DEBUG_TIME_BLOCK(KLF_FUNC_NAME+"('"+fnm+"')") ;
-
-  if (flagForceReadOnly) {
-    klfWarning("attempt to save a forced-read-only file! fnm="<<fnm<<"/fileName="<<fileName()<<" !");
-    return false;
-  }
+  KLF_DEBUG_TIME_BLOCK(KLF_FUNC_NAME+"("+fnm+")") ;
 
   QString fname = (!fnm.isEmpty() ? fnm : filename) ;
   klfDbg(" saving to file "<<fname<<" a "<<legacyLibType<<"-type library with N="<<resources.size()
@@ -350,8 +342,8 @@ bool KLFLibLegacyFileDataPrivate::save(const QString& fnm)
 
     stream << QString("KLATEXFORMULA_LIBRARY_EXPORT") << (qint16)2 << (qint16)1
 	   << resources << library;
-    // additionally, save our meta-data at the end (this will be ignored by versions of KLF which
-    // don't know about metadata...)
+    // additionally, save our meta-data at the end (this will be ignored by previous versions
+    // of KLF)
     stream << metadata;
 
     klfDbg("saved export-library type. resource count: "<<resources.size()) ;
@@ -437,32 +429,18 @@ KLFLibLegacyEngine * KLFLibLegacyEngine::createDotKLF(const QString& fname, QStr
 
   QString lrname = legacyResourceName;
   if (QFile::exists(fileName)) {
-    klfWarning("File "<<fileName<<" already exists!") ;
     // fail; we want to _CREATE_ a .klf file. Erase file before calling this function to overwrite.
     return NULL;
   }
 
   if (fileName.isEmpty()) {
-    klfWarning("file name "<<fileName<<" is empty!");
+    qWarning()<<KLF_FUNC_NAME<<": file name "<<fileName<<" is empty!";
     return NULL;
   }
   //  if (!QFileInfo(QFileInfo(fileName).absolutePath()).isWritable()) {
   //    qWarning()<<KLF_FUNC_NAME<<": containing directory "<<QFileInfo(fileName).absolutePath()<<" is not writable.";
   //    return NULL;
   //  }
-
-  // create an empty .klf file
-  KLFLibLegacyFileDataPrivate * dd = KLFLibLegacyFileDataPrivate::instanceFor(fileName, false);
-  // initialize empty library
-  dd->legacyLibType = KLFLibLegacyFileDataPrivate::ExportLibraryType;
-  KLFLegacyData::KLFLibraryResource res = { KLFLegacyData::LibResourceUSERMIN, legacyResourceName };
-  dd->resources << res;
-  dd->library[res] = KLFLegacyData::KLFLibraryList();
-  // this will force a save
-  dd->flagForceReadOnly = false;
-  dd->haschanges = 1;
-  delete dd;
-  dd = NULL;
 
   QUrl url = QUrl::fromLocalFile(fileName);
   url.setScheme("klf+legacy");
@@ -507,8 +485,6 @@ KLFLibLegacyEngine::KLFLibLegacyEngine(const QString& fileName, const QString& r
     d->library[res] = KLFLegacyData::KLFLibraryList();
     d->haschanges = true;
   }
-
-  setReadOnly(isReadOnly() || d->flagForceReadOnly);
 
   klfDbg("Opened KLFLibLegacyEngine resource `"<<fileName<<"': d="<<d<<"; resources="<<d->resources
 	 <<" (me="<<this<<", d="<<d<<")\n") ;
@@ -630,7 +606,7 @@ QStringList KLFLibLegacyEngine::subResourceList() const
 
 bool KLFLibLegacyEngine::canCreateSubResource() const
 {
-  // canModifyData is not sensitive to these arguments...
+  // canModifyData is not sensitive to thses arguments...
   return canModifyData(QString(), ChangeData);
 }
 bool KLFLibLegacyEngine::canRenameSubResource(const QString& subResource) const
@@ -971,14 +947,14 @@ void KLFLibLegacyEngine::updateResourceProperty(int propId)
     KLFPropertizedObject::setAllProperties(resprops);
     // set some default values for some properties if they have not been set
     if (!KLFPropertizedObject::property(PropLocked).isValid())
-      KLFPropertizedObject::doSetProperty(PropLocked, QVariant(false));
+      KLFPropertizedObject::setProperty(PropLocked, QVariant(false));
     if (!KLFPropertizedObject::property(PropAccessShared).isValid())
-      KLFPropertizedObject::doSetProperty(PropAccessShared, QVariant::fromValue(false));
+      KLFPropertizedObject::setProperty(PropAccessShared, QVariant::fromValue(false));
     if (!KLFPropertizedObject::property(PropTitle).isValid())
-      KLFPropertizedObject::doSetProperty(PropTitle, QFileInfo(d->fileName()).baseName());
+      KLFPropertizedObject::setProperty(PropTitle, QFileInfo(d->fileName()).baseName());
   } else {
     QString propName = KLFPropertizedObject::propertyNameForId(propId);
-    KLFPropertizedObject::doSetProperty(propId, resprops[propName]);
+    KLFPropertizedObject::setProperty(propId, resprops[propName]);
   }
   emit resourcePropertyChanged(propId);
 }

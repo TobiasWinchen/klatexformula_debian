@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibview.h 604 2011-02-27 23:34:37Z phfaist $ */
+/* $Id: klflibview.h 603 2011-02-26 23:14:55Z phfaist $ */
 
 #ifndef KLFLIBVIEW_H
 #define KLFLIBVIEW_H
@@ -77,7 +77,7 @@ namespace KLFLib {
  *   the pointer before using it! See \ref validResourceEngine().
  *
  * If the reimplementation of this view can be searched with a KLFSearchBar, reimplement
- * searchable() to return a KLFPosSearchable object for this view.
+ * searchable() to return a KLFSearchable object for this view.
  */
 class KLF_EXPORT KLFAbstractLibView : public QWidget
 {
@@ -164,7 +164,7 @@ public:
    * categories. */
   virtual QStringList getCategorySuggestions() = 0;
 
-  virtual KLFPosSearchable * searchable() { return NULL; }
+  virtual KLFSearchable * searchable() { return NULL; }
 
 signals:
   /** Is emitted (by subclasses) when a latex entry is selected to be restored (eg. the entry was
@@ -638,8 +638,6 @@ private:
 
   bool dropCanInternal(const QMimeData *data);
 
-  friend class KLFLibViewSearchable;
-
   KLF_DEBUG_DECLARE_ASSIGNABLE_REF_INSTANCE() ;
 };
 
@@ -749,12 +747,10 @@ private:
 
 // -----------------
 
-class KLFLibViewSearchable;
-
 /** An implementation of the KLFAbstractLibView viwer to view library resource contents in
  * so-called Category, List or Icon view modes.
  */
-class KLF_EXPORT KLFLibDefaultView : public KLFAbstractLibView
+class KLF_EXPORT KLFLibDefaultView : public KLFAbstractLibView, public KLFSearchable
 {
   Q_OBJECT
   Q_PROPERTY(bool autoBackgroundItems READ autoBackgroundItems WRITE setAutoBackgroundItems) ;
@@ -801,13 +797,17 @@ public:
 
   virtual QStringList getCategorySuggestions();
 
-  virtual KLFPosSearchable * searchable();
+  virtual KLFSearchable * searchable() { return this; }
 
 public slots:
   //   virtual bool writeEntryProperty(int property, const QVariant& value);
   //   virtual bool deleteSelected(bool requireConfirmation = true);
   //   virtual bool insertEntries(const KLFLibEntryList& entries);
   virtual bool selectEntries(const QList<KLFLib::entryId>& idList);
+
+  virtual bool searchFind(const QString& queryString, bool forward = true);
+  virtual bool searchFindNext(bool forward);
+  virtual void searchAbort();
 
   virtual void restore(uint restoreflags = KLFLib::RestoreLatexAndStyle);
 
@@ -879,8 +879,6 @@ private:
   KLFLibViewDelegate *pDelegate;
   KLFLibModel *pModel;
 
-  KLFLibViewSearchable *pSearchable;
-
   bool pGroupSubCategories;
 
   QList<QAction*> pCommonActions;
@@ -896,7 +894,8 @@ private:
 
   bool func_selectAll(const QModelIndex& parent, uint flags, QTime *tm, KLFDelayedPleaseWaitPopup *pleaseWait);
 
-  friend class KLFLibViewSearchable;
+private slots:
+  void searchFound(const QModelIndex& i);
 
 protected:
   KLF_DEBUG_DECLARE_REF_INSTANCE( QFileInfo(url().path()).fileName()+":"

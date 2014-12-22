@@ -1,6 +1,6 @@
 # CMake Install Instructions
 # ==========================
-# $Id: klfinstallpaths.cmake 697 2011-08-06 17:26:15Z phfaist $
+# $Id: klfinstallpaths.cmake 572 2010-11-27 12:52:43Z philippe $
 
 
 KLFGetCMakeVarChanged(CMAKE_INSTALL_PREFIX)
@@ -21,19 +21,11 @@ message(STATUS "'make install' will install to \"${CMAKE_INSTALL_PREFIX}\" (CMAK
 # Installation Paths
 # ------------------
 
-macro(KLFWarnAbsInstallPath var)
-  if(klf_changed_CMAKE_INSTALL_PREFIX AND IS_ABSOLUTE "${${var}}")
-    KLFNote("You have chosen an absolute ${var} path. The change
-    to CMAKE_INSTALL_PREFIX will NOT be reflected there; you may have to change
-    the variable manually.")
-  endif(klf_changed_CMAKE_INSTALL_PREFIX AND IS_ABSOLUTE "${${var}}")
-endmacro(KLFWarnAbsInstallPath)
-
 # Lib Dir
 set(install_lib_dir "lib${KLF_LIB_SUFFIX}")
 if(WIN32)
   # install all in binary directory on MS Windows
-  set(install_lib_dir "bin") # yes, install to "bin"!
+  set(install_lib_dir "bin")
 endif(WIN32)
 if(APPLE AND KLF_MACOSX_BUNDLES)
   # install to /Library/Frameworks on mac OS X
@@ -49,7 +41,11 @@ KLFDeclareCacheVarOptionFollowComplex1(KLF_INSTALL_LIB_DIR
 	KLF_LIB_SUFFIX                   # dependance variables
 )
 message(STATUS "Installing libraries to \"${KLF_INSTALL_LIB_DIR}\" (KLF_INSTALL_LIB_DIR)")
-KLFWarnAbsInstallPath(KLF_INSTALL_LIB_DIR)
+if(IS_ABSOLUTE "${KLF_INSTALL_LIB_DIR}"	)
+  KLFNote("You have chosen an absolute KLF_INSTALL_LIB_DIR path. There is
+    nothing wrong with that, but keep in mind that this value will
+    NOT be updated if you change CMAKE_INSTALL_PREFIX.")
+endif(IS_ABSOLUTE "${KLF_INSTALL_LIB_DIR}")
 
 # Utility variable. Same as KLF_INSTALL_LIB_DIR, but garanteed to be absolute path.
 # Not kept in cache, it is (trivially) computed here
@@ -75,30 +71,15 @@ KLFDeclareCacheVarOptionFollowComplex1(KLF_INSTALL_BIN_DIR
 	DUMMY_DEPENDANCE_VARIABLE # dependance variable (as of now none!)
 )
 message(STATUS "Installing binary to \"${KLF_INSTALL_BIN_DIR}\" (KLF_INSTALL_BIN_DIR)")
-KLFWarnAbsInstallPath(KLF_INSTALL_BIN_DIR)
+if(IS_ABSOLUTE "${KLF_INSTALL_BIN_DIR}")
+  KLFNote("You have chosen an absolute KLF_INSTALL_BIN_DIR path. There is
+    nothing wrong with that, but keep in mind that this value will
+    NOT be updated if you change CMAKE_INSTALL_PREFIX.")
+endif(IS_ABSOLUTE "${KLF_INSTALL_BIN_DIR}")
 
 # Utility variable. Same as KLF_INSTALL_BIN_DIR, but garanteed to be absolute path.
 # Not kept in cache, it is (trivially) computed here
 KLFMakeAbsInstallPath(KLF_ABS_INSTALL_BIN_DIR KLF_INSTALL_BIN_DIR)
-
-
-# Designer Plugin Library Dir
-# ...
-#KLFDeclareCacheVarOptionFollowComplexN(specificoption cachetype cachestring updatenotice calcoptvalue depvars)
-KLFDeclareCacheVarOptionFollowComplexN(KLF_INSTALL_DESPLUGIN_DIR
-	STRING "Qt Designer Plugin installation directory (relative to install prefix, or absolute)" # cache info
-	ON                            # updatenotice
-	"${QT_PLUGINS_DIR}/designer"  # calculated value
-	""     # dependance variables
-)
-if(KLF_BUILD_TOOLSDESPLUGIN)
-  message(STATUS "Installing klftools designer plugin to \"${KLF_INSTALL_DESPLUGIN_DIR}\" (KLF_INSTALL_DESPLUGIN_DIR)")
-endif(KLF_BUILD_TOOLSDESPLUGIN)
-KLFWarnAbsInstallPath(KLF_INSTALL_DESPLUGIN_DIR)
-
-# Utility variable. Same as KLF_INSTALL_DESPLUGIN_DIR, but garanteed to be absolute path.
-# Not kept in cache, it is (trivially) computed here
-KLFMakeAbsInstallPath(KLF_ABS_INSTALL_DESPLUGIN_DIR KLF_INSTALL_DESPLUGIN_DIR)
 
 
 # rccresources dir
@@ -107,7 +88,11 @@ if(WIN32)
   set(KLF_INSTALL_RCCRESOURCES_DIR "rccresources/" CACHE STRING
 			    "Where to install rccresources files (see also KLF_INSTALL_PLUGINS)")
   mark_as_advanced(KLF_INSTALL_RCCRESOURCES_DIR)
-  KLFWarnAbsInstallPath(KLF_INSTALL_RCCRESOURCES_DIR)
+  if(IS_ABSOLUTE "${KLF_INSTALL_RCCRESOURCES_DIR}")
+    KLFNote("You have chosen an absolute KLF_INSTALL_RCCRESOURCES_DIR. There is
+    nothing wrong with that, but keep in mind that this value will
+    NOT be updated if you change CMAKE_INSTALL_PREFIX.")
+  endif(IS_ABSOLUTE "${KLF_INSTALL_RCCRESOURCES_DIR}")
 
 else(WIN32)
   set(KLF_INSTALL_RCCRESOURCES_DIR "share/klatexformula/rccresources/" CACHE STRING
@@ -176,10 +161,6 @@ if(KLF_BUILD_TOOLS)
 		    KLF_INSTALL_KLFTOOLS_FRAMEWORK
   )
 endif(KLF_BUILD_TOOLS)
-if(KLF_BUILD_TOOLSDESPLUGIN)
-  KLFDeclareCacheVarOptionFollow(KLF_INSTALL_KLFTOOLSDESPLUGIN  KLF_INSTALL_DEVEL "Install klftoolsdesplugin Qt Designer Plugin")
-  mark_as_advanced( KLF_INSTALL_KLFTOOLSDESPLUGIN )
-endif(KLF_BUILD_TOOLSDESPLUGIN)
 
 if(KLF_BUILD_GUI)
   KLFDeclareCacheVarOptionFollow(KLF_INSTALL_KLFAPP_HEADERS      KLF_INSTALL_DEVEL   "Install klfapp headers")
@@ -215,16 +196,14 @@ message(STATUS "Will install targets:
                \theaders\t\tstatic,\t    shared libraries   \tframework
    klfbackend: \t  ${KLF_INSTALL_KLFBACKEND_HEADERS}\t\t  ${KLF_INSTALL_KLFBACKEND_STATIC_LIBS}\t\t  ${KLF_INSTALL_KLFBACKEND_SO_LIBS}\t\t  ${KLF_INSTALL_KLFBACKEND_FRAMEWORK}
    klftools:   \t  ${KLF_INSTALL_KLFTOOLS_HEADERS}\t\t  ${KLF_INSTALL_KLFTOOLS_STATIC_LIBS}\t\t  ${KLF_INSTALL_KLFTOOLS_SO_LIBS}\t\t  ${KLF_INSTALL_KLFTOOLS_FRAMEWORK}
-   klftoolsdesplugin: --\t  --\t\t  ${KLF_INSTALL_KLFTOOLSDESPLUGIN}\t\t  --
    klfapp:     \t  ${KLF_INSTALL_KLFAPP_HEADERS}\t\t  ${KLF_INSTALL_KLFAPP_STATIC_LIBS}\t\t  ${KLF_INSTALL_KLFAPP_SO_LIBS}\t\t  ${KLF_INSTALL_KLFAPP_FRAMEWORK}
 
-   klatexformula:        \t${KLF_INSTALL_KLATEXFORMULA_BIN}
-   klatexformula_cmdl:   \t${KLF_INSTALL_KLATEXFORMULA_CMDL}
+   klatexformula: \t${KLF_INSTALL_KLATEXFORMULA_BIN}
+   klatexformula_cmdl: \t${KLF_INSTALL_KLATEXFORMULA_CMDL}
    klatexformula bundle: \t${KLF_INSTALL_KLATEXFORMULA_BUNDLE}
 
    individual installs can be fine-tuned with
-          KLF_INSTALL_KLF{BACKEND|TOOLS|APP}_{HEADERS|SO_LIBS|STATIC_LIBS|FRAMEWORK},
-          KLF_INSTALL_KLFTOOLSDESPLUGIN,
+          KLF_INSTALL_KLF{BACKEND|TOOLS|APP}_{HEADERS|SO_LIBS|STATIC_LIBS|FRAMEWORK}
    and    KLF_INSTALL_KLATEXFORMULA_{BIN|CMDL|BUNDLE}
 
    Irrelevant settings, eg. installing os X bundles on linux, or KLF{TOOLS|APP} library install
@@ -306,45 +285,29 @@ else(KLF_INSTALL_DESKTOP)
 endif(KLF_INSTALL_DESKTOP)
 
 if(WIN32)
-  set(default_install_qtlibs ON)
-  set(default_install_qtplugins ON)
-else(WIN32)
-  set(default_install_qtlibs OFF)
-  set(default_install_qtplugins OFF)
+  option(KLF_INSTALL_QTLIBS "Copy Qt Libs next to installed executable" ON)
+
+  if(KLF_INSTALL_QTLIBS)
+
+    message(STATUS "Will install Qt libs next to installed executable (KLF_INSTALL_QTLIBS)")
+
+    set(KLF_INSTALL_QTPLUGINS_DIR "qt-plugins/" CACHE STRING
+	"Where to install Qt Plugins to deploy with application (relative to prefix, or absolute)")
+    KLFGetCMakeVarChanged(KLF_INSTALL_QTPLUGINS_LIST)
+    if(NOT DEFINED KLF_INSTALL_QTPLUGINS_LIST OR KLF_INSTALL_QTPLUGINS_LIST STREQUAL "")
+      file(GLOB_RECURSE qtplugins_list RELATIVE "${QT_PLUGINS_DIR}"
+	"${QT_PLUGINS_DIR}/*.dll")
+      set(KLF_INSTALL_QTPLUGINS_LIST "${qtplugins_list}" CACHE STRING
+	"List of Qt plugins, relative to ${QT_PLUGINS_DIR}, to deploy with exe" FORCE)
+    endif(NOT DEFINED KLF_INSTALL_QTPLUGINS_LIST OR KLF_INSTALL_QTPLUGINS_LIST STREQUAL "")
+    message(STATUS "Will install given Qt plugins next to installed executable, in ${KLF_INSTALL_QTPLUGINS_DIR} (KLF_INSTALL_QTPLUGINS_DIR,KLF_INSTALL_QTPLUGINS_LIST)")
+  else(KLF_INSTALL_QTLIBS)
+
+    message(STATUS "Will NOT install Qt libs next to installed executable (KLF_INSTALL_QTLIBS)")
+
+  endif(KLF_INSTALL_QTLIBS)
+
 endif(WIN32)
-
-option(KLF_INSTALL_QTLIBS "Copy Qt Libs next to installed executable" ${default_install_qtlibs})
-option(KLF_INSTALL_QTPLUGINS "Copy Qt Plugins next to installed executable" ${default_install_qtplugins})
-
-if(APPLE AND KLF_INSTALL_QTLIBS)
-  KLFNote("You should not set KLF_INSTALL_QTLIBS on Mac. Qt frameworks can be imported into
-    the application bundle (KLF_MACOSX_BUNDLE_EXTRAS)")
-endif(APPLE AND KLF_INSTALL_QTLIBS)
-if(APPLE AND KLF_INSTALL_QTLIBS)
-  KLFNote("You should not set KLF_INSTALL_QTPLUGINS on Mac. Qt plugins should be bundled into
-    the application bundle (KLF_BUNDLE_QT_PLUGINS)")
-endif(APPLE AND KLF_INSTALL_QTLIBS)
-
-if(KLF_INSTALL_QTLIBS)
-  message(STATUS "Will install Qt libs next to installed executable (KLF_INSTALL_QTLIBS)")
-elseif(WIN32)
-  message(STATUS "Will NOT install Qt libs next to installed executable (KLF_INSTALL_QTLIBS)")
-endif(KLF_INSTALL_QTLIBS)
-if(KLF_INSTALL_QTPLUGINS)
-  set(KLF_INSTALL_QTPLUGINS_DIR "qt-plugins/" CACHE STRING
-    "Where to install Qt Plugins to deploy with application (relative to prefix, or absolute)")
-  KLFGetCMakeVarChanged(KLF_INSTALL_QTPLUGINS_LIST)
-  if(NOT DEFINED KLF_INSTALL_QTPLUGINS_LIST OR KLF_INSTALL_QTPLUGINS_LIST STREQUAL "")
-    file(GLOB_RECURSE qtplugins_list RELATIVE "${QT_PLUGINS_DIR}"
-      "${QT_PLUGINS_DIR}/*.dll" "${QT_PLUGINS_DIR}/*.so")
-    set(KLF_INSTALL_QTPLUGINS_LIST "${qtplugins_list}" CACHE STRING
-      "List of Qt plugins, relative to ${QT_PLUGINS_DIR}, to deploy with exe" FORCE)
-  endif(NOT DEFINED KLF_INSTALL_QTPLUGINS_LIST OR KLF_INSTALL_QTPLUGINS_LIST STREQUAL "")
-  message(STATUS "Will install given Qt plugins next to installed executable, in ${KLF_INSTALL_QTPLUGINS_DIR} (KLF_INSTALL_QTPLUGINS_DIR,KLF_INSTALL_QTPLUGINS_LIST)")
-elseif(WIN32)
-  message(STATUS "Will NOT install Qt plugins next to installed executable (QT_INSTALL_QTPLUGINS)")
-endif(KLF_INSTALL_QTPLUGINS)
-
 
 
 # Run Post-Install Scripts?
@@ -405,7 +368,9 @@ if(KLF_INSTALL_LATEXDIST)
     and install it to ${KLF_INSTALL_LATEXDIST_DIR}")
 
   KLFMakeAbsInstallPath(KLF_ABS_INSTALL_LATEXDIST_DIR  KLF_INSTALL_LATEXDIST_DIR)
+endif(KLF_INSTALL_LATEXDIST)
 
+if(KLF_INSTALL_LATEXDIST)
   KLFRelativePath(klf_latexdist_reldir "${KLF_ABS_INSTALL_BIN_DIR}" "${KLF_ABS_INSTALL_LATEXDIST_DIR}")
   set(klf_latexdist_reldir "@executable_path/${klf_latexdist_reldir}")
   set(klf_extrasearchpaths
@@ -415,7 +380,6 @@ if(KLF_INSTALL_LATEXDIST)
 else(KLF_INSTALL_LATEXDIST)
   set(klf_extrasearchpaths "")
 endif(KLF_INSTALL_LATEXDIST)
-
 #KLFDeclareCacheVarOptionFollowComplexN(specificoption cachetype cachestring updatenotice calcoptvalue depvarlist)
 KLFDeclareCacheVarOptionFollowComplexN(KLF_EXTRA_SEARCH_PATHS
   STRING "Extra paths klatexformula executable will search for latex/dvips/etc. in"

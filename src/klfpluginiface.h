@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfpluginiface.h 712 2011-08-27 23:48:11Z phfaist $ */
+/* $Id: klfpluginiface.h 603 2011-02-26 23:14:55Z phfaist $ */
 
 #ifndef KLFPLUGINIFACE_H
 #define KLFPLUGINIFACE_H
@@ -67,8 +67,7 @@ public:
 
 };
 
-/* REMEMBER TO BUMB PLUGIN INTERFACE VERSION FOR NEW MAJOR VERSIONS WITH NON-BINARY-COMPATIBLE CHANGES */
 Q_DECLARE_INTERFACE(KLFPluginGenericInterface,
-		    "org.klatexformula.KLatexFormula.Plugin.GenericInterface/1.2");
+		    "org.klatexformula.KLatexFormula.Plugin.GenericInterface/1.1");
 
 #endif

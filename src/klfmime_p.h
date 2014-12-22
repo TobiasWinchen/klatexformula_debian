@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmime_p.h 867 2013-11-26 21:27:16Z phfaist $ */
+/* $Id: klfmime_p.h 603 2011-02-26 23:14:55Z phfaist $ */
 
 #ifndef KLFMIME_P_H
 #define KLFMIME_P_H
@@ -50,7 +50,7 @@ public:
 
   virtual QString exporterName() const { return QString::fromLatin1("KLFMimeExporterImage"); }
 
-  virtual QStringList keys(const KLFBackend::klfOutput * output) const;
+  virtual QStringList keys() const;
   virtual QByteArray data(const QString& key, const KLFBackend::klfOutput& klfoutput);
 
   virtual QString windowsFormatName(const QString& key) const;
@@ -71,31 +71,7 @@ public:
 
   virtual QString exporterName() const { return QString::fromLatin1("KLFMimeExporterUrilist"); }
 
-  virtual QStringList keys(const KLFBackend::klfOutput * output) const;
-  virtual QByteArray data(const QString& key, const KLFBackend::klfOutput& klfoutput);
-
-  virtual QString windowsFormatName(const QString& key) const;
-
-  static QString tempFileForOutput(const KLFBackend::klfOutput& klfoutput, int targetDpi = -1);
-
-private:
-  static QMap<qint64,QMap<int,QString> > tempFilesForImageCacheKey;
-};
-
-
-/** KLFMimeExporter implementation for exporting \c "text/x-moz-url" and \c "text/uri-list"
- * to a temporary PDF file
- */
-class KLF_EXPORT KLFMimeExporterUrilistPDF : public QObject, public KLFMimeExporter
-{
-  Q_OBJECT
-public:
-  KLFMimeExporterUrilistPDF(QObject *parent) : QObject(parent) { }
-  virtual ~KLFMimeExporterUrilistPDF() { }
-
-  virtual QString exporterName() const { return QString::fromLatin1("KLFMimeExporterUrilistPDF"); }
-
-  virtual QStringList keys(const KLFBackend::klfOutput * output) const;
+  virtual QStringList keys() const;
   virtual QByteArray data(const QString& key, const KLFBackend::klfOutput& klfoutput);
 
   virtual QString windowsFormatName(const QString& key) const;
@@ -105,7 +81,6 @@ public:
 private:
   static QMap<qint64,QString> tempFilesForImageCacheKey;
 };
-
 
 /** Export HTML document with image and alt text ("text/html"). */
 class KLF_EXPORT KLFMimeExporterHTML : public QObject, public KLFMimeExporter
@@ -117,7 +92,7 @@ public:
 
   virtual QString exporterName() const { return QString::fromLatin1("KLFMimeExporterHTML"); }
 
-  virtual QStringList keys(const KLFBackend::klfOutput * output) const;
+  virtual QStringList keys() const;
   virtual QByteArray data(const QString& key, const KLFBackend::klfOutput& klfoutput);
 
   virtual QString windowsFormatName(const QString& key) const;
@@ -136,7 +111,7 @@ public:
 
   virtual QString exporterName() const { return QString::fromLatin1("KLFMimeExporterLibFmts"); }
 
-  virtual QStringList keys(const KLFBackend::klfOutput * output) const;
+  virtual QStringList keys() const;
   virtual QByteArray data(const QString& key, const KLFBackend::klfOutput& klfoutput);
 
 };
@@ -144,8 +119,8 @@ public:
 
 
 
-/** \brief Alien glow equations ;) */
-class KLF_EXPORT KLFMimeExporterGlowImage : public QObject, public KLFMimeExporter
+/** Alien glow equations ;) */
+class KLFMimeExporterGlowImage : public QObject, public KLFMimeExporter
 {
   Q_OBJECT
 public:
@@ -153,28 +128,10 @@ public:
 
   virtual QString exporterName() const { return QString::fromLatin1("KLFMimeExporterGlowImage"); }
 
-  virtual QStringList keys(const KLFBackend::klfOutput * output) const;
+  virtual QStringList keys() const;
   virtual QByteArray data(const QString& key, const KLFBackend::klfOutput& klfoutput);
 
 };
-
-
-
-class KLF_EXPORT KLFMimeExporterUserScript : public QObject, public KLFMimeExporter
-{
-  Q_OBJECT
-public:
-  KLFMimeExporterUserScript(const QString& scriptname, QObject *parent);
-
-  virtual QString exporterName() const;
-
-  virtual QStringList keys(const KLFBackend::klfOutput * output) const;
-  virtual QByteArray data(const QString& key, const KLFBackend::klfOutput& klfoutput);
-
-private:
-  KLFExportUserScript pUserScript;
-};
-
 
 
 #endif

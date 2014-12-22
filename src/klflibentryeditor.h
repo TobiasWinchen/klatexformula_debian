@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibentryeditor.h 698 2011-08-08 08:28:12Z phfaist $ */
+/* $Id: klflibentryeditor.h 603 2011-02-26 23:14:55Z phfaist $ */
 
 #ifndef KLFLIBENTRYEDITOR_H
 #define KLFLIBENTRYEDITOR_H
@@ -71,8 +71,6 @@ public slots:
   void setInputEnabled(bool enabled);
 
   void retranslateUi(bool alsoBaseUi = true);
-
-  void slotCopy();
 
 protected slots:
 

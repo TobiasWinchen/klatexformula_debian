@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfpobj.cpp 761 2012-03-12 10:19:16Z phfaist $ */
+/* $Id: klfpobj.cpp 603 2011-02-26 23:14:55Z phfaist $ */
 
 #include <QDebug>
 #include <QByteArray>
@@ -29,82 +29,9 @@
 
 #include "klfpobj.h"
 
-
-KLFAbstractPropertizedObject::KLFAbstractPropertizedObject()
-{
-}
-KLFAbstractPropertizedObject::~KLFAbstractPropertizedObject()
-{
-}
-
-KLFSpecifyableType::KLFSpecifyableType()
-{
-}
-KLFSpecifyableType::~KLFSpecifyableType()
-{
-}
-
-
-
-// -----------------------------
-
-
-QMap<QString,QVariant> KLFAbstractPropertizedObject::allProperties() const
-{
-  QMap<QString,QVariant> data;
-  QStringList pnames = propertyNameList();
-  foreach (QString pname, pnames) {
-    data[pname] = property(pname);
-  }
-  return data;
-}
-
-bool KLFAbstractPropertizedObject::setAllProperties(const QMap<QString,QVariant>& data)
-{
-  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
-  klfDbg("data="<<data) ;
-  bool allok = true;
-  for (QVariantMap::const_iterator it = data.begin(); it != data.end(); ++it) {
-    bool ok = setProperty(it.key(), it.value());
-    if (!ok) {
-      allok = false;
-      qWarning()<<KLF_FUNC_NAME<<": Can't set property "<<it.key()<<" to "<<it.value();
-    }
-  }
-  return allok;
-}
-
-
-// --------
-
-KLF_EXPORT QDataStream& operator<<(QDataStream& stream, const KLFEnumType& e)
-{
-  return stream << e.specification() << qint32(e.value());
-}
-KLF_EXPORT QDataStream& operator>>(QDataStream& stream, KLFEnumType& e)
-{
-  QByteArray s;
-  qint32 x;
-  stream >> s >> x;
-  e.setSpecification(s);
-  e.setValue(x);
-  return stream;
-}
-
-
-// -------
-
-
-
-
 KLFPropertizedObject::KLFPropertizedObject(const QString& propNameSpace)
   : pPropNameSpace(propNameSpace)
 {
-  // ensure the property name space exists
-  if (!pRegisteredProperties.contains(propNameSpace))
-    pRegisteredProperties[propNameSpace] = QMap<QString,int>();
-  if (!pRegisteredPropertiesMaxId.contains(propNameSpace))
-    pRegisteredPropertiesMaxId[propNameSpace] = -1;
 }
 
 KLFPropertizedObject::~KLFPropertizedObject()
@@ -137,31 +64,6 @@ QVariant KLFPropertizedObject::property(int propId) const
   return QVariant();
 }
 
-QVariant KLFPropertizedObject::property(const QString& propname, const QVariant& defaultValue) const
-{
-  int propId = propertyIdForName(propname);
-  if (propId < 0) {
-    return defaultValue;
-  }
-  QVariant value = property(propId);
-  if (value.isValid())
-    return value;
-  return defaultValue;
-}
-
-bool KLFPropertizedObject::hasPropertyValue(const QString& propName) const
-{
-  return property(propName, QVariant()).isValid();
-}
-
-bool KLFPropertizedObject::hasPropertyValue(int propId) const
-{
-  if (!propertyIdRegistered(propId))
-    return false;
-
-  return hasPropertyValue(propertyNameForId(propId));
-}
-
 
 void KLFPropertizedObject::propertyValueChanged(int , const QVariant& ,
 						const QVariant& )
@@ -169,28 +71,28 @@ void KLFPropertizedObject::propertyValueChanged(int , const QVariant& ,
   // do nothing. Subclasses may implement thier own behavior.
 }
 
-bool KLFPropertizedObject::doSetProperty(const QString& propname, const QVariant& value)
+void KLFPropertizedObject::setProperty(const QString& propname, const QVariant& value)
 {
   if ( ! propertyNameRegistered(propname) ) {
     qWarning("%s[%s](): Property `%s' not registered.", KLF_FUNC_NAME, qPrintable(pPropNameSpace),
 	     qPrintable(propname));
-    return false;
+    return;
   }
-  return doSetProperty(propertyIdForName(propname), value);
+  setProperty(propertyIdForName(propname), value);
 }
-bool KLFPropertizedObject::doSetProperty(int propId, const QVariant& value)
+void KLFPropertizedObject::setProperty(int propId, const QVariant& value)
 {
   if (propId >= 0 && propId < pProperties.size()) {
     // all ok, set this property
     QVariant oldvalue = pProperties[propId];
     pProperties[propId] = value;
     propertyValueChanged(propId, oldvalue, value);
-    return true;
+    return;
   }
   if (propId < 0) {
     qWarning("%s[%s](id=%d): invalid property ID.", KLF_FUNC_NAME, qPrintable(pPropNameSpace),
 	     propId);
-    return false;
+    return;
   }
   // maybe our properties array needs resize for properties that could have been
   // registered after last access
@@ -202,16 +104,14 @@ bool KLFPropertizedObject::doSetProperty(int propId, const QVariant& value)
       ! propertyIdRegistered(propId) ) {
     qWarning("%s[%s](id=%d): invalid property id.", KLF_FUNC_NAME, qPrintable(pPropNameSpace),
 	     propId);
-    return false;
+    return;
   }
   QVariant oldvalue = pProperties[propId];
   pProperties[propId] = value;
   propertyValueChanged(propId, oldvalue, value);
-  return true;
 }
-int KLFPropertizedObject::doLoadProperty(const QString& propname, const QVariant& value)
+int KLFPropertizedObject::loadProperty(const QString& propname, const QVariant& value)
 {
-  klfDbg("propname="<<propname<<" value="<<value) ;
   int propId = propertyIdForName(propname);
   if ( propId < 0 ) {
     // register property
@@ -219,7 +119,7 @@ int KLFPropertizedObject::doLoadProperty(const QString& propname, const QVariant
     if (propId < 0)
       return -1;
   }
-  doSetProperty(propId, value);
+  setProperty(propId, value);
   return propId;
 }
 
@@ -262,37 +162,13 @@ QMap<QString,QVariant> KLFPropertizedObject::allProperties() const
   return properties;
 }
 
-bool KLFPropertizedObject::setProperty(const QString& propname, const QVariant& value)
+void KLFPropertizedObject::setAllProperties(const QMap<QString, QVariant>& propValues)
 {
-  return doLoadProperty(propname, value) >= 0;
-}
-
-bool KLFPropertizedObject::setProperty(int propId, const QVariant& value)
-{
-  KLF_ASSERT_CONDITION(propertyIdRegistered(propId), "Property ID="<<propId<<" is not registered!",
-		       return false; ) ;
-
-  return setProperty(propertyNameForId(propId), value);
-}
-
-
-bool KLFPropertizedObject::setAllProperties(const QMap<QString, QVariant>& propValues)
-{
-  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
-  klfDbg("propValues="<<propValues) ;
-
-  bool allok = true;
   QStringList propKeys = propValues.keys();
   int k;
   for (k = 0; k < propKeys.size(); ++k) {
-    // bypass check, set property anyway
-    bool ok = (doLoadProperty(propKeys[k], propValues[propKeys[k]]) >= 0);
-    if (!ok) {
-      allok = false;
-      qWarning()<<KLF_FUNC_NAME<<": Failed to load property "<<propKeys[k]<<" with value "<<propValues[propKeys[k]];
-    }
+    loadProperty(propKeys[k], propValues[propKeys[k]]);
   }
-  return allok;
 }
 
 
@@ -312,23 +188,6 @@ void KLFPropertizedObject::setAllPropertiesFromByteArray(const QByteArray& data)
   QDataStream stream(data);
   stream >> *this;
 }
-
-/*
-QVariant KLFPropertizedObject::parsePropertyValue(int propId, const QString& strvalue)
-{
-  KLF_ASSERT_CONDITION(propertyIdRegistered(propId), "Property ID="<<propId<<" is not registered!",
-		       return QVariant(); ) ;
-
-  return parsePropertyValue(propertyNameForId(propId), strvalue);
-}
-
-QVariant KLFPropertizedObject::parsePropertyValue(const QString& / *propName* /, const QString& / *strvalue* /)
-{
-  return QVariant();
-}
-*/
-
-
 
 
 
@@ -612,25 +471,17 @@ bool operator==(const KLFPropertizedObject& a, const KLFPropertizedObject& b)
 
 
 
-QDataStream& KLFPropertizedObject::streamInto(QDataStream& stream) const
-{
-  stream << allProperties();
-  return stream;
-}
-QDataStream& KLFPropertizedObject::streamFrom(QDataStream& stream)
-{
-  QMap<QString,QVariant> props;
-  stream >> props;
-  setAllProperties(props);
-  return stream;
-}
 QDataStream& operator<<(QDataStream& stream, const KLFPropertizedObject& obj)
 {
-  return obj.streamInto(stream);
+  stream << obj.allProperties();
+  return stream;
 }
 QDataStream& operator>>(QDataStream& stream, KLFPropertizedObject& obj)
 {
-  return obj.streamFrom(stream);
+  QMap<QString,QVariant> props;
+  stream >> props;
+  obj.setAllProperties(props);
+  return stream;
 }
 
 
@@ -646,6 +497,4 @@ QDebug& operator<<(QDebug& stream, const KLFPropertizedObject& obj)
   stream << obj.allProperties();
   return stream;
 }
-
-
 

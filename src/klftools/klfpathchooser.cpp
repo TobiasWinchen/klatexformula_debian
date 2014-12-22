@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfpathchooser.cpp 604 2011-02-27 23:34:37Z phfaist $ */
+/* $Id: klfpathchooser.cpp 603 2011-02-26 23:14:55Z phfaist $ */
 
 #include <QLineEdit>
 #include <QHBoxLayout>

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdbus.cpp 689 2011-08-01 12:06:27Z phfaist $ */
+/* $Id: klfdbus.cpp 603 2011-02-26 23:14:55Z phfaist $ */
 
 #include "klfmainwin.h"
 #include "klfdbus.h"
@@ -62,8 +62,6 @@ void KLFDBusAppAdaptor::setInputData(const QString& key, const QString& svalue, 
     _mainwin->slotSetMathMode(svalue);
   } else if (key == "preamble") {
     _mainwin->slotSetPreamble(svalue);
-  } else if (key == "userscript") {
-    _mainwin->slotSetUserScript(svalue);
   } else if (key == "dpi") {
     _mainwin->slotSetDPI(ivalue);
   }

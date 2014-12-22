@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfstylemanager.cpp 647 2011-06-17 20:51:47Z phfaist $ */
+/* $Id: klfstylemanager.cpp 603 2011-02-26 23:14:55Z phfaist $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -136,13 +136,7 @@ bool KLFStyleListModel::dropMimeData(const QMimeData *mdata, Qt::DropAction acti
 
 
 KLFStyleManager::KLFStyleManager(KLFStyleList *stydata, QWidget *parent)
-  : QWidget(parent, 
-#ifdef Q_WS_MAC
-	    Qt::Sheet
-#else
-	    Qt::Dialog
-#endif
-	    )
+  : QWidget(parent, Qt::Dialog)
 {
   u = new Ui::KLFStyleManager;
   u->setupUi(this);

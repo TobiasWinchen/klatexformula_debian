@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfpixmapbutton.cpp 604 2011-02-27 23:34:37Z phfaist $ */
+/* $Id: klfpixmapbutton.cpp 603 2011-02-26 23:14:55Z phfaist $ */
 
 #include <QApplication>
 #include <QPushButton>

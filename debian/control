@@ -3,7 +3,7 @@ Section: tex
 Priority: extra
 Maintainer: Tobias Winchen <winchen@physik.rwth-aachen.de> 
 Build-Depends: cdbs, debhelper (>= 7), docbook-to-man, cmake, libqt4-dev, pkg-kde-tools, kdelibs5-dev, libx11-dev
-Standards-Version: 3.9.4
+Standards-Version: 3.9.6
 Vcs-git: git://github.com/winchen/klatexformula_debian.git
 Vcs-Browser: https://github.com/winchen/klatexformula_debian
 Homepage: http://klatexformula.sourceforge.net/

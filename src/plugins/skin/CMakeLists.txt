@@ -1,7 +1,7 @@
 # ##################################################### #
 # CMake project file for klatexformula/src/plugins/skin #
 # ##################################################### #
-# $Id: CMakeLists.txt 733 2011-09-16 15:41:13Z phfaist $
+# $Id: CMakeLists.txt 627 2011-04-12 12:36:22Z phfaist $
 # ##################################################### #
 
 set(skin_SRCS
@@ -22,5 +22,10 @@ qt4_wrap_ui(skin_UIS_H ${skin_UIS})
 qt4_add_resources(skin_QRC_CPPS ${skin_QRCS})
 
 add_library(skin MODULE ${skin_SRCS} ${skin_MOC_CPPS} ${skin_UIS_H} ${skin_QRC_CPPS})
-
-KLFPluginUndefOrLink(skin  klftools klfbackend klfapp)
+target_link_libraries(skin ${QT_LIBRARIES})
+if(NOT KLF_LIBKLFTOOLS_STATIC)
+  target_link_libraries(skin klftools)
+endif(NOT KLF_LIBKLFTOOLS_STATIC)
+if(NOT KLF_LIBKLFAPP_STATIC)
+  target_link_libraries(skin klfapp)
+endif(NOT KLF_LIBKLFAPP_STATIC)

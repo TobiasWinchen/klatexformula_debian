@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfsettings.h 819 2012-08-10 21:12:14Z phfaist $ */
+/* $Id: klfsettings.h 603 2011-02-26 23:14:55Z phfaist $ */
 
 #ifndef KLFSETTINGS_H
 #define KLFSETTINGS_H
@@ -30,7 +30,6 @@
 #include <QPushButton>
 
 #include <klfbackend.h>
-#include <klfconfig.h>
 
 class QTreeWidgetItem;
 class KLFColorChooser;
@@ -39,8 +38,6 @@ class KLFLatexSyntaxHighlighter;
 class KLFMainWin;
 
 namespace Ui { class KLFSettings; }
-
-class KLFSettingsPrivate;
 
 /** \brief A settings dialog
  *
@@ -54,18 +51,13 @@ public:
   enum SettingsControl {
     AppLanguage = 1,
     AppFonts,
-    AppLookNFeel,
-    AppMacOSXMetalLook,
     Preview,
     TooltipPreview,
     SyntaxHighlighting,
-    SyntaxHighlightingColors,
     ExecutablePaths,
     ExpandEPSBBox,
-    CalcEPSBoundingBox,
     ExportProfiles,
     LibrarySettings,
-    UserScriptInfo,
     ManageAddOns,
     ManagePlugins,
     PluginsConfig
@@ -75,9 +67,6 @@ public:
   ~KLFSettings();
 
   bool eventFilter(QObject *object, QEvent *event);
-
-signals:
-  void settingsApplied();
 
 public slots:
 
@@ -102,21 +91,57 @@ public slots:
   /** \warning This method provides NO USER CONFIRMATION and NO AFTER-OPERATION REFRESH */
   void removePlugin(const QString& fname);
 
-  void showAdvancedConfigEditor();
-  void showSystemMessages();
-
   void retranslateUi(bool alsoBaseUi = true);
 
 protected:
 
 protected slots:
+
+  void populateLocaleCombo();
+  void populateExportProfilesCombos();
+
+  void initPluginControls();
+  void resetPluginControls();
+  void refreshPluginSelected();
+  void refreshAddOnList();
+  void refreshAddOnSelected();
+
   virtual void accept();
+
+  void slotChangeFontPresetSender();
+  void slotChangeFontSender();
+  void slotChangeFont(QPushButton *btn, const QFont& f);
 
 private:
   Ui::KLFSettings *u;
 
-  KLF_DECLARE_PRIVATE(KLFSettings);
+  KLFMainWin *_mainwin;
 
+  bool pUserSetDefaultAppFont;
+
+  QMap<QString,QPushButton*> pFontButtons;
+  QMap<QString,QAction*> pFontBasePresetActions;
+  QList<QAction*> pFontSetActions;
+
+  struct TextFormatEnsemble {
+    TextFormatEnsemble(QTextCharFormat *format,
+		       KLFColorChooser *foreground, KLFColorChooser *background,
+		       QCheckBox *chkBold, QCheckBox *chkItalic)
+      : fmt(format), fg(foreground), bg(background), chkB(chkBold), chkI(chkItalic) { }
+    QTextCharFormat *fmt;
+    KLFColorChooser *fg;
+    KLFColorChooser *bg;
+    QCheckBox *chkB;
+    QCheckBox *chkI;
+  };
+  QList<TextFormatEnsemble> _textformats;
+
+  bool _pluginstuffloaded;
+  QMap<QString,QWidget*> mPluginConfigWidgets;
+  QMap<QString,QTreeWidgetItem*> mPluginListItems;
+
+  bool setDefaultFor(const QString& progname, const QString& guessprog, bool required,
+		     KLFPathChooser *destination);
 };
 
 #endif

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflatexsymbols.cpp 837 2012-11-19 23:08:48Z phfaist $ */
+/* $Id: klflatexsymbols.cpp 603 2011-02-26 23:14:55Z phfaist $ */
 
 #include <stdio.h>
 
@@ -27,13 +27,12 @@
 #include <QDir>
 #include <QTextStream>
 #include <QScrollArea>
-#include <QRegExp>
 #include <QList>
 #include <QStringList>
 #include <QProgressDialog>
 #include <QGridLayout>
 #include <QPushButton>
-#include <QHash>
+#include <QMap>
 #include <QStackedWidget>
 #include <QLineEdit>
 #include <QMessageBox>
@@ -52,28 +51,13 @@
 #include <ui_klflatexsymbols.h>
 
 #include <klfpixmapbutton.h>
-#include <klfrelativefont.h>
-
 #include "klfmain.h"
 #include "klfconfig.h"
 #include "klflatexsymbols.h"
 
-#include "klflatexsymbols_p.h"
-
 
 
 // ------------------
-
-KLF_EXPORT QDebug operator<<(QDebug str, const KLFLatexSymbol& s)
-{
-  return str << "KLFLatexSymbol["<<s.symbol
-	     <<(s.symbol_option?"[]":"")
-	     <<(s.symbol_numargs>0?qPrintable("{"+QString::number(s.symbol_numargs)+"x}"):"")
-	     <<";preview="<<(s.previewlatex.size()?qPrintable("`"+s.previewlatex+"'"):"")
-	     <<";preamblelist/size="<<s.preamble.size()
-	     <<";txtmd="<<s.textmode<<";hidden="<<s.hidden
-	     <<";kw="<<s.keywords;
-}
 
 
 KLFLatexSymbol::KLFLatexSymbol(const QDomElement& e)
@@ -119,86 +103,14 @@ KLFLatexSymbol::KLFLatexSymbol(const QDomElement& e)
   }
   if (latexlist.size() == 0)
     return;
-  QRegExp rx_bool("\\s*(y(?:es)?|t(?:rue)?|on|1)|(n(?:o)?|f(?:alse)?|off|0)\\s*", Qt::CaseInsensitive);
-
-  QDomElement latexnode = latexlist.at(0).toElement();
-  symbol = latexnode.text();
-  QString symopt = latexnode.attribute("option", "no");
-  bool boolok = rx_bool.exactMatch(symopt);
-  if (!boolok) {
-    qWarning()<<KLF_FUNC_NAME<<": Bad boolean format "<<symopt;
-    symbol_option = false;
-  } else {
-    // if cap(1) is non-empty, TRUE; if cap(2) is non-empty then FALSE
-    symbol_option = rx_bool.cap(1).size();
-  }
-  QString nargs = latexnode.attribute("numargs", "0");
-  bool uintok = true;
-  symbol_numargs = nargs.toUInt(&uintok);
-  if (!uintok) {
-    qWarning()<<KLF_FUNC_NAME<<": Bad integer format "<<nargs;
-  }
-
-  // latex preview code
-  QDomNodeList previewlatexlist = e.elementsByTagName("preview-latex");
-  if (previewlatexlist.size() > 1) {
-    fprintf(stderr, "WARNING: Expected at most one <preview-latex>...</preview-latex> in symbol entry!\n");
-  }
-  if (previewlatexlist.size() > 0) {
-    QDomElement previewlatexnode = previewlatexlist.at(0).toElement();
-    previewlatex = previewlatexnode.text();
-  } else {
-    previewlatex = QString();
-  }
-
-  // keywords
-  QDomNodeList keywordslist = e.elementsByTagName("keywords");
-  for (k = 0; k < keywordslist.size(); ++k) {
-    QStringList kw;
-    kw = keywordslist.at(k).toElement().text().split(QRegExp("\\s+"), QString::SkipEmptyParts);
-    keywords << kw;
-  }
+  symbol = latexlist.at(0).toElement().text();
 
   klfDbg("read symbol "<<symbol<<" hidden="<<hidden);
 }
 
-QString KLFLatexSymbol::symbolWithArgs() const
-{
-  QString s = symbol;
-  if (symbol_option)
-    s += "[]";
-  int n = symbol_numargs;
-  while (n--)
-    s += "{}";
-  return s;
-}
-
-QString KLFLatexSymbol::latexCodeForPreview() const
-{
-  if (previewlatex.size())
-    return previewlatex;
-
-  static const QString dummyopt = "n";
-  static const QStringList dummyargs =
-    QStringList()<<"x"<<"y"<<"z"<<"w"<<"a"<<"b"<<"c"<<"d"<<"e"<<"f";
-  int k;
-
-  QString s = symbol;
-  if (symbol_option)
-    s += "["+dummyopt+"]";
-  for (k = 0; k < symbol_numargs; ++k)
-    s += "{"+dummyargs[k%dummyargs.size()]+"}";
-
-  return s;
-}
-
-
 KLF_EXPORT bool operator==(const KLFLatexSymbol& a, const KLFLatexSymbol& b)
 {
   return a.symbol == b.symbol &&
-    a.symbol_numargs == b.symbol_numargs &&
-    a.symbol_option == b.symbol_option &&
-    a.previewlatex == b.previewlatex &&
     a.textmode == b.textmode &&
     a.preamble == b.preamble &&
     a.bbexpand.t == b.bbexpand.t &&
@@ -208,51 +120,35 @@ KLF_EXPORT bool operator==(const KLFLatexSymbol& a, const KLFLatexSymbol& b)
     a.hidden == b.hidden;
 }
 
-// KLF_EXPORT bool operator<(const KLFLatexSymbol& a, const KLFLatexSymbol& b)
-// {
-//   if (a.symbol != b.symbol)
-//     return a.symbol < b.symbol;
-//   if (a.textmode != b.textmode)
-//     return a.textmode < b.textmode;
-//   if (a.preamble.size() != b.preamble.size())
-//     return a.preamble.size() < b.preamble.size();
-//   int k;
-//   for (k = 0; k < a.preamble.size(); ++k)
-//     if (a.preamble[k] != b.preamble[k])
-//       return a.preamble[k] < b.preamble[k];
-//   // a and b seem to be equal
-//   return false;
-// }
+KLF_EXPORT bool operator<(const KLFLatexSymbol& a, const KLFLatexSymbol& b)
+{
+  if (a.symbol != b.symbol)
+    return a.symbol < b.symbol;
+  if (a.textmode != b.textmode)
+    return a.textmode < b.textmode;
+  if (a.preamble.size() != b.preamble.size())
+    return a.preamble.size() < b.preamble.size();
+  int k;
+  for (k = 0; k < a.preamble.size(); ++k)
+    if (a.preamble[k] != b.preamble[k])
+      return a.preamble[k] < b.preamble[k];
+  // a and b seem to be equal
+  return false;
+}
 
 QDataStream& operator<<(QDataStream& stream, const KLFLatexSymbol& s)
 {
-  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
-  return stream << s.symbol
-		<< (quint8)s.symbol_option
-		<< (quint8)s.symbol_numargs
-		<< s.previewlatex
-		<< s.preamble
-		<< (quint8)s.textmode
-		<< (qint16)s.bbexpand.t << (qint16)s.bbexpand.r << (qint16)s.bbexpand.b << (qint16)s.bbexpand.l
-		<< (quint8)s.hidden
-		<< s.keywords;
+  return stream << s.symbol << s.preamble << (quint8)s.textmode
+		<< (qint16)s.bbexpand.t << (qint16)s.bbexpand.r
+		<< (qint16)s.bbexpand.b << (qint16)s.bbexpand.l << (quint8)s.hidden;
 }
 
 QDataStream& operator>>(QDataStream& stream, KLFLatexSymbol& s)
 {
-  quint8 symopt, symnargs, textmode, hidden;
+  quint8 textmode, hidden;
   struct { qint16 t, r, b, l; } readbbexpand;
-  stream >> s.symbol
-	 >> symopt
-	 >> symnargs
-	 >> s.previewlatex
-	 >> s.preamble
-	 >> textmode
-	 >> readbbexpand.t >> readbbexpand.r >> readbbexpand.b >> readbbexpand.l
-	 >> hidden
-	 >> s.keywords;
-  s.symbol_option = symopt;
-  s.symbol_numargs = symnargs;
+  stream >> s.symbol >> s.preamble >> textmode >> readbbexpand.t >> readbbexpand.r
+	 >> readbbexpand.b >> readbbexpand.l >> hidden;
   s.bbexpand.t = readbbexpand.t;
   s.bbexpand.r = readbbexpand.r;
   s.bbexpand.b = readbbexpand.b;
@@ -281,9 +177,6 @@ static QString relcachefile()
 KLFLatexSymbolsCache::KLFLatexSymbolsCache()
 {
   KLF_DEBUG_TIME_BLOCK(KLF_FUNC_NAME) ;
-
-  d = new KLFLatexSymbolsCachePrivate;
-
   // load the cache
 
   QStringList cachefiles;
@@ -308,12 +201,7 @@ KLFLatexSymbolsCache::KLFLatexSymbolsCache()
     qWarning() << KLF_FUNC_NAME << ": error finding and reading cache file!";
   }
 
-  d->flag_modified = false;
-}
-
-KLFLatexSymbolsCache::~KLFLatexSymbolsCache()
-{
-  delete d;
+  flag_modified = false;
 }
 
 int KLFLatexSymbolsCache::loadCacheStream(QDataStream& stream)
@@ -333,9 +221,9 @@ int KLFLatexSymbolsCache::loadCacheStream(QDataStream& stream)
 
   // stream is now ready to read
 
-  stream >> d->cache;
+  stream >> cache;
 
-  d->flag_modified = false;
+  flag_modified = false;
   return 0;
 }
 
@@ -343,25 +231,18 @@ int KLFLatexSymbolsCache::saveCacheStream(QDataStream& stream)
 {
   klfDataStreamWriteHeader(stream, "KLATEXFORMULA_SYMBOLS_PIXMAP_CACHE");
   // stream is now ready to be written
-  stream << d->cache;
-  d->flag_modified = false;
+  stream << cache;
+  flag_modified = false;
   return 0;
-}
-
-bool KLFLatexSymbolsCache::cacheNeedsSave() const
-{
-  return d->flag_modified;
 }
 
 QPixmap KLFLatexSymbolsCache::getPixmap(const KLFLatexSymbol& sym, bool fromcacheonly)
 {
   klfDbg("sym.symbol="<<sym.symbol<<" fromCacheOnly="<<fromcacheonly) ;
-  klfDbg("full symbol: "<<sym) ;
 
-  if (d->cache.contains(sym)) {
-    klfDbg("Found symbol in cache! pixmap is null="<<d->cache[sym].pix.isNull()
-	   <<"; sym.preamble="<<sym.preamble.join(";"));
-    return d->cache[sym].pix;
+  if (cache.contains(sym)) {
+    klfDbg("Found symbol in cache! pixmap is null="<<cache[sym].isNull()<<"; sym.preamble="<<sym.preamble.join(";"));
+    return cache[sym];
   }
 
   if (fromcacheonly) {
@@ -375,13 +256,13 @@ QPixmap KLFLatexSymbolsCache::getPixmap(const KLFLatexSymbol& sym, bool fromcach
     // so that it doesn't detect old symbols in the cache)
     // This is done only if fromcache is false, so as to perform the check only on first pass
     // when generating the symbol cache.
-    QHash<KLFLatexSymbol,SymbolInfo>::iterator it = d->cache.begin();
-    while (it != d->cache.end()) {
+    QMap<KLFLatexSymbol,QPixmap>::iterator it = cache.begin();
+    while (it != cache.end()) {
       klfDbg("Testing symbol "<<it.key().symbol<<",preamble="<<it.key().preamble.join(",")
 	     << "for being a duplicate of "<<sym.symbol);
-      if (it.key().symbol == sym.symbol && !it.value().confirmed) {
-	klfDbg("erasing duplicate marked unconfirmed.");
-	it = d->cache.erase(it); // erase old symbol entry
+      if (it.key().symbol == sym.symbol) {
+	klfDbg("erasing duplicate.");
+	it = cache.erase(it); // erase old symbol entry
       } else {
 	++it;
       }
@@ -392,27 +273,27 @@ QPixmap KLFLatexSymbolsCache::getPixmap(const KLFLatexSymbol& sym, bool fromcach
     // special treatment for hidden symbols
     // insert a QPixmap() into cache and return it
     klfDbg("symbol is hidden. Assigning NULL pixmap.") ;
-    d->cache[sym].pix = QPixmap();
+    cache[sym] = QPixmap();
     return QPixmap();
   }
 
   const float mag = 4.0;
 
   KLFBackend::klfInput in;
-  in.latex = sym.latexCodeForPreview();
+  in.latex = sym.symbol;
   in.mathmode = sym.textmode ? "..." : "\\[ ... \\]";
   in.preamble = sym.preamble.join("\n")+"\n";
   in.fg_color = qRgb(0,0,0);
   in.bg_color = qRgba(255,255,255,0); // transparent Bg
   in.dpi = (int)(mag * 150);
 
-  d->backendsettings.epstopdfexec = ""; // don't waste time making PDF, we don't need it
-  d->backendsettings.tborderoffset = sym.bbexpand.t;
-  d->backendsettings.rborderoffset = sym.bbexpand.r;
-  d->backendsettings.bborderoffset = sym.bbexpand.b;
-  d->backendsettings.lborderoffset = sym.bbexpand.l;
+  backendsettings.epstopdfexec = ""; // don't waste time making PDF, we don't need it
+  backendsettings.tborderoffset = sym.bbexpand.t;
+  backendsettings.rborderoffset = sym.bbexpand.r;
+  backendsettings.bborderoffset = sym.bbexpand.b;
+  backendsettings.lborderoffset = sym.bbexpand.l;
 
-  KLFBackend::klfOutput out = KLFBackend::getLatexFormula(in, d->backendsettings);
+  KLFBackend::klfOutput out = KLFBackend::getLatexFormula(in, backendsettings);
 
   if (out.status != 0) {
     qWarning()
@@ -420,18 +301,15 @@ QPixmap KLFLatexSymbolsCache::getPixmap(const KLFLatexSymbol& sym, bool fromcach
       <<QString(":ERROR: Can't generate preview for symbol %1 : status %2 !\n\tError: %3\n")
       .arg(sym.symbol).arg(out.status).arg(out.errorstr);
     return QPixmap(":/pics/badsym.png");
-  } else {
-    klfDbg("successfully got pixmap for symbol "<<sym.symbol<<".") ;
   }
 
-  d->flag_modified = true;
+  flag_modified = true;
 
   QImage scaled = out.result.scaled((int)(out.result.width() / mag),
 				    (int)(out.result.height() / mag),
 				    Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
   QPixmap pix = QPixmap::fromImage(scaled);
-  d->cache[sym].pix = pix;
-  d->cache[sym].confirmed = true;
+  cache[sym] = pix;
 
   klfDbg("Ran getLatexFormula(), got the pixmap. Returning.") ;
 
@@ -480,39 +358,24 @@ int KLFLatexSymbolsCache::precacheList(const QList<KLFLatexSymbol>& list, bool u
 
 void KLFLatexSymbolsCache::setBackendSettings(const KLFBackend::klfSettings& settings)
 {
-  d->backendsettings = settings;
+  backendsettings = settings;
 }
 
 KLFLatexSymbol KLFLatexSymbolsCache::findSymbol(const QString& symbolCode)
 {
-  for (QHash<KLFLatexSymbol,SymbolInfo>::const_iterator it = d->cache.begin();
-       it != d->cache.end(); ++it) {
-    if (it.key().symbol == symbolCode) {
+  for (QMap<KLFLatexSymbol,QPixmap>::const_iterator it = cache.begin();
+       it != cache.end(); ++it) {
+    if (it.key().symbol == symbolCode)
       return it.key();
-    }
   }
   return KLFLatexSymbol();
-}
-
-QList<KLFLatexSymbol> KLFLatexSymbolsCache::findSymbols(const QString& symbolCode)
-{
-  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
-  QList<KLFLatexSymbol> slist;
-  for (QHash<KLFLatexSymbol,SymbolInfo>::const_iterator it = d->cache.begin();
-       it != d->cache.end(); ++it) {
-    if (it.key().symbol == symbolCode) {
-      klfDbg("found symbol: "<<it.key());
-      slist << it.key();
-    }
-  }
-  return slist;
 }
 
 QStringList KLFLatexSymbolsCache::symbolCodeList()
 {
   QStringList l;
-  for (QHash<KLFLatexSymbol,SymbolInfo>::const_iterator it = d->cache.begin();
-       it != d->cache.end(); ++it)
+  for (QMap<KLFLatexSymbol,QPixmap>::const_iterator it = cache.begin();
+       it != cache.end(); ++it)
     l << it.key().symbol;
   return l;
 }
@@ -526,26 +389,10 @@ QPixmap KLFLatexSymbolsCache::findSymbolPixmap(const QString& symbolCode)
     return QPixmap();
   }
   // return the pixmap from cache
-  return d->cache[sym].pix;
+  return cache[sym];
 }
 
-void KLFLatexSymbolsCache::debugDump()
-{
-#ifdef KLF_DEBUG
-  klfDbg("dumping cache.");
-  QHash<KLFLatexSymbol,SymbolInfo>::const_iterator it;
-  int k;
-  for (it = d->cache.begin(), k = 0; it != d->cache.end(); ++it, ++k) {
-    const KLFLatexSymbol& s = it.key();
-    const QPixmap& p = it.value().pix;
-    qDebug("  #%4d  %s (%s)  prembl/sz=%d  txtmd=%s  hid=%s  pix/sz=(%d,%d) confirmed=%s", k,
-	   qPrintable(s.symbolWithArgs()), qPrintable(s.previewlatex),
-	   s.preamble.size(), s.textmode?"yes":"no", s.hidden?"yes":"no",
-	   p.width(), p.height(), it.value().confirmed?"yes":"no"
-	   );
-  }
-#endif
-}
+
 
 
 
@@ -566,6 +413,7 @@ int KLFLatexSymbolsCache::loadCacheFrom(const QString& fname, int version)
   return r;
 }
 
+
 // static
 KLFLatexSymbolsCache * KLFLatexSymbolsCache::theCache()
 {
@@ -577,7 +425,6 @@ KLFLatexSymbolsCache * KLFLatexSymbolsCache::theCache()
 // static
 void KLFLatexSymbolsCache::saveTheCache()
 {
-  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
   if (staticCache->cacheNeedsSave()) {
     QString s = klfconfig.homeConfigDir + relcachefile();
     QFile f(s);
@@ -648,7 +495,7 @@ void KLFLatexSymbolsView::buildDisplay()
   pal.setColor(QPalette::Button, QColor(206,207,233));
 #endif
   mLayout = new QGridLayout(mFrame);
-  int i, k;
+  int i;
   for (i = 0; i < _symbols.size(); ++i) {
     QPixmap p = KLFLatexSymbolsCache::theCache()->getPixmap(_symbols[i]);
     KLFPixmapButton *btn = new KLFPixmapButton(p, mFrame);
@@ -661,12 +508,6 @@ void KLFLatexSymbolsView::buildDisplay()
     btn->setProperty("gridpos", QPoint(-1,-1));
     btn->setProperty("gridcolspan", -1);
     btn->setProperty("myWidth", p.width() + 4);
-    QString symcode = _symbols[i].symbol;
-    if (_symbols[i].symbol_option)
-      symcode += "[]";
-    for (k = 0; _symbols[i].symbol_numargs > 0 && k < _symbols[i].symbol_numargs; ++k) {
-      symcode += "{}";
-    }
     QString tooltiptext =
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\""
       " \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
@@ -677,15 +518,12 @@ void KLFLatexSymbolsView::buildDisplay()
       "</style>"
       "</head>"
       "<body>\n"
-      "<p style=\"white-space: pre\">"+tr("LaTeX code:")+" <b><tt>"+symcode+"</tt></b>"+
+      "<p style=\"white-space: pre\">"+tr("LaTeX code:")+" <b><tt>"+_symbols[i].symbol+"</tt></b>"+
       (_symbols[i].textmode?tr(" [in text mode]"):QString(""))+
       +"</p>";
     if (_symbols[i].preamble.size())
       tooltiptext += "<p>"+tr("Requires:")+"<b><pre>" +
 	_symbols[i].preamble.join("\n")+"</pre></b></p>";
-    if (_symbols[i].keywords.size())
-      tooltiptext += "<p>"+tr("Key Words:")+"<pre><b>" +
-	_symbols[i].keywords.join("</b>, <b>")+"</b></pre></p>";
     tooltiptext += "</body></html>";
     btn->setToolTip(tooltiptext);
     //klfDbg("tooltip text is "<<tooltiptext);
@@ -748,36 +586,43 @@ void KLFLatexSymbolsView::slotSymbolActivated()
 }
 
 
-static bool stringlist_contains(const QStringList& l, const QString& qs, Qt::CaseSensitivity cs)
+bool KLFLatexSymbolsView::searchIterMatches(const SearchIterator& pos, const QString& queryString)
 {
-  QRegExp qsrx(".*"+QRegExp::escape(qs)+".*", cs);
-  return l.indexOf(qsrx) >= 0;
-}
-
-bool KLFLatexSymbolsView::symbolMatches(int symbol, const QString& curqstr)
-{
-  if (symbol < 0 || symbol >= mSymbols.size())
+  // remember:  SearchIterator==int
+  if (pos < 0 || pos >= mSymbols.size())
     return false;
 
-  int symIndex = mSymbols[symbol]->property("symbol").toInt();
+  int symIndex = mSymbols[pos]->property("symbol").toInt();
   if (symIndex < 0 || symIndex >= _symbols.size()) {
     qWarning()<<KLF_FUNC_NAME<<": Inavlid symbol index "<<symIndex;
     return false;
   }
 
   // (X)Emacs-style: presence of capital letter triggers case sensitive search
-  Qt::CaseSensitivity cs = (curqstr.contains(QRegExp("[A-Z]")) ? Qt::CaseSensitive : Qt::CaseInsensitive) ;
+  Qt::CaseSensitivity cs = (queryString.contains(QRegExp("[A-Z]")) ? Qt::CaseSensitive : Qt::CaseInsensitive) ;
 
-  if ( _symbols[symIndex].symbol.contains(curqstr, cs) ||
-       stringlist_contains(_symbols[symIndex].preamble, curqstr, cs) ||
-       stringlist_contains(_symbols[symIndex].keywords, curqstr, cs) ) {
+  if ( _symbols[symIndex].symbol.contains(queryString, cs) ||
+       _symbols[symIndex].preamble.contains(queryString, cs) ) {
     klfDbg("found match at "<<symIndex<<": "<<_symbols[symIndex].symbol) ;
     return true;
   }
   return false;
 }
 
-void KLFLatexSymbolsView::highlightSearchMatches(int currentMatch, const QString& curqstr)
+void KLFLatexSymbolsView::searchPerformed(const SearchIterator& result)
+{
+  klfDbg("result is "<<result<<" valid="<<(result<mSymbols.size())) ;
+
+  highlightSearchMatches(result);
+}
+void KLFLatexSymbolsView::searchAbort()
+{
+  KLFIteratorSearchable<int>::searchAbort();
+  highlightSearchMatches(-1);
+  //  setFocus();
+}
+
+void KLFLatexSymbolsView::highlightSearchMatches(int currentMatch)
 {
   QString stylesheets[] = {
     // don't affect tooltips: give KLFPixmapButton { } scopes
@@ -795,10 +640,12 @@ void KLFLatexSymbolsView::highlightSearchMatches(int currentMatch, const QString
     int which = 0;
     if (k == currentMatch)
       which = 2;
-    else if (curqstr.size() && symbolMatches(k, curqstr))
+    else if (searchIterMatches(k, searchQueryString()))
       which = 1;
     mSymbols[k]->setStyleSheet(stylesheets[which]);
   }  
+  if (currentMatch >= 0 && currentMatch < mSymbols.size())
+    ensureWidgetVisible(mSymbols[currentMatch]);
 }
 
 
@@ -807,7 +654,7 @@ void KLFLatexSymbolsView::highlightSearchMatches(int currentMatch, const QString
 
 KLFLatexSymbols::KLFLatexSymbols(QWidget *parent, const KLFBackend::klfSettings& baseSettings)
   : QWidget(
-#if defined(Q_WS_WIN) || defined(Q_WS_MAC)
+#if defined(Q_OS_WIN32)
 	    0 /* parent */
 #else
 	    parent /* 0 */
@@ -815,24 +662,19 @@ KLFLatexSymbols::KLFLatexSymbols(QWidget *parent, const KLFBackend::klfSettings&
 	    , /*Qt::Tool*/ Qt::Window /*0*/)
 {
   KLF_DEBUG_TIME_BLOCK(KLF_FUNC_NAME) ;
-  Q_UNUSED(parent) ;
 
   u = new Ui::KLFLatexSymbols;
   u->setupUi(this);
   setAttribute(Qt::WA_StyledBackground);
 
   // add our search bar
-  pSearchBar = u->searchbar; //new KLFSearchBar(this);
+  pSearchBar = new KLFSearchBar(this);
   KLF_DEBUG_ASSIGN_REF_INSTANCE(pSearchBar, "latexsymbols-searchbar") ;
-  //  pSearchBar->setShowOverlayMode(true);
+  pSearchBar->setShowOverlayMode(true);
   pSearchBar->registerShortcuts(this);
+  pSearchBar->setSearchText("");
   pSearchBar->setShowHideButton(true);
   connect(pSearchBar, SIGNAL(escapePressed()), pSearchBar, SLOT(hide()));
-
-  pSearchable = new KLFLatexSymbolsSearchable(this);
-  pSearchBar->setSearchTarget(pSearchable);
-
-  u->btnInsertSearchCurrent->hide();
 
   klfDbg("prepared search bar.") ;
 
@@ -843,22 +685,16 @@ KLFLatexSymbols::KLFLatexSymbols(QWidget *parent, const KLFBackend::klfSettings&
 
   slotShowCategory(0);
 
-  KLFRelativeFont *relfont = new KLFRelativeFont(u->cbxCategory);
-  relfont->setRelPointSize(+2);
+  QFont f = u->cbxCategory->font();
+  int ps = f.pointSize();
+  if (ps < 8)
+    ps = QFontInfo(f).pointSize();
+  f.setPointSize(ps+1);
+  u->cbxCategory->setFont(f);
 
   connect(u->cbxCategory, SIGNAL(highlighted(int)), this, SLOT(slotShowCategory(int)));
   connect(u->cbxCategory, SIGNAL(activated(int)), this, SLOT(slotShowCategory(int)));
   connect(u->btnClose, SIGNAL(clicked()), this, SLOT(close()));
-
-  connect(u->btnInsertSearchCurrent, SIGNAL(clicked()),
-	  pSearchable, SLOT(slotInsertCurrentMatch()));
-
-#ifdef Q_WS_MAC
-  // Cmd+Space is used by spotlight, so use Ctrl+Space (on Qt/Mac, Ctrl key is mapped to Qt::META)
-  u->btnInsertSearchCurrent->setShortcut(QKeySequence(Qt::META+Qt::Key_Space));
-#endif
-
-  slotKlfConfigChanged();
 }
 
 void KLFLatexSymbols::retranslateUi(bool alsoBaseUi)
@@ -869,20 +705,8 @@ void KLFLatexSymbols::retranslateUi(bool alsoBaseUi)
 
 KLFLatexSymbols::~KLFLatexSymbols()
 {
-  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
   KLFLatexSymbolsCache::saveTheCache();
 }
-
-void KLFLatexSymbols::emitInsertSymbol(const KLFLatexSymbol& symbol)
-{
-  emit insertSymbol(symbol);
-}
-
-void KLFLatexSymbols::slotKlfConfigChanged()
-{
-  pSearchBar->setEmacsStyleBackspace(klfconfig.UI.emacsStyleBackspaceSearch);
-}
-
 
 void KLFLatexSymbols::read_symbols_create_ui()
 {
@@ -915,19 +739,19 @@ void KLFLatexSymbols::read_symbols_create_ui()
       fxmllist << fxmldir.absoluteFilePath(xmllist[j]);
   }
   klfDbgT("files collected: "<<fxmllist) ;
-  //   if (fxmllist.isEmpty()) {
-  //     // copy legacy XML file into the home latexsymbols.d directory
-  //     QDir("/").mkpath(klfconfig.homeConfigDir+"/conf/latexsymbols.d");
-  //     if (QFile::exists(klfconfig.homeConfigDir+"/latexsymbols.xml")) {
-  //       QFile::copy(klfconfig.homeConfigDir+"/latexsymbols.xml",
-  // 		  klfconfig.homeConfigDir+"/conf/latexsymbols.d/mylatexsymbols.xml");
-  //       fxmllist << klfconfig.homeConfigDir+"/conf/latexsymbols.d/mylatexsymbols.xml";
-  //     } else {
-  //       QFile::copy(":/data/latexsymbols.xml",
-  // 		  klfconfig.homeConfigDir+"/conf/latexsymbols.d/defaultlatexsymbols.xml");
-  //       fxmllist << klfconfig.homeConfigDir+"/conf/latexsymbols.d/defaultlatexsymbols.xml";
-  //     }
-  //   }
+  if (fxmllist.isEmpty()) {
+    // copy legacy XML file into the home latexsymbols.d directory
+    QDir("/").mkpath(klfconfig.homeConfigDir+"/conf/latexsymbols.d");
+    if (QFile::exists(klfconfig.homeConfigDir+"/latexsymbols.xml")) {
+      QFile::copy(klfconfig.homeConfigDir+"/latexsymbols.xml",
+		  klfconfig.homeConfigDir+"/conf/latexsymbols.d/mylatexsymbols.xml");
+      fxmllist << klfconfig.homeConfigDir+"/conf/latexsymbols.d/mylatexsymbols.xml";
+    } else {
+      QFile::copy(":/data/latexsymbols.xml",
+		  klfconfig.homeConfigDir+"/conf/latexsymbols.d/defaultlatexsymbols.xml");
+      fxmllist << klfconfig.homeConfigDir+"/conf/latexsymbols.d/defaultlatexsymbols.xml";
+    }
+  }
 
   klfDbgT("got xml files, ensured not empty; fxmllist="<<fxmllist) ;
 
@@ -959,20 +783,10 @@ void KLFLatexSymbols::read_symbols_create_ui()
     file.close();
     
     QDomElement root = doc.documentElement();
-    if (root.nodeName() == "latexsymbollist") {
-      if (!fn.endsWith("conf/latexsymbols.d/defaultlatexsymbols.xml"))
-        klfWarning("Ignoring old symbols definition file "<<fn<<".");
-      continue;
-    }
-    if (root.nodeName() != "klf-symbol-list") {
-      qWarning("%s: Error parsing XML for latex symbols from file `%s': unexpected root tag `%s'.", KLF_FUNC_NAME,
+    if (root.nodeName() != "latexsymbollist") {
+      qWarning("%s: Error parsing XML for latex symbols from file `%s': unexpected root tag `%s'.\n", KLF_FUNC_NAME,
 	       qPrintable(fn), qPrintable(root.nodeName()));
       continue;
-    }
-    QString minklfversion = root.attribute("minklfversion", "3.3.0a");
-    if (klfVersionCompare(minklfversion, KLF_VERSION_STRING) > 0) {
-      qWarning("%s: ignoring XML latex symbols definition file `%s' which requires KLF version %s.",
-	       KLF_FUNC_NAME, qPrintable(fn), qPrintable(minklfversion));
     }
 
     QDomNode n;
@@ -1004,7 +818,7 @@ void KLFLatexSymbols::read_symbols_create_ui()
 		 <<"; current category-title="<<categoryTitle<<",lang="<<curCategoryTitleLang) ;
 	  if (categoryTitle.isEmpty()) {
 	    // no category title yet
-	    if (lang.isEmpty() || lang.startsWith(klfconfig.UI.locale) || klfconfig.UI.locale().startsWith(lang)) {
+	    if (lang.isEmpty() || lang.startsWith(klfconfig.UI.locale) || klfconfig.UI.locale.startsWith(lang)) {
 	      // correct locale
 	      categoryTitle = qApp->translate("xmltr_latexsymbols", eesym.text().toUtf8().constData(),
 					      "[[tag: <category-title>]]", QCoreApplication::UnicodeUTF8);
@@ -1013,7 +827,7 @@ void KLFLatexSymbols::read_symbols_create_ui()
 	    // otherwise skip this tag
 	  } else {
 	    // see if this locale is correct and more specific
-	    if ( (lang.startsWith(klfconfig.UI.locale) || klfconfig.UI.locale().startsWith(lang)) &&
+	    if ( (lang.startsWith(klfconfig.UI.locale) || klfconfig.UI.locale.startsWith(lang)) &&
 		 (curCategoryTitleLang.isEmpty() || lang.startsWith(curCategoryTitleLang) ) ) {
 	      // then keep it and replace the other
 	      categoryTitle = eesym.text();
@@ -1070,11 +884,6 @@ void KLFLatexSymbols::read_symbols_create_ui()
   // pre-cache all our symbols
   KLFLatexSymbolsCache::theCache()->precacheList(allsymbols, true, this);
 
-#ifdef KLF_DEBUG
-  // and dump symbol cache
-  KLFLatexSymbolsCache::theCache()->debugDump();
-#endif
-
   int i;
   for (i = 0; i < mViews.size(); ++i) {
     mViews[i]->buildDisplay();
@@ -1090,6 +899,15 @@ void KLFLatexSymbols::slotShowCategory(int c)
   stkViews->setCurrentIndex(c);
 
   klfDbg("current index="<<c) ;
+
+  QWidget * w = stkViews->currentWidget();
+  KLFSearchable * target = NULL;
+  if (w != NULL) {
+    KLFLatexSymbolsView *view = qobject_cast<KLFLatexSymbolsView*>(w);
+    if (view != NULL)
+      target = view;
+  }
+  pSearchBar->setSearchTarget(target);
 }
 
 void KLFLatexSymbols::closeEvent(QCloseEvent *e)

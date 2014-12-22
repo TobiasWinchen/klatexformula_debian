@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: systrayicon.h 702 2011-08-14 12:03:51Z phfaist $ */
+/* $Id: systrayicon.h 603 2011-02-26 23:14:55Z phfaist $ */
 
 #ifndef PLUGINS_SYSTRAYICON_H
 #define PLUGINS_SYSTRAYICON_H
@@ -32,11 +32,6 @@
 
 #include <ui_systrayiconconfigwidget.h>
 #include <ui_systraymainiconifybuttons.h>
-
-
-#if defined(Q_WS_MAC) && defined(QT_MAC_USE_COCOA)
-#define KLF_MAC_HIDE_INSTEAD
-#endif
 
 
 class SysTrayIconConfigWidget : public QWidget, public Ui::SysTrayIconConfigWidget
@@ -84,8 +79,6 @@ public:
   virtual void apply();
 
   virtual bool eventFilter(QObject *obj, QEvent *e);
-
-  virtual bool isMinimized();
 
 signals:
 

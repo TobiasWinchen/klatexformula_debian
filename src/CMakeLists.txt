@@ -1,12 +1,12 @@
 # ######################################## #
 # CMake project file for klatexformula/src #
 # ######################################## #
-# $Id: CMakeLists.txt 837 2012-11-19 23:08:48Z phfaist $
+# $Id: CMakeLists.txt 871 2014-04-27 14:44:58Z phfaist $
 # ######################################## #
 
 if(KLF_MACOSX_BUNDLES)
   set(KLF_MACOSXDIR "${CMAKE_CURRENT_SOURCE_DIR}/macosx")
-
+  set(KLF_MACOSX_BUNDLE_PATH "${CMAKE_CURRENT_BINARY_DIR}/klatexformula-${KLF_VERSION}.app")
   include(KLFMacBundle)
 endif(KLF_MACOSX_BUNDLES)
 
@@ -17,15 +17,13 @@ if(WIN32)
 endif(WIN32)
 
 
-# include these subprojects...
+# include SUBDIR: our klfbackend
+add_subdirectory(klfbackend)
 
-if(KLF_BUILD_TOOLS)
-  add_subdirectory(klftools)
-endif(KLF_BUILD_TOOLS)
 
-if(KLF_BUILD_BACKEND)
-  add_subdirectory(klfbackend)
-endif(KLF_BUILD_BACKEND)
+if(NOT KLF_BUILD_TOOLS)
+  return()
+endif(NOT KLF_BUILD_TOOLS)
 
 # Re-Include what we need from Qt for GUI KLF core+gui+xml+sql(+dbus)
 set(QT_USE_QTXML TRUE)
@@ -33,9 +31,15 @@ set(QT_USE_QTSQL TRUE)
 if(KLF_USE_DBUS)
   set(QT_USE_QTDBUS TRUE)
 endif(KLF_USE_DBUS)
-set(QT_USE_QTUITOOLS TRUE)
+# include our Qt4 stuff; Qt3 needs nothing.
+if(KLF_USE_QT4)
 include(${QT_USE_FILE})
+endif(KLF_USE_QT4)
 
+
+
+# include SUBDIR: our klftools
+add_subdirectory(klftools)
 
 
 if(NOT KLF_BUILD_GUI)
@@ -46,8 +50,8 @@ endif(NOT KLF_BUILD_GUI)
 # Sources
 set(klfapp_SRCS
 	klfconfig.cpp
+	klflatexedit.cpp
 	klflatexsymbols.cpp
-	klfstyle.cpp
 	klflibentryeditor.cpp
 	klflibbrowser.cpp
 	klflib.cpp
@@ -59,14 +63,12 @@ set(klfapp_SRCS
 	klfsettings.cpp
 	klfstylemanager.cpp
 	klfmain.cpp
-	klfcmdiface.cpp
-	klfuiloader.cpp
 )
 # Headers
 #  * with QObject classes (needs moc)
 set(klfapp_MOCHEADERS
+	klflatexedit.h
 	klflatexsymbols.h
-	klflatexsymbols_p.h
 	klflibentryeditor.h
 	klflibbrowser.h
 	klflibbrowser_p.h
@@ -82,20 +84,14 @@ set(klfapp_MOCHEADERS
 	klfmainwin.h
 	klfmainwin_p.h
 	klfsettings.h
-	klfsettings_p.h
 	klfstylemanager.h
-	klfcmdiface.h
-	klfuiloader_p.h
 )
 #  * all headers
 set(klfapp_HEADERS
 	klfmain.h
 	klfconfig.h
-	klfconfig_p.h
-	klfstyle.h
 	klfpluginiface.h
 	klflib_p.h
-	klfuiloader.h
 	${klfapp_MOCHEADERS}
 )
 # UI Forms
@@ -125,12 +121,10 @@ if(WIN32)
 endif(WIN32)
 if(APPLE)
   set(klfapp_HEADERS ${klfapp_HEADERS}
-	macosx/klfmacclipboard.h
+        macosx/klfmacclipboard.h
   )
   set(klfapp_SRCS ${klfapp_SRCS}
-	macosx/klfmacclipboard.cpp
-	macosx/klfmainwin_mac.mm
-	macosx/klfcmdifacedispatch_mac.mm
+        macosx/klfmacclipboard.cpp
   )
 endif(APPLE)
 # * X11
@@ -218,7 +212,7 @@ if(KLF_LIBKLFAPP_STATIC)
 else(KLF_LIBKLFAPP_STATIC)
   add_library(klfapp SHARED ${klfapp_ALLSRC})
   if(KLF_MACOSX_BUNDLES)
-    KLFMMakeFramework(klfapp ${klfapp_INSTHEADERS})
+    KLFMakeFramework(klfapp ${klfapp_INSTHEADERS})
     set_target_properties(klfapp PROPERTIES
 	MACOSX_FRAMEWORK_IDENTIFIER "org.klatexformula.klfapp"
 	MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${KLF_VERSION}"
@@ -238,19 +232,13 @@ set_target_properties(klfapp PROPERTIES
 )
 
 
+
 # klatexformula Executable
 # ------------------------
 
 # Sources
 set(klatexformula_SRCS
 	main.cpp
-	klfapp.cpp
-)
-set(klatexformula_MOCHEADERS
-	klfapp.h
-)
-set(klatexformula_HEADERS
-        ${klatexformula_MOCHEADERS}
 )
 # Translations
 set(klatexformula_TSS
@@ -289,8 +277,7 @@ list(APPEND klatexformula_QRCS "${klf_xtradata_res}")
 
 
 qt4_add_resources(klatexformula_QRC_CPPS ${klatexformula_QRCS})
-qt4_wrap_cpp(klatexformula_MOC_CPPS ${klatexformula_MOCHEADERS})
-set(klatexformula_ALLSRC ${klatexformula_SRCS} ${klatexformula_QRC_CPPS} ${klatexformula_MOC_CPPS})
+set(klatexformula_ALLSRC ${klatexformula_SRCS} ${klatexformula_QRC_CPPS})
 set(klatexformula_winrc)
 if(MINGW)
   set(KLF_WIN_ICON "mswin\\\\klficon64.ico" CACHE STRING
@@ -346,87 +333,91 @@ if(KLF_MACOSX_BUNDLES)
         MACOSX_BUNDLE_BUNDLE_VERSION "${KLF_VERSION}"
         MACOSX_BUNDLE_BUNDLE_COPYRIGHT "Copyright (C) 2011 Philippe Faist"
   )
-  KLFMMakeBundle(klatexformula)
-  KLFMBundleMkPrivateDir(klatexformula "Contents/Resources/rccresources")
+  KLFMakeBundle(klatexformula klatexformula-${KLF_VERSION}.app)
   
   # Add the frameworks to be included as private frameworks.
-  KLFMBundlePrivateImportQtLib(klatexformula 	Core  "")
-  KLFMBundlePrivateImportQtLib(klatexformula 	Gui   Core)
-  KLFMBundlePrivateImportQtLib(klatexformula 	Xml   Core)
-  KLFMBundlePrivateImportQtLib(klatexformula 	Sql   Core)
+  KLFBundlePrivateImportQtLib(klatexformula "${KLF_MACOSX_BUNDLE_PATH}"
+	klatexformula_BUNDLEXTRA  Core  "")
+  KLFBundlePrivateImportQtLib(klatexformula "${KLF_MACOSX_BUNDLE_PATH}"
+	klatexformula_BUNDLEXTRA  Gui   Core)
+  KLFBundlePrivateImportQtLib(klatexformula "${KLF_MACOSX_BUNDLE_PATH}"
+	klatexformula_BUNDLEXTRA  Xml   Core)
+  KLFBundlePrivateImportQtLib(klatexformula "${KLF_MACOSX_BUNDLE_PATH}"
+	klatexformula_BUNDLEXTRA  Sql   Core)
   if(KLF_USE_DBUS)
-    KLFMBundlePrivateImportQtLib(klatexformula      DBus  "Core;Xml")
+    KLFBundlePrivateImportQtLib(klatexformula "${KLF_MACOSX_BUNDLE_PATH}"
+          klatexformula_BUNDLEXTRA  DBus  "Core;Xml")
   endif(KLF_USE_DBUS)
   foreach(plugin ${KLF_BUNDLE_QT_PLUGINS})
-    KLFMBundlePrivateImport(klatexformula "${plugin}" "${QT_PLUGINS_DIR}/${plugin}" plugins)
-    KLFMInstallNameToolID(klatexformula "plugins/${plugin}")
-    KLFMBundlePrivateLibUpdateQtDep(klatexformula "plugins/${plugin}"  "Core;Gui;Xml;Sql")
+    KLFBundlePrivateImport(klatexformula "${KLF_MACOSX_BUNDLE_PATH}" klatexformula_BUNDLEXTRA
+			"${plugin}" "${QT_PLUGINS_DIR}/${plugin}" plugins)
+    KLFInstallNameToolID(klatexformula "${KLF_MACOSX_BUNDLE_PATH}" "plugins/${plugin}")
+    KLFBundlePrivateLibUpdateQtDep(klatexformula "${KLF_MACOSX_BUNDLE_PATH}"
+			"plugins/${plugin}"  "Core;Gui;Xml;Sql")
   endforeach()
-  #- # Import&Setup klftools_desplugin designer plugin, needed for QUiLoader to load user scripts' input widget UIs
-  #- KLFGetTargetLocation(klf_desplugin_target_path klftoolsdesplugin)
-  #- KLFGetTargetFileName(klf_desplugin_target_name klftoolsdesplugin)
-  #- KLFMBundlePrivateImport(klatexformula "designer/${klf_desplugin_target_name}"
-  #-   "${klf_desplugin_target_path}" "plugins")
-  #- KLFMInstallNameToolID(klatexformula "plugins/designer/${klf_desplugin_target_name}")
-  #- KLFMBundlePrivateLibUpdateQtDep(klatexformula "plugins/designer/${klf_desplugin_target_name}"  "Core;Gui;Xml;")
-  #- ...... but the plugin depends on libQtDesigner/libQtDesignerComponents (!???!)
   # Import&Setup klfbackend framework
-  KLFMBundlePrivateImport(klatexformula "klfbackend.framework"
-    "${CMAKE_CURRENT_BINARY_DIR}/klfbackend/klfbackend.framework"  Frameworks)
-  KLFMInstallNameToolID(klatexformula "Frameworks/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend")
-  KLFMBundlePrivateLibUpdateQtDep(klatexformula "Frameworks/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend"  "Core;Gui;Xml;Sql;DBus")
+  KLFBundlePrivateImport(klatexformula "${KLF_MACOSX_BUNDLE_PATH}" klatexformula_BUNDLEXTRA
+	"klfbackend.framework" "${CMAKE_CURRENT_BINARY_DIR}/klfbackend/klfbackend.framework"  Frameworks)
+  KLFInstallNameToolID(klatexformula "${KLF_MACOSX_BUNDLE_PATH}" "Frameworks/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend")
+  KLFBundlePrivateLibUpdateQtDep(klatexformula "${KLF_MACOSX_BUNDLE_PATH}"
+	"Frameworks/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend"  "Core;Gui;Xml;Sql;DBus")
   # Import&Setup klftools framework
-  KLFMBundlePrivateImport(klatexformula "klftools.framework"
-    "${CMAKE_CURRENT_BINARY_DIR}/klftools/klftools.framework"  Frameworks)
-  KLFMInstallNameToolID(klatexformula "Frameworks/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools")
-  KLFMBundlePrivateLibUpdateQtDep(klatexformula "Frameworks/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools"  "Core;Gui;Xml;Sql;DBus")
-  KLFMInstallNameToolChange(klatexformula
-	"Frameworks/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend"
+  KLFBundlePrivateImport(klatexformula "${KLF_MACOSX_BUNDLE_PATH}" klatexformula_BUNDLEXTRA
+	"klftools.framework" "${CMAKE_CURRENT_BINARY_DIR}/klftools/klftools.framework"  Frameworks)
+  KLFInstallNameToolID(klatexformula "${KLF_MACOSX_BUNDLE_PATH}"
+	"Frameworks/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools")
+  KLFBundlePrivateLibUpdateQtDep(klatexformula "${KLF_MACOSX_BUNDLE_PATH}"
+	"Frameworks/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools"  "Core;Gui;Xml;Sql;DBus")
+  KLFInstallNameToolChange(klatexformula
 	"Frameworks/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools"
-	"${CMAKE_CURRENT_BINARY_DIR}/klftools/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools")
-  # Import&Setup klfapp framework
-  KLFMBundlePrivateImport(klatexformula "klfapp.framework" "${CMAKE_CURRENT_BINARY_DIR}/klfapp.framework"  Frameworks)
-  KLFMInstallNameToolID(klatexformula "Frameworks/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp")
-  KLFMBundlePrivateLibUpdateQtDep(klatexformula
-    "Frameworks/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp"  "Core;Gui;Xml;Sql;DBus")
-  KLFMInstallNameToolChange(klatexformula
-	"Frameworks/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp"
-	"Frameworks/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend"
+	"${KLF_MACOSX_BUNDLE_PATH}"  "Frameworks/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend"
 	"${CMAKE_CURRENT_BINARY_DIR}/klfbackend/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend")
-  KLFMInstallNameToolChange(klatexformula
+  # Import&Setup klfapp framework
+  KLFBundlePrivateImport(klatexformula "${KLF_MACOSX_BUNDLE_PATH}" klatexformula_BUNDLEXTRA
+	"klfapp.framework" "${CMAKE_CURRENT_BINARY_DIR}/klfapp.framework"  Frameworks)
+  KLFInstallNameToolID(klatexformula "${KLF_MACOSX_BUNDLE_PATH}"
+	"Frameworks/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp")
+  KLFBundlePrivateLibUpdateQtDep(klatexformula "${KLF_MACOSX_BUNDLE_PATH}"
+	"Frameworks/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp"  "Core;Gui;Xml;Sql;DBus")
+  KLFInstallNameToolChange(klatexformula
 	"Frameworks/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp"
-	"Frameworks/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools"
+	"${KLF_MACOSX_BUNDLE_PATH}"  "Frameworks/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend"
+	"${CMAKE_CURRENT_BINARY_DIR}/klfbackend/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend")
+  KLFInstallNameToolChange(klatexformula
+	"Frameworks/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp"
+	"${KLF_MACOSX_BUNDLE_PATH}"  "Frameworks/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools"
 	"${CMAKE_CURRENT_BINARY_DIR}/klftools/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools")
   # Setup klatexformula executable's lib dependencies
-  KLFMBundlePrivateLibUpdateQtDep(klatexformula "MacOS/klatexformula-${KLF_VERSION}" "Core;Gui;Xml;Sql;DBus")
-  KLFMInstallNameToolChange(klatexformula
-	"MacOS/klatexformula-${KLF_VERSION}"
+  KLFBundlePrivateLibUpdateQtDep(klatexformula "${KLF_MACOSX_BUNDLE_PATH}"
+	"MacOS/klatexformula-${KLF_VERSION}" "Core;Gui;Xml;Sql;DBus")
+  KLFInstallNameToolChange(klatexformula
+	"MacOS/klatexformula-${KLF_VERSION}" "${KLF_MACOSX_BUNDLE_PATH}"
 	"Frameworks/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend"
 	"${CMAKE_CURRENT_BINARY_DIR}/klfbackend/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend")
-  KLFMInstallNameToolChange(klatexformula
-	"MacOS/klatexformula-${KLF_VERSION}"
+  KLFInstallNameToolChange(klatexformula
+	"MacOS/klatexformula-${KLF_VERSION}" "${KLF_MACOSX_BUNDLE_PATH}"
 	"Frameworks/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools"
 	"${CMAKE_CURRENT_BINARY_DIR}/klftools/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools")
-  KLFMInstallNameToolChange(klatexformula
-	"MacOS/klatexformula-${KLF_VERSION}"
+  KLFInstallNameToolChange(klatexformula
+	"MacOS/klatexformula-${KLF_VERSION}" "${KLF_MACOSX_BUNDLE_PATH}"
 	"Frameworks/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp"
 	"${CMAKE_CURRENT_BINARY_DIR}/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp")
   # Default Qt config stuff
-  KLFMBundlePrivateImport(klatexformula
+  KLFBundlePrivateImport(klatexformula "${KLF_MACOSX_BUNDLE_PATH}" klatexformula_BUNDLEXTRA
 			qt.conf "${CMAKE_CURRENT_SOURCE_DIR}/macosx/qt.conf" Resources)
   # Add a few icons for our app
-  KLFMBundlePrivateImport(klatexformula
+  KLFBundlePrivateImport(klatexformula "${KLF_MACOSX_BUNDLE_PATH}" klatexformula_BUNDLEXTRA
 	klficon.icns "${CMAKE_CURRENT_SOURCE_DIR}/macosx/klficon.icns" Resources)
-  KLFMBundlePrivateImport(klatexformula
+  KLFBundlePrivateImport(klatexformula "${KLF_MACOSX_BUNDLE_PATH}" klatexformula_BUNDLEXTRA
 	klatexformula-128.png "${CMAKE_CURRENT_SOURCE_DIR}/klatexformula-128.png" Resources)
-  KLFMBundlePrivateImport(klatexformula
+  KLFBundlePrivateImport(klatexformula "${KLF_MACOSX_BUNDLE_PATH}" klatexformula_BUNDLEXTRA
 	klatexformula-64.png "${CMAKE_CURRENT_SOURCE_DIR}/klatexformula-64.png" Resources)
-  KLFMBundlePrivateImport(klatexformula
+  KLFBundlePrivateImport(klatexformula "${KLF_MACOSX_BUNDLE_PATH}" klatexformula_BUNDLEXTRA
 	klatexformula-32.png "${CMAKE_CURRENT_SOURCE_DIR}/klatexformula-32.png" Resources)
-  KLFMBundlePrivateImport(klatexformula
+  KLFBundlePrivateImport(klatexformula "${KLF_MACOSX_BUNDLE_PATH}" klatexformula_BUNDLEXTRA
 	klatexformula-16.png "${CMAKE_CURRENT_SOURCE_DIR}/klatexformula-16.png" Resources)
   KLFCMakeDebug("Extras to be bundled are ${klatexformula_BUNDLEXTRA}")
-  KLFMBundlePackage(klatexformula)
+  KLFBundlePackage(klatexformula   "${klatexformula_BUNDLEXTRA}")
 endif(KLF_MACOSX_BUNDLES)
 
 
@@ -496,15 +487,15 @@ endif(HELP2MAN)
 KLFInstallLibrary(klfapp KLF_INSTALL_KLFAPP_ "${KLF_INSTALL_LIB_DIR}" "include/klfapp")
 if(KLF_MACOSX_BUNDLES AND KLF_INSTALL_KLFAPP_FRAMEWORK)
   # Installed library's ID
-  KLFMInstFrameworkUpdateId("${KLF_INSTALL_LIB_DIR}/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp")
+  KLFInstFrameworkUpdateId("${KLF_INSTALL_LIB_DIR}/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp")
   # Installed library's dependency on klfbackend should be updated
-  KLFMInstFrameworkUpdateLibChange(
+  KLFInstFrameworkUpdateLibChange(
 	"${KLF_INSTALL_LIB_DIR}/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp"
 	"${CMAKE_CURRENT_BINARY_DIR}/klfbackend/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend"
 	"${KLF_INSTALL_LIB_DIR}/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend"
   )
   # Installed library's dependency on klftools should be updated
-  KLFMInstFrameworkUpdateLibChange(
+  KLFInstFrameworkUpdateLibChange(
 	"${KLF_INSTALL_LIB_DIR}/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp"
 	"${CMAKE_CURRENT_BINARY_DIR}/klftools/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools"
 	"${KLF_INSTALL_LIB_DIR}/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools"
@@ -514,15 +505,12 @@ endif(KLF_MACOSX_BUNDLES AND KLF_INSTALL_KLFAPP_FRAMEWORK)
 if(WIN32 AND KLF_INSTALL_QTLIBS)
   # Install Qt libs
   #  QT_BINARY_DIR and QT_PLUGINS_DIR are set by FindQt4 CMake module
-  install(DIRECTORY "${QT_BINARY_DIR}/" DESTINATION "${KLF_INSTALL_LIB_DIR}"
-	    FILES_MATCHING REGEX "/Qt(Core|Gui|Sql|Xml)4?\\.dll$" REGEX "/libgcc.*\\.dll" REGEX "/mingw.*\\.dll"
-	 )
-elseif(KLF_INSTALL_QTLIBS)
-  # Install Prereq libs
-  message(ERROR "Not supported on non-windows system. TODO: write me. Actually, write a more general
-    framework to import needed libraries, which could also replace the win32-specific code.")
-endif(WIN32 AND KLF_INSTALL_QTLIBS)
-if(KLF_INSTALL_QTPLUGINS)
+  #message(STATUS "QT_BINARY_DIR is ${QT_BINARY_DIR}")
+  install(DIRECTORY "${QT_BINARY_DIR}/" DESTINATION "${KLF_INSTALL_LIB_DIR}" FILES_MATCHING
+    PATTERN "libgcc*.dll"
+    PATTERN "mingw*.dll"
+    REGEX "/Qt(Core|Gui|Sql|Xml)4?\\.dll$"
+  )
   set(qtplugin_list ${KLF_INSTALL_QTPLUGINS_LIST})
   set(qtplugin_list "dummyitem" ${qtplugin_list})
   string(REGEX REPLACE ";" ";${QT_PLUGINS_DIR}/" qtplugin_list_temp "${qtplugin_list}")
@@ -534,14 +522,7 @@ if(KLF_INSTALL_QTPLUGINS)
     install(FILES "${QT_PLUGINS_DIR}/${qtplugin}"
 	    DESTINATION "${KLF_INSTALL_QTPLUGINS_DIR}/${qtplugin_dir}")
   endforeach(qtplugin)
-
-  #- # install klftools_desplugin plugin too, in order to load user scripts' input widget with QUiLoader
-  #- # TODO: TEST!!!
-  #- KLFGetTargetLocation(klf_desplugin_target_path klftoolsdesplugin)
-  #- install(FILES "${klf_desplugin_target_path}"
-  #-   DESTINATION "${KLF_INSTALL_QTPLUGINS_DIR}/designer/")
-
-endif(KLF_INSTALL_QTPLUGINS)
+endif(WIN32 AND KLF_INSTALL_QTLIBS)
 
 
 # klatexformula bin
@@ -562,17 +543,17 @@ endif(NOT KLF_MACOSX_BUNDLES)
 if(KLF_MACOSX_BUNDLES AND KLF_INSTALL_KLATEXFORMULA_BUNDLE)
   install(TARGETS klatexformula BUNDLE DESTINATION "${KLF_INSTALL_BIN_DIR}")
   # Update klatexformula's dependency on the installed frameworks.
-  KLFMInstFrameworkUpdateLibChange(
+  KLFInstFrameworkUpdateLibChange(
   "${KLF_INSTALL_BIN_DIR}/klatexformula-${KLF_VERSION}/Contents/MacOS/klatexformula-${KLF_VERSION}"
   "${CMAKE_CURRENT_BINARY_DIR}/klfbackend/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend"
   "${KLF_INSTALL_LIB_DIR}/klfbackend.framework/Versions/${KLF_LIB_VERSION}/klfbackend"
   )
-  KLFMInstFrameworkUpdateLibChange(
+  KLFInstFrameworkUpdateLibChange(
   "${KLF_INSTALL_BIN_DIR}/klatexformula-${KLF_VERSION}/Contents/MacOS/klatexformula-${KLF_VERSION}"
   "${CMAKE_CURRENT_BINARY_DIR}/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools"
   "${KLF_INSTALL_LIB_DIR}/klftools.framework/Versions/${KLF_LIB_VERSION}/klftools"
   )
-  KLFMInstFrameworkUpdateLibChange(
+  KLFInstFrameworkUpdateLibChange(
   "${KLF_INSTALL_BIN_DIR}/klatexformula-${KLF_VERSION}/Contents/MacOS/klatexformula-${KLF_VERSION}"
   "${CMAKE_CURRENT_BINARY_DIR}/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp"
   "${KLF_INSTALL_LIB_DIR}/klfapp.framework/Versions/${KLF_LIB_VERSION}/klfapp"
@@ -624,13 +605,4 @@ if(KLF_INSTALL_DESKTOP)
     )
   endif(KLF_INSTALL_POST_UPDATEMIMEDATABASE)
 endif(KLF_INSTALL_DESKTOP)
-
-
-if(UNIX AND NOT KLF_MACOSX_BUNDLES AND KLF_USE_CPACK)
-  configure_file(
-    "${CMAKE_SOURCE_DIR}/src/klatexformula.sh.in"
-    "${CMAKE_BINARY_DIR}/src/klatexformula.sh"
-    @ONLY)
-  install(PROGRAMS "${CMAKE_BINARY_DIR}/src/klatexformula.sh" DESTINATION "/")
-endif(UNIX AND NOT KLF_MACOSX_BUNDLES AND KLF_USE_CPACK)
 

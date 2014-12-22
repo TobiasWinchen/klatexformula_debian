@@ -1,7 +1,7 @@
 # ######################################### #
 # CMake utility functions for klatexformula #
 # ######################################### #
-# $Id: KLFUtil.cmake 736 2011-09-20 12:48:57Z phfaist $
+# $Id: KLFUtil.cmake 527 2010-09-29 01:04:09Z philippe $
 # ######################################### #
 
 
@@ -591,40 +591,3 @@ macro(KLFGetTargetFileName var target)
   KLFGetTargetLocation(${var} ${target})
   string(REGEX REPLACE "^.*/([^/]+)$" "\\1" ${var} "${${var}}")
 endmacro(KLFGetTargetFileName)
-
-
-macro(KLFAppendToTargetProp target property addtext)
-  
-  KLFCMakeDebug("Target is ${target}")
-  KLFCMakeDebug("Property is ${property}")
-  KLFCMakeDebug("addtext is ${addtext}")
-
-  if(NOT "${addtext}" STREQUAL "")
-    get_target_property(val "${target}" "${property}")
-    KLFCMakeDebug("Value is ${val}")
-    if(val)
-      set(val "${val} ")
-    else(val)
-      set(val "")
-    endif(val)
-    set_target_properties("${target}" PROPERTIES
-      ${property} "${val}${addtext}"
-      )
-  endif(NOT "${addtext}" STREQUAL "")
-endmacro(KLFAppendToTargetProp)
-
-macro(KLFNoShlibUndefined target)
-
-  set(add_link_flags "")
-  if(APPLE)
-    set(add_link_flags "-undefined dynamic_lookup")
-  elseif(WIN32)
-    # DLL's don't allow undefined references (!!)
-    set(add_link_flags "")
-  else()
-    set(add_link_flags "-Wl,--allow-shlib-undefined")
-  endif(APPLE)
-
-  KLFAppendToTargetProp("${target}" LINK_FLAGS "${add_link_flags}")
-
-endmacro(KLFNoShlibUndefined)

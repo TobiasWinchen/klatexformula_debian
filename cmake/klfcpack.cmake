@@ -1,6 +1,6 @@
 # CMake definitions for CPack
 # ===========================
-# $Id: klfcpack.cmake 693 2011-08-02 22:23:25Z phfaist $
+# $Id: klfcpack.cmake 642 2011-06-09 19:40:39Z phfaist $
 
 
 configure_file("${CMAKE_SOURCE_DIR}/cmake/welcome_installer.txt.in"
@@ -103,10 +103,6 @@ set(CPACK_PACKAGE_VERSION "${KLF_VERSION}")
 #set(CPACK_INSTALL_DIRECTORIES )
 
 
-if(UNIX AND NOT APPLE)
-  set(CPACK_GENERATOR "TGZ")
-endif(UNIX AND NOT APPLE)
-
 
 
 
@@ -115,7 +111,7 @@ endif(UNIX AND NOT APPLE)
 # --------------------------------
 
 option(KLF_USE_CPACK
-       "Use CPack to create packages with 'make package'. Affects possibly CMAKE_INSTALL_PREFIX" OFF)
+       "Use CPack to create packages with 'make packages'. Affects possibly CMAKE_INSTALL_PREFIX" OFF)
 
 if(KLF_USE_CPACK)
   if(WIN32)

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibbrowser.cpp 707 2011-08-24 09:12:19Z phfaist $ */
+/* $Id: klflibbrowser.cpp 603 2011-02-26 23:14:55Z phfaist $ */
 
 #include <QDebug>
 #include <QFile>
@@ -47,7 +47,7 @@
 
 KLFLibBrowser::KLFLibBrowser(QWidget *parent)
   : QWidget(
-#if defined(Q_WS_WIN) || defined(Q_WS_MAC)
+#if defined(Q_OS_WIN32)
 	    0 /* parent */
 #else
 	    parent /* 0 */
@@ -55,7 +55,6 @@ KLFLibBrowser::KLFLibBrowser(QWidget *parent)
 	    , Qt::Window)
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
-  Q_UNUSED(parent) ;
 
   u = new Ui::KLFLibBrowser;
   u->setupUi(this);
@@ -64,8 +63,8 @@ KLFLibBrowser::KLFLibBrowser(QWidget *parent)
   KLF_DEBUG_ASSIGN_REF_INSTANCE(u->searchBar, "libbrowser-searchbar") ;
   u->searchBar->registerShortcuts(this);
   // set found/not-found colors
-  klfconfig.LibraryBrowser.colorFound.connectQObjectProperty(u->searchBar, "colorFound");
-  klfconfig.LibraryBrowser.colorNotFound.connectQObjectProperty(u->searchBar, "colorNotFound");
+  u->searchBar->setColorFound(klfconfig.LibraryBrowser.colorFound);
+  u->searchBar->setColorNotFound(klfconfig.LibraryBrowser.colorNotFound);
 
   pResourceMenu = new QMenu(u->tabResources);
   // connect actions
@@ -1464,15 +1463,6 @@ void KLFLibBrowser::slotCut()
 void KLFLibBrowser::slotCopy()
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
-
-  // first determine who had widget focus
-  QWidget *focusWidget = QApplication::focusWidget();
-  if (u->wEntryEditor->isAncestorOf(focusWidget)) {
-    u->wEntryEditor->slotCopy();
-    return;
-  }
-
-  // otherwise perform the copy from the visible lib view
 
   KLFAbstractLibView * view = curLibView();
   if ( view == NULL )

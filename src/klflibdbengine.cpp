@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibdbengine.cpp 698 2011-08-08 08:28:12Z phfaist $ */
+/* $Id: klflibdbengine.cpp 603 2011-02-26 23:14:55Z phfaist $ */
 
 #include <QDebug>
 #include <QApplication>  // qApp
@@ -235,7 +235,7 @@ KLFLibDBEngine * KLFLibDBEngine::createSqlite(const QString& fileName, const QSt
   url.addQueryItem("klfDefaultSubResource", subresname);
   if (subresname.contains("\"")) {
     // SQLite table name cannot contain double-quote char (itself is used to escape the table name!)
-    qWarning()<<KLF_FUNC_NAME<<"`\"' character is not allowed in SQLITE database tables (<-> library sub-resources).";
+    qWarning()<<KLF_FUNC_NAME<<"\" character is not allowed in SQLITE database tables (<-> library sub-resources).";
     return NULL;
   }
 
@@ -271,7 +271,7 @@ KLFLibDBEngine::KLFLibDBEngine(const QSqlDatabase& db, bool autodisconnect,
   pAutoDisconnectDB = autodisconnect;
 
   // load some read-only properties in memory (these are NOT stored in the DB)
-  KLFPropertizedObject::doSetProperty(PropAccessShared, accessshared);
+  KLFPropertizedObject::setProperty(PropAccessShared, accessshared);
 
   setDatabase(db);
   readResourceProperty(-1); // read all resource properties from DB
@@ -306,7 +306,6 @@ KLFLibDBEngine::~KLFLibDBEngine()
 // private
 bool KLFLibDBEngine::tableExists(const QString& subResource) const
 {
-  // sqlite does not distinguish case
   return pDB.tables().contains(dataTableName(subResource), Qt::CaseInsensitive);
 }
 
@@ -403,7 +402,7 @@ bool KLFLibDBEngine::saveResourceProperty(int propId, const QVariant& value)
       return false;
     }
   }
-  KLFPropertizedObject::doSetProperty(propId, value);
+  KLFPropertizedObject::setProperty(propId, value);
   dbPropertyNotifierInstance(pDB.connectionName())->notifyResourcePropertyChanged(propId);
   // will be emitted by own slot from above call
   //  emit resourcePropertyChanged(propId);
@@ -449,7 +448,7 @@ void KLFLibDBEngine::readResourceProperty(int propId)
     }
     QVariant propvalue = convertVariantFromDBData(q.value(1));
     klfDbg( "Setting property `"<<propname<<"' (id #"<<propId<<") to "<<propvalue<<"" ) ;
-    KLFPropertizedObject::doSetProperty(propId, propvalue);
+    KLFPropertizedObject::setProperty(propId, propvalue);
     emit resourcePropertyChanged(propId);
   }
 }
@@ -1223,9 +1222,7 @@ QVariant KLFLibDBEngine::convertVariantToDBData(const QVariant& value) const
 
   // any other case: convert metatype to QByteArray.
   QByteArray valuedata;
-  { QBuffer buf(&valuedata);
-    buf.open(QIODevice::WriteOnly);
-    QDataStream stream(&buf);
+  { QDataStream stream(&valuedata, QIODevice::WriteOnly);
     stream.setVersion(QDataStream::Qt_4_4);
     stream << value; }
   return encaps(ts, valuedata);
@@ -1304,10 +1301,7 @@ QVariant KLFLibDBEngine::decaps(const QByteArray& data) const
   // OTHERWISE, load from datastream save:
 
   QVariant value;
-  { QByteArray vdata = valuedata;
-    QBuffer buf(&vdata);
-    buf.open(QIODevice::ReadOnly);
-    QDataStream stream(&buf);
+  { QDataStream stream(valuedata);
     stream.setVersion(QDataStream::Qt_4_4);
     stream >> value; }
   return value;

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfblockprocess.h 780 2012-05-12 13:41:36Z phfaist $ */
+/* $Id: klfblockprocess.h 603 2011-02-26 23:14:55Z phfaist $ */
 
 #ifndef KLFBLOCKPROCESS_H
 #define KLFBLOCKPROCESS_H
@@ -31,9 +31,14 @@
 
 #include <klfdefs.h>
 
-#include <QProcess>
-#include <QString>
+#include <qprocess.h>
+#include <qstring.h>
+#ifdef KLFBACKEND_QT4
 #include <QByteArray>
+#else
+#include <qcstring.h>
+#include <qmemarray.h>
+#endif
 
 
 //! A QProcess subclass for code-blocking process execution
@@ -62,31 +67,49 @@ public:
   /** Normal destructor */
   ~KLFBlockProcess();
 
-  /** specify whether or not to call regularly qApp->processEvents() while executing.
+#ifdef KLFBACKEND_QT4
+  /** Qt4 ONLY: specify whether or not to call regularly qApp->processEvents() while executing.
    * This will prevent the GUI to freeze. Enabled is the default. However you can choose to
    * disable this behavior by passing FALSE here. */
   inline void setProcessAppEvents(bool processAppEvents) { mProcessAppEvents = processAppEvents; }
+#endif
 
   /** Returns all standard error output as a QByteArray. This function is to standardize the
    * readStderr() and readAllStandardError() functions in QT 3 or QT 4 respectively */
   QByteArray getAllStderr() {
+#ifdef KLFBACKEND_QT4
     return readAllStandardError();
+#else
+    return readStderr();
+#endif
   }
 
   /** Returns all standard output as a QByteArray. This function is to standardize the
    * readStdout() and readAllStandardOutput() functions in QT 3 or QT 4 respectively */
   QByteArray getAllStdout() {
+#ifdef KLFBACKEND_QT4
     return readAllStandardOutput();
+#else
+    return readStdout();
+#endif
   }
 
-  /** Same as QProcess::exitStatus()==NormalExit */
+  /** A function that normalizes Qt3 and Qt4 api: Qt3: normalExit(), Qt4: exitStatus()==NormalExit */
   bool processNormalExit() const {
+#ifdef KLFBACKEND_QT4
     return QProcess::exitStatus() == NormalExit;
+#else
+    return normalExit();
+#endif
   }
 
-  /** Same as QProcess::exitCode() */
+  /** A function that normalizes Qt3 and Qt4 api: Qt3: exitStatus(), Qt4: exitCode() */
   int processExitStatus() const {
+#ifdef KLFBACKEND_QT4
     return exitCode();
+#else
+    return exitStatus();
+#endif
   }
 
 
@@ -101,12 +124,19 @@ public slots:
    * \returns TRUE upon success, FALSE upon failure.
    */
   bool startProcess(QStringList cmd, QByteArray stdindata, QStringList env = QStringList());
-
+#ifndef KLFBACKEND_QT4
+  /** Convenient function if you want to pass string input to program
+   * This mostly truncates the last '\\0' because programs don't like it.
+   *
+   * \warning this function is only available with QT 3. */
+  bool startProcess(QStringList cmd, QCString str, QStringList env = QStringList());
+#endif
   /** Convenient function to be used in the case where program doesn't
    * expect stdin data or if you chose to directly close stdin without writing
    * anything to it. */
   bool startProcess(QStringList cmd, QStringList env = QStringList());
 
+#ifdef KLFBACKEND_QT4
   /** Same as getAllStderr(), except result is returned here as QString. */
   QString readStderrString() {
     return QString::fromLocal8Bit(getAllStderr());
@@ -115,6 +145,24 @@ public slots:
   QString readStdoutString() {
     return QString::fromLocal8Bit(getAllStdout());
   }
+#else
+  /** Like QProcess::readStdout(), except returns a QString instead of a QByteArray */
+  QString readStdoutString() {
+    QCString sstdout = "";
+    QByteArray stdout = readStdout();
+    if (stdout.size() > 0 && stdout.data() != 0)
+      sstdout = QCString(stdout.data(), stdout.size());
+    return QString(sstdout);
+  }
+  /** Like QProcess::readStderr(), except returns a QString instead of a QByteArray */
+  QString readStderrString() {
+    QCString sstderr = "";
+    QByteArray stderr = readStderr();
+    if (stderr.size() > 0 && stderr.data() != 0)
+      sstderr = QCString(stderr.data(), stderr.size());
+    return QString(sstderr);
+  }
+#endif
 
 
 private slots:
@@ -123,9 +171,15 @@ private slots:
 
 private:
   bool _runstatus;
+#ifdef KLFBACKEND_QT4
   bool mProcessAppEvents;
+#endif
 };
 
+
+//! The current process environment
+/** Returns the current process environment, as a QStringList. */
+KLF_EXPORT QStringList klf_cur_environ();
 
 
 #endif

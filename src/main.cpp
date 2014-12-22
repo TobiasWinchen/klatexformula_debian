@@ -1,7 +1,7 @@
 /***************************************************************************
  *   file main.cpp
  *   This file is part of the KLatexFormula Project.
- *   Copyright (C) 2012 by Philippe Faist
+ *   Copyright (C) 2011 by Philippe Faist
  *   philippe.faist@bluewin.ch
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: main.cpp 853 2013-03-27 14:24:38Z phfaist $ */
+/* $Id: main.cpp 894 2014-07-28 19:10:42Z phfaist $ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,7 +46,6 @@
 #include <klfbackend.h>
 
 #include <klfutil.h>
-#include <klfsysinfo.h>
 #include <klfcolorchooser.h>
 #include "klflib.h"
 #include "klflibdbengine.h"
@@ -57,9 +56,6 @@
 #include "klfmainwin.h"
 #include "klfdbus.h"
 #include "klfpluginiface.h"
-#include "klfcmdiface.h"
-#include "klfapp.h"
-
 
 /** \file
  * \brief main() function for klatexformula [NOT part of klfapp]
@@ -79,11 +75,6 @@
 #ifndef KLF_RESOURCES_ENVNAM
 #define KLF_RESOURCES_ENVNAM "KLF_RESOURCES"
 #endif
-
-
-#define KLF_WELCOME                                             \
-  "KLatexFormula Version %s by Philippe Faist (c) 2005-2013\n"  \
-  "Licensed under the terms of the GNU Public License GPL\n\n"
 
 
 // Program Exit Error Codes
@@ -109,28 +100,23 @@ char *opt_bgcolor = NULL;
 int opt_dpi = -1;
 char *opt_mathmode = NULL;
 char *opt_preamble = NULL;
-char *opt_userscript = NULL;
 bool opt_quiet = false;
 char *opt_redirect_debug = NULL;
 bool opt_daemonize = false;
 bool opt_dbus_export_mainwin = false;
 bool opt_skip_plugins = false;
 
-int opt_calcepsbbox = -1;
 int opt_outlinefonts = -1;
-QString opt_lborderoffset = QString();
-QString opt_tborderoffset = QString();
-QString opt_rborderoffset = QString();
-QString opt_bborderoffset = QString();
+int opt_lborderoffset = -1;
+int opt_tborderoffset = -1;
+int opt_rborderoffset = -1;
+int opt_bborderoffset = -1;
 
 char *opt_tempdir;
 char *opt_latex;
 char *opt_dvips;
 char *opt_gs;
 char *opt_epstopdf;
-
-int opt_wantpdf = -1;
-int opt_wantsvg = -1;
 
 bool opt_help_requested = false;
 FILE * opt_help_fp = stderr;
@@ -168,7 +154,6 @@ enum {
   OPT_DPI = 'X',
   OPT_MATHMODE = 'm',
   OPT_PREAMBLE = 'p',
-  OPT_USERSCRIPT = 's',
   OPT_QUIET = 'q',
   OPT_DAEMONIZE = 'd',
 
@@ -177,18 +162,11 @@ enum {
 
   OPT_QTOPT = 'Q',
 
-  OPT_WANTSVG = 'W',
-  OPT_WANTPDF = 'D',
-
-  OPT_CALCEPSBBOX = 127,
-  OPT_NOCALCEPSBBOX,
-  OPT_OUTLINEFONTS,
-  OPT_NOOUTLINEFONTS,
+  OPT_OUTLINEFONTS = 127,
   OPT_LBORDEROFFSET,
   OPT_TBORDEROFFSET,
   OPT_RBORDEROFFSET,
   OPT_BBORDEROFFSET,
-  OPT_BORDEROFFSETS,
   OPT_TEMPDIR,
   OPT_LATEX,
   OPT_DVIPS,
@@ -220,25 +198,17 @@ static struct option klfcmdl_optlist[] = {
   { "dpi", 1, NULL, OPT_DPI },
   { "mathmode", 1, NULL, OPT_MATHMODE },
   { "preamble", 1, NULL, OPT_PREAMBLE },
-  { "userscript", 1, NULL, OPT_USERSCRIPT },
-  { "quiet", 2 /*optional arg*/, NULL, OPT_QUIET },
+  { "quiet", 2, NULL, OPT_QUIET },
   { "redirect-debug", 1, NULL, OPT_REDIRECT_DEBUG },
   { "daemonize", 0, NULL, OPT_DAEMONIZE },
   { "dbus-export-mainwin", 0, NULL, OPT_DBUS_EXPORT_MAINWIN },
   { "skip-plugins", 2, NULL, OPT_SKIP_PLUGINS },
   // -----
-  { "want-svg", 2, NULL, OPT_WANTSVG },
-  { "want-pdf", 2, NULL, OPT_WANTPDF },
-  // ---
-  { "calcepsbbox", 2, NULL, OPT_CALCEPSBBOX },
-  { "nocalcepsbbox", 2, NULL, OPT_NOCALCEPSBBOX },
-  { "outlinefonts", 2, NULL, OPT_OUTLINEFONTS },
-  { "nooutlinefonts", 0, NULL, OPT_NOOUTLINEFONTS },
+  { "outlinefonts", 2 /*optional arg*/, NULL, OPT_OUTLINEFONTS },
   { "lborderoffset", 1, NULL, OPT_LBORDEROFFSET },
   { "tborderoffset", 1, NULL, OPT_TBORDEROFFSET },
   { "rborderoffset", 1, NULL, OPT_RBORDEROFFSET },
   { "bborderoffset", 1, NULL, OPT_BBORDEROFFSET },
-  { "borderoffsets", 1, NULL, OPT_BORDEROFFSETS },
   // -----
   { "tempdir", 1, NULL, OPT_TEMPDIR },
   { "latex", 1, NULL, OPT_LATEX },
@@ -271,8 +241,8 @@ void signal_act(int sig)
     fprintf(ftty, "Interrupt\n");
     if (ftty != stderr)  fprintf(stderr, "*** Interrupt\n");
 
-    static long last_sigint_time = 0;
-    long curtime;
+    static time_t last_sigint_time = 0;
+    time_t curtime;
     time(&curtime);
     bool isInsisted = (curtime - last_sigint_time <= 2); // re-pressed Ctrl-C after less than 2 secs
     if (!isInsisted && qApp != NULL) {
@@ -298,17 +268,96 @@ void signal_act(int sig)
 
 // DEBUG, WARNING AND FATAL MESSAGES HANDLER
 
-// klfdebug.cpp
-extern  void klf_qt_msg_handle(QtMsgType type, const char *msg);
-extern  void klf_qt_msg_set_fp(FILE * fp);
+// redirect deboug output to this file (if non-NULL) instead of stderr
+static FILE *klf_qt_msg_fp = NULL;
 
+// in case we want to print messages directly into terminal
+static FILE *klf_fp_tty = NULL;
+static bool klf_fp_tty_failed = false;
 
 void klf_qt_message(QtMsgType type, const char *msg)
 {
   if (opt_quiet)
     return;
 
-  klf_qt_msg_handle(type, msg);
+  FILE *fout = stderr;
+  if (klf_qt_msg_fp != NULL)  fout = klf_qt_msg_fp;
+
+#ifdef Q_OS_LINUX
+  if (klf_fp_tty == NULL && !klf_fp_tty_failed)
+    if ( !(klf_fp_tty = fopen("/dev/tty", "w")) )
+      klf_fp_tty_failed = true;
+#else
+  Q_UNUSED(klf_fp_tty_failed) ;
+#endif
+
+  switch (type) {
+  case QtDebugMsg:
+    // only with debugging enabled
+#ifdef KLF_DEBUG
+    fprintf(fout, "D: %s\n", msg);
+    fflush(fout);
+#endif
+    break;
+  case QtWarningMsg:
+    fprintf(fout, "Warning: %s\n", msg);
+    fflush(fout);
+#ifdef KLF_DEBUG
+    // in debug mode, also print warning messages to TTY (because they get lost in the debug messages!)
+    if (klf_fp_tty) fprintf(klf_fp_tty, "Warning: %s\n", msg);
+#endif
+
+#if defined Q_WS_WIN && defined KLF_DEBUG
+#  define   SAFECOUNTER_NUM   10
+    // only show dialog after having created a QApplication
+    if (qApp != NULL && qApp->inherits("QApplication")) {
+      static int safecounter = SAFECOUNTER_NUM;
+      if (safecounter-- >= 0) {
+	if (!QString::fromLocal8Bit(msg).startsWith("MNG error")) { // ignore these "MNG" errors...
+	  QMessageBox::warning(0, "Warning",
+			       QString("KLatexFormula System Warning:\n%1")
+			       .arg(QString::fromLocal8Bit(msg)));
+	}
+      }
+      if (safecounter == -1) {
+	QMessageBox::information(0, "Information",
+				 QString("Shown %1 system warnings. Will stop displaying them.").arg(SAFECOUNTER_NUM));
+	safecounter = -2;
+      }
+      if (safecounter < -2) safecounter = -2;
+    }
+#endif
+    break;
+  case QtCriticalMsg:
+    fprintf(fout, "Error: %s\n", msg);
+    fflush(fout);
+#ifdef Q_WS_WIN
+    if (qApp != NULL && qApp->inherits("QApplication")) {
+      QMessageBox::critical(0, QObject::tr("Error", "[[KLF's Qt Message Handler: dialog title]]"),
+			    QObject::tr("KLatexFormula System Error:\n%1",
+					"[[KLF's Qt Message Handler: dialog text]]")
+			    .arg(QString::fromLocal8Bit(msg)));
+    }
+#endif
+    break;
+  case QtFatalMsg:
+    fprintf(fout, "Fatal: %s\n", msg);
+    fflush(fout);
+#ifdef Q_WS_WIN
+    if (qApp != NULL && qApp->inherits("QApplication")) {
+      QMessageBox::critical(0, QObject::tr("FATAL ERROR",
+					   "[[KLF's Qt Message Handler: dialog title]]"),
+			    QObject::tr("KLatexFormula System FATAL ERROR:\n%1",
+					"[[KLF's Qt Message Handler: dialog text]]")
+			    .arg(QString::fromLocal8Bit(msg)));
+    }
+#endif
+    ::exit(255);
+  default:
+    fprintf(fout, "?????: %s\n", msg);
+    fflush(fout);
+    break;
+  }
 }
 
 
@@ -397,6 +446,34 @@ void main_save(KLFBackend::klfOutput klfoutput, const QString& f_output, QString
   KLFBackend::saveOutputToFile(klfoutput, f_output, format);
 }
 
+#ifdef KLF_DEBUG
+static void dumpDir(const QDir& d, int indent = 0)
+{
+  char sindent[] = "                                                               ";
+  uint nindent = indent*2; // 2 spaces per indentation
+  if (nindent < strlen(sindent))
+    sindent[nindent] = '\0';
+
+  QStringList dchildren = d.entryList(QDir::Dirs);
+
+  int k;
+  for (k = 0; k < dchildren.size(); ++k) {
+    // skip system ":/trolltech"
+    if (indent == 0 && dchildren[k] == "trolltech")
+      continue;
+    qDebug("%s%s/", sindent, qPrintable(dchildren[k]));
+    dumpDir(QDir(d.absoluteFilePath(dchildren[k])), indent+1);
+  }
+
+  QStringList fchildren = d.entryList(QDir::Files);
+  for (k = 0; k < fchildren.size(); ++k) {
+    qDebug("%s%s", sindent, qPrintable(fchildren[k]));
+  }
+}
+#else
+inline void dumpDir(const QDir&, int = 0) { }
+#endif
+
 void main_load_extra_resources()
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
@@ -469,35 +546,11 @@ void main_load_extra_resources()
   // set the global "can-import" flag
   klf_addons_canimport = klfsettings_can_import;
 
-  void dumpDir(const QDir&, int = 0);
   klfDbg( "dump of :/ :" ) ;
   dumpDir(QDir(":/"));
 }
 
 
-void dumpDir(const QDir& d, int indent = 0)
-{
-  char sindent[] = "                                                               ";
-  uint nindent = indent*2; // 2 spaces per indentation
-  if (nindent < strlen(sindent))
-    sindent[nindent] = '\0';
-
-  QStringList dchildren = d.entryList(QDir::Dirs);
-
-  int k;
-  for (k = 0; k < dchildren.size(); ++k) {
-    // skip system ":/trolltech"
-    if (indent == 0 && dchildren[k] == "trolltech")
-      continue;
-    qDebug("%s%s/", sindent, qPrintable(dchildren[k]));
-    dumpDir(QDir(d.absoluteFilePath(dchildren[k])), indent+1);
-  }
-
-  QStringList fchildren = d.entryList(QDir::Files);
-  for (k = 0; k < fchildren.size(); ++k) {
-    qDebug("%s%s", sindent, qPrintable(fchildren[k]));
-  }
-}
 
 /** \internal */
 class VersionCompareWithPrefixGreaterThan {
@@ -524,98 +577,72 @@ void main_load_plugins(QApplication *app, KLFMainWin *mainWin)
   int i, k, j;
   for (k = 0; k < klf_addons.size(); ++k) {
     QStringList pluginList = klf_addons[k].pluginList();
-    bool hadatleastonecompatibleplugin = false;
     for (j = 0; j < pluginList.size(); ++j) {
       KLFAddOnInfo::PluginSysInfo psinfo = klf_addons[k].pluginSysInfo(pluginList[j]);
       klfDbg( "Testing plugin psinfo="<<psinfo<<"\n\tTo our system: qtver="<<qVersion()
 	      <<"; klfver="<<KLF_VERSION_STRING<<"; os="<<KLFSysInfo::osString()
 	      <<"; arch="<<KLFSysInfo::arch() ) ;
-      if ( ! psinfo.isCompatibleWithCurrentSystem() ) {
-	continue;
-      }
-      // ok to install plugin
-      hadatleastonecompatibleplugin = true;
-      QString resfn = klf_addons[k].rccmountroot() + "/plugins/" + pluginList[j];
-      QString locsubdir = klf_addons[k].pluginLocalSubDirName(pluginList[j]);
-      QString locfn = klfconfig.homeConfigDirPlugins + "/" + locsubdir + "/"
-	+ QFileInfo(pluginList[j]).fileName();
-      QDateTime installedplugin_dt = QFileInfo(locfn).lastModified();
-      QDateTime resourceplugin_dt = QFileInfo(klf_addons[k].fpath()).lastModified();
-      qDebug("Comparing resource datetime (%s) with installed plugin datetime (%s)",
-	     qPrintable(resourceplugin_dt.toString()), qPrintable(installedplugin_dt.toString()));
-      if (  ! QFile::exists( locfn ) ||
-	    installedplugin_dt.isNull() || resourceplugin_dt.isNull() ||
-	    ( resourceplugin_dt > installedplugin_dt )  ) {
-	klfDbg("locsubdir="<<locsubdir) ;
-	// create path to that plugin dir
-	if (!locsubdir.isEmpty() &&
-	    !QDir(klfconfig.homeConfigDirPlugins + "/plugins/" + locsubdir).exists()) {
-	  if (! QDir(klfconfig.homeConfigDirPlugins).mkpath(locsubdir) ) {
-	    klfWarning("Can't create local plugin directory "<<locsubdir
-		       <<" inside "<<klfconfig.homeConfigDirPlugins<<" !") ;
+      if ( psinfo.isCompatibleWithCurrentSystem() ) {
+	// ok to install plugin
+	QString resfn = klf_addons[k].rccmountroot() + "/plugins/" + pluginList[j];
+	QString locsubdir = klf_addons[k].pluginLocalSubDirName(pluginList[j]);
+	QString locfn = klfconfig.homeConfigDirPlugins + "/" + locsubdir + "/"
+	  + QFileInfo(pluginList[j]).fileName();
+	QDateTime installedplugin_dt = QFileInfo(locfn).lastModified();
+	QDateTime resourceplugin_dt = QFileInfo(klf_addons[k].fpath()).lastModified();
+	qDebug("Comparing resource datetime (%s) with installed plugin datetime (%s)",
+	       qPrintable(resourceplugin_dt.toString()), qPrintable(installedplugin_dt.toString()));
+	if (  ! QFile::exists( locfn ) ||
+	      installedplugin_dt.isNull() || resourceplugin_dt.isNull() ||
+	      ( resourceplugin_dt > installedplugin_dt )  ) {
+	  // create path to that plugin dir
+	  if (!locsubdir.isEmpty() &&
+	      !QDir(klfconfig.homeConfigDirPlugins + "/plugins/" + locsubdir).exists())
+	    QDir(klfconfig.homeConfigDirPlugins).mkpath(locsubdir);
+	  // remove old version if exists
+	  if (QFile::exists(locfn)) QFile::remove(locfn);
+	  // copy plugin to local plugin dir
+	  klfDbg( "\tcopy "<<resfn<<" to "<<locfn ) ;
+	  bool res = QFile::copy( resfn , locfn );
+	  if ( ! res ) {
+	    qWarning("Unable to copy plugin '%s' to local directory!", qPrintable(pluginList[j]));
+	  } else {
+	    QFile::setPermissions(locfn, QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|
+				  QFile::ReadUser|QFile::WriteUser|QFile::ExeUser|
+				  QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
+	    qDebug("Copied plugin %s to local directory %s.", qPrintable(resfn), qPrintable(locfn));
 	  }
-	}
-	// remove old version if exists
-	if (QFile::exists(locfn)) QFile::remove(locfn);
-	// copy plugin to local plugin dir
-	klfDbg( "\tcopy "<<resfn<<" to "<<locfn ) ;
-	bool res = QFile::copy( resfn , locfn );
-	if ( ! res ) {
-	  klf_addons[k].addError(QObject::tr("Failed to install plugin locally.", "[[plugin error message]]"));
-	  qWarning("Unable to copy plugin '%s' to local directory!", qPrintable(pluginList[j]));
-	} else {
-	  QFile::setPermissions(locfn, QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|
-				QFile::ReadUser|QFile::WriteUser|QFile::ExeUser|
-				QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
-	  qDebug("Copied plugin %s to local directory %s.", qPrintable(resfn), qPrintable(locfn));
 	}
       }
       // OK, plugin locally installed.
-    } // for(j) in pluginList
-    if (!hadatleastonecompatibleplugin) {
-      klf_addons[k].addError(QObject::tr("Plugin not compatible with current system.", "[[plugin error message]]"));
     }
-  } // for(k) in klf_addons
+  }
 
-  // explore all base plugins dir with compatible architectures, eg.
-  // /usr/share/klatexformula/plugins, and ~/.klatexformula/plugins/
+  // explore all base plugins dir, eg. /usr/share/klatexformula/plugins, and ~/.klatexformula/plugins/
   int n;
   for (n = 0; n < baseplugindirs.size(); ++n) {
-    // build a list of plugin directories to search.
+    QString baseplugindir = baseplugindirs[n];
+    klfDbg("exploring base plugin directory "<<baseplugindir) ;
+    // build a list of plugin directories to search. We will need to load plugins in our version directory
+    // + all prior version directories + root plugin path.
     QStringList pluginsdirs;
-    // For each path in pluginsdirs, in this array (at same index pos) we have the
-    // relative path from baseplugindir.
+    // For each path in pluginsdirs, in this array (at same index pos) we have the relative path from baseplugindir.
     QStringList pluginsdirsbaserel;
-    
-    QString basebaseplugindir = baseplugindirs[n];
-    klfDbg("exploring base plugin directory "<<basebaseplugindir) ;
-    // explore all compatible architecture directores
-    QDir dbaseplugindir(basebaseplugindir);
-    QStringList arches = dbaseplugindir.entryList(QStringList()<<"sysarch_*", QDir::Dirs);
-    foreach(QString pluginarchdir, arches) {
-      QString thissysarch = pluginarchdir.mid(strlen("sysarch_"));
-      klfDbg("testing directory "<<pluginarchdir<<" of sysarch "<<thissysarch<<" for current os="
-	     <<KLFSysInfo::osString()<<"/arch="<<KLFSysInfo::arch()) ;
-      if (KLFSysInfo::isCompatibleSysArch(thissysarch)) {
-	klfDbg("...is compatible. looking for plugin to load...") ;
-	QString baseplugindir = basebaseplugindir+"/"+pluginarchdir;
-	// ok. this is compatible arch
-	// now look into klf-version directories
-	QDir pdir(baseplugindir);
-	QStringList pdirlist = pdir.entryList(QStringList()<<"klf*", QDir::Dirs);
-	klfDbg("pdirlist="<<pdirlist) ;
-	// sort plugin dirs so that for a plugin existing in multiple versions, we load the
-	// one for the most recent first, then ignore the others.
-	qSort(pdirlist.begin(), pdirlist.end(), VersionCompareWithPrefixGreaterThan("klf"));
-	for (i = 0; i < pdirlist.size(); ++i) {
-	  klfDbg( "maybe adding plugin dir"<<pdirlist[i]<<"; klfver="<<pdirlist[i].mid(3) ) ;
-	  if (klfVersionCompare(pdirlist[i].mid(3), KLF_VERSION_STRING) <= 0) { // Version OK
-	    pluginsdirs << pdir.absoluteFilePath(pdirlist[i]) ;
-	    pluginsdirsbaserel << pdirlist[i]+"/";
-	  }
-	}
+    QDir pdir(baseplugindir);
+    QStringList pdirlist = pdir.entryList(QStringList()<<"klf*", QDir::Dirs);
+    // sort plugin dirs so that for a plugin existing in multiple versions, we load the one for the
+    // most recent first, then ignore the others.
+    qSort(pdirlist.begin(), pdirlist.end(), VersionCompareWithPrefixGreaterThan("klf"));
+    for (i = 0; i < pdirlist.size(); ++i) {
+      klfDbg( "maybe adding plugin dir"<<pdirlist[i]<<"; klfver="<<pdirlist[i].mid(3) ) ;
+      if (klfVersionCompare(pdirlist[i].mid(3), KLF_VERSION_STRING) <= 0) { // Version OK
+	pluginsdirs << pdir.absoluteFilePath(pdirlist[i]) ;
+	pluginsdirsbaserel << pdirlist[i]+"/";
       }
     }
+    pluginsdirs << klfconfig.homeConfigDirPlugins ;
+    pluginsdirsbaserel << "" ;
+
     klfDbg( "pluginsdirs="<<pluginsdirs ) ;
     
     for (i = 0; i < pluginsdirs.size(); ++i) {
@@ -640,37 +667,21 @@ void main_load_plugins(QApplication *app, KLFMainWin *mainWin)
 	}
 	if (plugin_already_loaded)
 	  continue;
-	// find to which add-on we belong, for error messages if any
-	int kk;
-	k = -1;
-	for (kk = 0; k < 0 && kk < klf_addons.size(); ++kk) {
-	  QStringList pl = klf_addons[kk].localPluginList();
-	  foreach (QString p, pl) {
-	    klfDbg("testing "<<pluginfnamebaserel<<" with "<<p<<"...") ;
-	    if (QFileInfo(thisplugdir.absoluteFilePath(pluginfname)).canonicalFilePath().endsWith(p)) {
-	      k = kk;
-	      break;
-	    }
-	  }
-	}
-	klfDbg("we belong to add-on # k="<<k<<", "<<(k>=0?klf_addons[k].fname():QString("(out of range)"))) ;
-
 	QString pluginpath = thisplugdir.absoluteFilePath(pluginfname);
 	QPluginLoader pluginLoader(pluginpath, app);
 	bool loaded = pluginLoader.load();
 	if (!loaded) {
-	  if (k >= 0)
-	    klf_addons[k].addError(QObject::tr("Failed to load plugin.", "[[plugin error message]]"));
 	  klfDbg("QPluginLoader failed to load plugin "<<pluginpath<<". Skipping.");
 	  continue;
 	}
 	QObject *pluginInstObject = pluginLoader.instance();
+	if (pluginInstObject == NULL) {
+	  klfDbg("QPluginLoader failed to load plugin "<<pluginpath<<" (object is NULL). Skipping.");
+	  continue;
+	}
 	pluginInstance = qobject_cast<KLFPluginGenericInterface *>(pluginInstObject);
-	klfDbg("pluginInstObject="<<pluginInstObject<<", pluginInst="<<pluginInstance) ;
-	if (pluginInstObject == NULL || pluginInstance == NULL) {
-	  if (k >= 0)
-	    klf_addons[k].addError(QObject::tr("Incompatible plugin failed to load.", "[[plugin error message]]"));
-	  klfDbg("QPluginLoader failed to load plugin "<<pluginpath<<" (object or instance is NULL). Skipping.");
+	if (pluginInstance == NULL) {
+	  klfDbg("QPluginLoader failed to load plugin "<<pluginpath<<" (instance is NULL). Skipping.");
 	  continue;
 	}
 	// plugin file successfully loaded.
@@ -733,11 +744,11 @@ void main_load_plugins(QApplication *app, KLFMainWin *mainWin)
 }
 
 
+
+
 // function to set up the Q[Core]Application correctly
 void main_setup_app(QCoreApplication *a)
 {
-  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
-
   a->setApplicationName(QLatin1String("KLatexFormula"));
   a->setApplicationVersion(QLatin1String(KLF_VERSION_STRING));
   a->setOrganizationDomain(QLatin1String("klatexformula.org"));
@@ -759,16 +770,12 @@ void main_setup_app(QCoreApplication *a)
 
   qRegisterMetaType< QImage >("QImage");
   qRegisterMetaType< KLFStyle >();
-  qRegisterMetaType< KLFStyle::BBoxExpand >();
   qRegisterMetaTypeStreamOperators< KLFStyle >("KLFStyle");
-  qRegisterMetaTypeStreamOperators< KLFStyle::BBoxExpand >("KLFStyle::BBoxExpand");
   qRegisterMetaType< KLFLibEntry >();
   qRegisterMetaTypeStreamOperators< KLFLibEntry >("KLFLibEntry");
   qRegisterMetaType< KLFLibResourceEngine::KLFLibEntryWithId >();
   qRegisterMetaTypeStreamOperators< KLFLibResourceEngine::KLFLibEntryWithId >
     /* */  ("KLFLibResourceEngine::KLFLibEntryWithId");
-  qRegisterMetaType< KLFEnumType >();
-  qRegisterMetaTypeStreamOperators< KLFEnumType >("KLFEnumType");
 
   // for delayed calls in klflibview.cpp
   qRegisterMetaType< QItemSelection >("QItemSelection");
@@ -776,20 +783,12 @@ void main_setup_app(QCoreApplication *a)
 }
 
 
-
 // OUR MAIN FUNCTION
 
 int main(int argc, char **argv)
 {
-#ifdef KLF_DEBUG
-  fprintf(stderr, "main()!");
-#endif
   int k;
   klfDbgT("$$main()$$") ;
-
-// #ifdef QT_MAC_USE_COCOA
-//   MainStartEnd klf_mainstartendinstance;
-// #endif
 
   qInstallMsgHandler(klf_qt_message);
 
@@ -822,20 +821,21 @@ int main(int argc, char **argv)
     char fname[1024];
     const char * SUFFIX = ".klfdebug";
     strcpy(fname, opt_redirect_debug);
-    if (strlen(fname) < strlen(SUFFIX) ||
-	strncmp(fname+(strlen(fname)-strlen(SUFFIX)), SUFFIX, strlen(SUFFIX)) != 0) {
+    if (strncmp(fname+(strlen(fname)-strlen(SUFFIX)), SUFFIX, strlen(SUFFIX)) != 0) {
       // fname does not end with SUFFIX
-      // append SUFFIX, except if we are redirecting to a /dev/* file
-      if (strlen(fname) < strlen("/dev/") || strncmp(fname, "/dev/", strlen("/dev/")) != 0) {
-	strcat(fname, SUFFIX);
-      }
+      strcat(fname, SUFFIX);
     }
     // before performing the redirect...
     klfDbg("Redirecting debug output to file "<<QString::fromLocal8Bit(fname)) ;
-    FILE * klffp = fopen(fname, "w");
-    KLF_ASSERT_NOT_NULL( klffp, "debug output redirection failed." , /* no fail action */; ) ;
-    if (klffp != NULL) {
-      klf_qt_msg_set_fp(klffp);
+    klf_qt_msg_fp = fopen(fname, "w");
+    KLF_ASSERT_NOT_NULL( klf_qt_msg_fp, "debug output redirection failed." , /* no fail action */; ) ;
+    if (klf_qt_msg_fp != NULL) {
+      fprintf(klf_qt_msg_fp, "\n\n"
+	      "-------------------------------------------------\n"
+	      "  KLATEXFORMULA DEBUG OUTPUT\n"
+	      "-------------------------------------------------\n"
+	      "Started on %s\n\n",
+	      qPrintable(QDateTime::currentDateTime().toString(Qt::DefaultLocaleLongDate)));
     }
   }
 
@@ -851,16 +851,12 @@ int main(int argc, char **argv)
     QApplication::setDesktopSettingsAware(false);
 #endif
 
-    // Create the application
-    KLFGuiApplication app(qt_argc, qt_argv);
+    // Create the QApplication
+    QApplication app(qt_argc, qt_argv);
 
 #ifdef Q_WS_MAC
-    app.setFont(QFont("Lucida Grande", 13));
-
     extern void __klf_init_the_macpasteboardmime();
     __klf_init_the_macpasteboardmime();
-    //    extern void qt_set_sequence_auto_mnemonic(bool b);
-    //    qt_set_sequence_auto_mnemonic(true);
 #endif
 
     // add our default application font(s) ;-)
@@ -900,28 +896,20 @@ int main(int argc, char **argv)
 	args << "--mathmode="+QString::fromLocal8Bit(opt_mathmode);
       if (opt_preamble != NULL)
 	args << "--preamble="+QString::fromLocal8Bit(opt_preamble);
-      if (opt_userscript != NULL)
-	args << "--userscript="+QString::fromLocal8Bit(opt_userscript);
       if (opt_quiet)
 	args << "--quiet";
       if (opt_redirect_debug != NULL)
 	args << "--redirect-debug="+QString::fromLocal8Bit(opt_redirect_debug);
-      if (opt_calcepsbbox >= 0)
-	args << "--calcepsbbox="+QString::fromLatin1(opt_calcepsbbox?"1":"0");
-      if (opt_wantsvg >= 0)
-	args << "--want-svg="+QString::fromLatin1(opt_wantsvg?"1":"0");
-      if (opt_wantpdf >= 0)
-	args << "--want-pdf="+QString::fromLatin1(opt_wantpdf?"1":"0");
       if (opt_outlinefonts >= 0)
-	args << "--outlinefonts="+QString::fromLatin1(opt_outlinefonts?"1":"0");
-      const struct { char c; QString optval; } borderoffsets[] =
-						{ {'t', opt_tborderoffset}, {'r', opt_rborderoffset},
-						  {'b', opt_bborderoffset}, {'l', opt_lborderoffset},
-						  {'\0', QString() } };
+	args << "--outlinefonts="+QString::fromLatin1(opt_outlinefonts?"TRUE":"FALSE");
+      const struct { char c; int optval; } borderoffsets[] =
+					     { {'t', opt_tborderoffset}, {'r', opt_rborderoffset},
+					       {'b', opt_bborderoffset}, {'l', opt_lborderoffset},
+					       {'\0', -1} };
       for (k = 0; borderoffsets[k].c != 0; ++k)
-	if (borderoffsets[k].optval.length())
+	if (borderoffsets[k].optval != -1)
 	  args << (QString::fromLatin1("--")+QLatin1Char(borderoffsets[k].c)+"borderoffset="
-		   +borderoffsets[k].optval) ;
+		   +QString::number(borderoffsets[k].optval)) ;
       if (opt_tempdir != NULL)
 	args << "--tempdir="+QString::fromLocal8Bit(opt_tempdir);
       if (opt_latex != NULL)
@@ -938,8 +926,7 @@ int main(int argc, char **argv)
       for (k = 0; klf_args[k] != NULL; ++k)
 	args << QString::fromLocal8Bit(klf_args[k]);
 
-      klfDbg("Prepared daemonized process' command-line: progexe="<<progexe<<"; args="<<args) ;
-
+      klfDbg("Prepared deamonized process' command-line: progexe="<<progexe<<"; args="<<args) ;
       // now launch the klatexformula 'daemon' process
       qint64 pid;
       bool result = QProcess::startDetached(progexe, args, QDir::currentPath(), &pid);
@@ -954,81 +941,6 @@ int main(int argc, char **argv)
     }
 
     main_setup_app(&app);
-
-#if defined(Q_WS_MAC) && defined(QT_MAC_USE_COCOA)
-    extern bool klf_mac_find_open_klf();
-    extern bool klf_mac_dispatch_commands(const QList<QUrl>& urls);
-    if (klf_mac_find_open_klf()) {
-      // there is another instance of KLF running, dispatch commands to it.
-      QList<QUrl> cmds;
-
-      // convenience #define:
-#define CMDURL_MW(slot, argstream)					\
-      KLFCmdIface::encodeCommand(KLFCmdIface::Command(QLatin1String("klfmainwin.klfapp.klf"), \
-						      QLatin1String(#slot), \
-						      QVariantList()<<argstream))
-      // ---------
-
-      if ( ! latexinput.isNull() )
-	cmds << CMDURL_MW(slotSetLatex, latexinput);
-      if ( opt_fgcolor != NULL )
-	cmds << CMDURL_MW(slotSetFgColor, QString::fromLocal8Bit(opt_fgcolor));
-      if ( opt_bgcolor != NULL )
-	cmds << CMDURL_MW(slotSetBgColor, QString::fromLocal8Bit(opt_bgcolor));
-      if ( opt_dpi > 0 )
-	cmds << CMDURL_MW(slotSetDPI, opt_dpi);
-      if (opt_mathmode != NULL)
-	cmds << CMDURL_MW(slotSetMathMode, QString::fromLocal8Bit(opt_mathmode));
-      if (opt_preamble != NULL)
-	cmds << CMDURL_MW(slotSetPreamble, QString::fromLocal8Bit(opt_preamble));
-      if (opt_userscript != NULL)
-	cmds << CMDURL_MW(slotSetUserScript, QString::fromLocal8Bit(opt_userscript));
-      if (opt_calcepsbbox >= 0)
-	cmds << CMDURL_MW(alterSetting, (int)KLFMainWin::altersetting_CalcEpsBoundingBox<<(int)opt_calcepsbbox);
-      if (opt_wantsvg >= 0)
-	cmds << CMDURL_MW(alterSetting, (int)KLFMainWin::altersetting_WantSVG<<(bool)opt_wantsvg);
-      if (opt_wantpdf >= 0)
-	cmds << CMDURL_MW(alterSetting, (int)KLFMainWin::altersetting_WantPDF<<(bool)opt_wantpdf);
-      if (opt_outlinefonts >= 0)
-	cmds << CMDURL_MW(alterSetting, (int)KLFMainWin::altersetting_OutlineFonts<<(int)opt_outlinefonts);
-      if (opt_lborderoffset.length())
-	cmds << CMDURL_MW(alterSetting, (int)KLFMainWin::altersetting_LBorderOffset<<opt_lborderoffset);
-      if (opt_tborderoffset.length())
-	cmds << CMDURL_MW(alterSetting, (int)KLFMainWin::altersetting_TBorderOffset<<opt_tborderoffset);
-      if (opt_rborderoffset.length())
-	cmds << CMDURL_MW(alterSetting, (int)KLFMainWin::altersetting_RBorderOffset<<opt_rborderoffset);
-      if (opt_bborderoffset.length())
-	cmds << CMDURL_MW(alterSetting, (int)KLFMainWin::altersetting_BBorderOffset<<opt_bborderoffset);
-      if (opt_tempdir != NULL)
-	cmds << CMDURL_MW(alterSetting, (int)KLFMainWin::altersetting_TempDir<<QString::fromLocal8Bit(opt_tempdir));
-      if (opt_latex != NULL)
-	cmds << CMDURL_MW(alterSetting, (int)KLFMainWin::altersetting_Latex<<QString::fromLocal8Bit(opt_latex));
-      if (opt_dvips != NULL)
-	cmds << CMDURL_MW(alterSetting, (int)KLFMainWin::altersetting_Dvips<<QString::fromLocal8Bit(opt_dvips));
-      if (opt_gs != NULL)
-	cmds << CMDURL_MW(alterSetting, (int)KLFMainWin::altersetting_Gs<<QString::fromLocal8Bit(opt_gs));
-      
-      if (!opt_noeval && opt_output) {
-	// will actually save only if output is non empty.
-	cmds << CMDURL_MW(slotEvaluateAndSave,
-			  QString::fromLocal8Bit(opt_output)<<QString::fromLocal8Bit(opt_format));
-      }
-      
-      // IMPORT .klf (or other) files passed as arguments
-      QStringList flist;
-      for (int k = 0; klf_args[k] != NULL; ++k)
-	flist << QString::fromLocal8Bit(klf_args[k]);
-
-      cmds << CMDURL_MW(openFiles, flist);
-
-      // and dispatch these commands to the other instance
-      bool result = klf_mac_dispatch_commands(cmds);
-      if (!result) {
-	qWarning()<<KLF_FUNC_NAME<<": Warning: failed to dispatch commands!";
-      }
-      return 0;
-    }
-#endif
 
 #if defined(KLF_USE_DBUS)
     // see if an instance of KLatexFormula is running...
@@ -1048,27 +960,19 @@ int main(int argc, char **argv)
 	iface->setInputData("mathmode", QString::fromLocal8Bit(opt_mathmode));
       if (opt_preamble != NULL)
 	iface->setInputData("preamble", QString::fromLocal8Bit(opt_preamble));
-      if (opt_userscript != NULL)
-	iface->setInputData("userscript", QString::fromLocal8Bit(opt_userscript));
       // load latex after preamble, so that the interface doesn't prompt to include missing packages
       if ( ! latexinput.isNull() )
 	iface->setInputData("latex", latexinput);
-      if (opt_calcepsbbox >= 0)
-	iface->setAlterSetting_i(KLFMainWin::altersetting_CalcEpsBoundingBox, opt_calcepsbbox);
-      if (opt_wantsvg >= 0)
-	iface->setAlterSetting_i(KLFMainWin::altersetting_WantSVG, (bool)opt_wantsvg);
-      if (opt_wantpdf >= 0)
-	iface->setAlterSetting_i(KLFMainWin::altersetting_WantPDF, (bool)opt_wantpdf);
       if (opt_outlinefonts >= 0)
 	iface->setAlterSetting_i(KLFMainWin::altersetting_OutlineFonts, opt_outlinefonts);
-      if (opt_lborderoffset.length())
-	iface->setAlterSetting_s(KLFMainWin::altersetting_LBorderOffset, opt_lborderoffset);
-      if (opt_tborderoffset.length())
-	iface->setAlterSetting_s(KLFMainWin::altersetting_TBorderOffset, opt_tborderoffset);
-      if (opt_rborderoffset.length())
-	iface->setAlterSetting_s(KLFMainWin::altersetting_RBorderOffset, opt_rborderoffset);
-      if (opt_bborderoffset.length())
-	iface->setAlterSetting_s(KLFMainWin::altersetting_BBorderOffset, opt_bborderoffset);
+      if (opt_lborderoffset != -1)
+	iface->setAlterSetting_i(KLFMainWin::altersetting_LBorderOffset, opt_lborderoffset);
+      if (opt_tborderoffset != -1)
+	iface->setAlterSetting_i(KLFMainWin::altersetting_TBorderOffset, opt_tborderoffset);
+      if (opt_rborderoffset != -1)
+	iface->setAlterSetting_i(KLFMainWin::altersetting_RBorderOffset, opt_rborderoffset);
+      if (opt_bborderoffset != -1)
+	iface->setAlterSetting_i(KLFMainWin::altersetting_BBorderOffset, opt_bborderoffset);
       if (opt_tempdir != NULL)
 	iface->setAlterSetting_s(KLFMainWin::altersetting_TempDir, QString::fromLocal8Bit(opt_tempdir));
       if (opt_latex != NULL)
@@ -1094,7 +998,9 @@ int main(int argc, char **argv)
 #endif
 
     if ( ! opt_quiet )
-      fprintf(stderr, KLF_WELCOME, KLF_VERSION_STRING);
+      fprintf(stderr, "KLatexFormula Version %s by Philippe Faist (c) 2005-2011\n"
+	      "Licensed under the terms of the GNU Public License GPL\n\n",
+	      KLF_VERSION_STRING);
 
     klfDbgT("$$About to load config$$");
   
@@ -1105,9 +1011,6 @@ int main(int argc, char **argv)
 
     klfDbgT("$$About to main_load_extra_resources$$");
     main_load_extra_resources();
-
-    // done in KLFMainWin constructor
-    //    klf_reload_user_scripts();
 
     klfDbgT("$$About to main_reload_translations$$");
     klf_reload_translations(&app, klfconfig.UI.locale);
@@ -1131,6 +1034,8 @@ int main(int argc, char **argv)
 
     if (!klfconfig.UI.useSystemAppFont)
       app.setFont(klfconfig.UI.applicationFont);
+
+    mainWin.refreshWindowSizes();
 
     if (!opt_skip_plugins)
       main_load_plugins(&app, &mainWin);
@@ -1177,24 +1082,15 @@ int main(int argc, char **argv)
       qDebug("opt_preamble != NULL, gui mode, preamble=%s", opt_preamble);
       mainWin.slotSetPreamble(QString::fromLocal8Bit(opt_preamble));
     }
-    if (opt_userscript != NULL) {
-      mainWin.slotSetUserScript(QString::fromLocal8Bit(opt_userscript));
-    }
-    if (opt_calcepsbbox >= 0)
-      mainWin.alterSetting(KLFMainWin::altersetting_CalcEpsBoundingBox, opt_calcepsbbox);
-    if (opt_wantsvg >= 0)
-      mainWin.alterSetting(KLFMainWin::altersetting_WantSVG, opt_wantsvg);
-    if (opt_wantpdf >= 0)
-      mainWin.alterSetting(KLFMainWin::altersetting_WantPDF, opt_wantpdf);
     if (opt_outlinefonts >= 0)
       mainWin.alterSetting(KLFMainWin::altersetting_OutlineFonts, opt_outlinefonts);
-    if (opt_lborderoffset.length())
+    if (opt_lborderoffset != -1)
       mainWin.alterSetting(KLFMainWin::altersetting_LBorderOffset, opt_lborderoffset);
-    if (opt_tborderoffset.length())
+    if (opt_tborderoffset != -1)
       mainWin.alterSetting(KLFMainWin::altersetting_TBorderOffset, opt_tborderoffset);
-    if (opt_rborderoffset.length())
+    if (opt_rborderoffset != -1)
       mainWin.alterSetting(KLFMainWin::altersetting_RBorderOffset, opt_rborderoffset);
-    if (opt_bborderoffset.length())
+    if (opt_bborderoffset != -1)
       mainWin.alterSetting(KLFMainWin::altersetting_BBorderOffset, opt_bborderoffset);
     if (opt_tempdir != NULL)
       mainWin.alterSetting(KLFMainWin::altersetting_TempDir, QString::fromLocal8Bit(opt_tempdir));
@@ -1275,30 +1171,24 @@ int main(int argc, char **argv)
     }
 
     if ( ! opt_quiet )
-      fprintf(stderr, KLF_WELCOME, KLF_VERSION_STRING);
+      fprintf(stderr, "KLatexFormula Version %s by Philippe Faist (c) 2005-2011\n"
+	      "Licensed under the terms of the GNU Public License GPL\n\n",
+	      KLF_VERSION_STRING);
 
     if ( opt_daemonize ) {
-      klfWarning(qPrintable(QObject::tr("The option --daemonize can only be used in interactive mode.")));
+      qWarning()<<qPrintable(QObject::tr("The option --daemonize can only be used in interactive mode."));
     }
   
     // warn for ignored arguments
     for (int kl = 0; klf_args[kl] != NULL; ++kl)
-      klfWarning(qPrintable(QObject::tr("[Non-Interactive Mode] Ignoring additional command-line argument: %1")
-                            .arg(klf_args[kl])));
+      qWarning()<<qPrintable(QObject::tr("[Non-Interactive Mode] Ignoring additional command-line argument: %1")
+			     .arg(klf_args[kl]));
 
 
     // now process required actions.
     KLFBackend::klfInput input;
     KLFBackend::klfSettings settings;
     KLFBackend::klfOutput klfoutput;
-
-
-    // detect settings
-    bool detectok = KLFBackend::detectSettings(&settings, QString(), true);
-    if (!detectok) {
-      if ( ! opt_quiet )
-        klfWarning(qPrintable(QObject::tr("Failed to detect local settings. You may have to provide some settings manually.")));
-    }
 
     if ( (opt_input == NULL || !strlen(opt_input)) &&
 	 (opt_latexinput == NULL || !strlen(opt_latexinput)) ) {
@@ -1312,19 +1202,13 @@ int main(int argc, char **argv)
     if (opt_mathmode != NULL) {
       input.mathmode = QString::fromLocal8Bit(opt_mathmode);
     } else {
-      input.mathmode = QLatin1String("\\[ ... \\]");
+      input.mathmode = "\\[ ... \\]";
     }
 
     if (opt_preamble != NULL) {
       input.preamble = QString::fromLocal8Bit(opt_preamble);
     } else {
       input.preamble = "";
-    }
-
-    if (opt_userscript != NULL) {
-      input.userScript = QString::fromLocal8Bit(opt_userscript);
-    } else {
-      input.userScript = QString();
     }
 
     if ( ! opt_fgcolor ) {
@@ -1347,37 +1231,25 @@ int main(int argc, char **argv)
 
     input.dpi = (opt_dpi > 0) ? opt_dpi : 1200;
 
-    // settings.calcEpsBoundingBox
-    settings.calcEpsBoundingBox = true;
-    if (opt_calcepsbbox >= 0)
-      settings.calcEpsBoundingBox = (bool)opt_calcepsbbox;
     settings.outlineFonts = true;
-    // output formats
-    if (opt_wantsvg >= 0)
-      settings.wantSVG = (bool)opt_wantsvg;
-    if (opt_wantpdf >= 0)
-      settings.wantPDF = (bool)opt_wantpdf;
-    // outline fonts
     if (opt_outlinefonts >= 0)
       settings.outlineFonts = (bool)opt_outlinefonts;
-    // border offsets
     settings.lborderoffset = settings.tborderoffset
       = settings.rborderoffset = settings.bborderoffset = 1;
-    if (opt_lborderoffset.length())
-      settings.lborderoffset = opt_lborderoffset.toDouble();
-    if (opt_tborderoffset.length())
-      settings.tborderoffset = opt_tborderoffset.toDouble();
-    if (opt_rborderoffset.length())
-      settings.rborderoffset = opt_rborderoffset.toDouble();
-    if (opt_bborderoffset.length())
-      settings.bborderoffset = opt_bborderoffset.toDouble();
-    // executables: defaults
+    if (opt_lborderoffset != -1)
+      settings.lborderoffset = opt_lborderoffset;
+    if (opt_tborderoffset != -1)
+      settings.tborderoffset = opt_tborderoffset;
+    if (opt_rborderoffset != -1)
+      settings.rborderoffset = opt_rborderoffset;
+    if (opt_bborderoffset != -1)
+      settings.bborderoffset = opt_bborderoffset;
     settings.latexexec = klfconfig.BackendSettings.execLatex;
     settings.dvipsexec = klfconfig.BackendSettings.execDvips;
     settings.gsexec = klfconfig.BackendSettings.execGs;
-    settings.epstopdfexec = klfconfig.BackendSettings.execEpstopdf; // obsolete
+    settings.epstopdfexec = klfconfig.BackendSettings.execEpstopdf;
     settings.tempdir = klfconfig.BackendSettings.tempDir;
-    // executables: overriden by options
+
     if (opt_tempdir != NULL)
       settings.tempdir = QString::fromLocal8Bit(opt_tempdir);
     if (opt_latex != NULL)
@@ -1389,9 +1261,6 @@ int main(int argc, char **argv)
     if (opt_epstopdf != NULL)
       settings.epstopdfexec = QString::fromLocal8Bit(opt_epstopdf);
 
-    
-
-    // Now, run it!
     klfoutput = KLFBackend::getLatexFormula(input, settings);
 
     if (klfoutput.status != 0) {
@@ -1457,72 +1326,12 @@ static bool __klf_parse_bool_arg(const char * arg, bool defaultvalue)
   if ( boolfalserx.exactMatch(arg) )
     return false;
 
-  qWarning("%s", qPrintable(QObject::tr("Can't parse boolean argument: `%1'").arg(arg)));
+  qWarning()<<KLF_FUNC_NAME<<": Can't parse boolean argument: "<<QString(arg);
   opt_error.has_error = true;
   opt_error.retcode = -1;
 
   return defaultvalue;
 }
-
-#define D_RX "([0-9eE.-]+)"
-#define SEP "[ \t,;]+"
-
-static void klf_warn_parse_double(const QString& s)
-{
-  bool ok;
-  (void)s.toDouble(&ok);
-  if (!ok) {
-    qWarning("%s", qPrintable(QObject::tr("Can't parse number argument: `%1'").arg(s)));
-  }
-}
-
-static void klf_read_borderoffsets(const char * arg)
-{
-  if (arg == NULL)
-    return;
-
-  QRegExp rx("" D_RX "(?:" SEP D_RX "(?:" SEP D_RX "(?:" SEP D_RX ")?)?)?");
-
-  if (rx.indexIn(QString::fromLocal8Bit(arg)) < 0) {
-    qWarning("%s", qPrintable(QObject::tr("Expected --borderoffsets=L[,T[,R[,B]]]")));
-    return;
-  }
-
-  QString l, t, r, b;
-  l = rx.cap(1);
-  t = rx.cap(2);
-  r = rx.cap(3);
-  b = rx.cap(4);
-  klf_warn_parse_double(l);
-  opt_lborderoffset = l;
-
-  if (t.isEmpty()) {
-    opt_tborderoffset = opt_rborderoffset = opt_bborderoffset = l;
-    return;
-  }
-  // t is set
-  klf_warn_parse_double(t);
-  opt_tborderoffset = t;
-
-  if (r.isEmpty()) {
-    opt_rborderoffset = opt_lborderoffset;
-    opt_bborderoffset = opt_tborderoffset;
-    return;
-  }
-  // r is set
-  klf_warn_parse_double(r);
-  opt_rborderoffset = r;
-
-  if (b.isEmpty()) {
-    opt_bborderoffset = opt_tborderoffset;
-    return;
-  }
-  // b is set
-  opt_bborderoffset = b;
-
-  return;
-}
-
 
 void main_parse_options(int argc, char *argv[])
 {
@@ -1636,9 +1445,6 @@ void main_parse_options(int argc, char *argv[])
 #endif
       opt_preamble = arg;
       break;
-    case OPT_USERSCRIPT:
-      opt_userscript = arg;
-      break;
     case OPT_QUIET:
       opt_quiet = __klf_parse_bool_arg(arg, true);
       break;
@@ -1655,23 +1461,8 @@ void main_parse_options(int argc, char *argv[])
       // default value 'true' (default value if option is given)
       opt_skip_plugins = __klf_parse_bool_arg(arg, true);
       break;
-    case OPT_CALCEPSBBOX:
-      opt_calcepsbbox = __klf_parse_bool_arg(arg, true);
-      break;
-    case OPT_NOCALCEPSBBOX:
-      opt_calcepsbbox = 0;
-      break;
     case OPT_OUTLINEFONTS:
       opt_outlinefonts = __klf_parse_bool_arg(arg, true);
-      break;
-    case OPT_NOOUTLINEFONTS:
-      opt_outlinefonts = 0;
-      break;
-    case OPT_WANTSVG:
-      opt_wantsvg = __klf_parse_bool_arg(arg, true);
-      break;
-    case OPT_WANTPDF:
-      opt_wantpdf = __klf_parse_bool_arg(arg, true);
       break;
     case OPT_LBORDEROFFSET:
       opt_lborderoffset = atoi(arg);
@@ -1684,9 +1475,6 @@ void main_parse_options(int argc, char *argv[])
       break;
     case OPT_BBORDEROFFSET:
       opt_bborderoffset = atoi(arg);
-      break;
-    case OPT_BORDEROFFSETS:
-      klf_read_borderoffsets(arg);
       break;
     case OPT_TEMPDIR:
       opt_tempdir = arg;

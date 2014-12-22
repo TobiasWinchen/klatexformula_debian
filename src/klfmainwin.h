@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmainwin.h 866 2013-11-24 13:56:22Z phfaist $ */
+/* $Id: klfmainwin.h 603 2011-02-26 23:14:55Z phfaist $ */
 
 #ifndef KLFMAINWIN_H
 #define KLFMAINWIN_H
@@ -34,14 +34,12 @@
 #include <QTextEdit>
 #include <QWidget>
 #include <QMimeData>
+#include <QThread>
+#include <QMutex>
+#include <QWaitCondition>
 #include <QDialog>
-#include <QMainWindow>
-#include <QClipboard>
-#include <QShortcut>
 
 #include <klfbackend.h>
-
-#include <klfguiutil.h>
 
 #include <klflib.h>
 #include <klfconfig.h>
@@ -54,8 +52,7 @@ class KLFStyleManager;
 class KLFSettings;
 class KLFLatexSyntaxHighlighter;
 class KLFLatexEdit;
-class KLFCmdIface;
-class KLFUserScriptSettings;
+
 
 
 namespace Ui {
@@ -73,13 +70,7 @@ public:
   KLFProgErr(QWidget *parent, QString errtext);
   virtual ~KLFProgErr();
 
-  QTextEdit *textEditWidget();
-
-  // convenience static function
   static void showError(QWidget *parent, QString text);
-
-protected:
-  virtual void showEvent(QShowEvent *e);
 
 private:
   Ui::KLFProgErr *u;
@@ -94,10 +85,8 @@ public:
   KLFAbstractOutputSaver() { }
   virtual ~KLFAbstractOutputSaver() { }
 
-  /** Returns a list of mime-types of supported file formats for the given output, which
-   * may be NULL. In the latter case, this function reports all formats that it can in
-   * principle provide. */
-  virtual QStringList supportedMimeFormats(KLFBackend::klfOutput * klfoutput) = 0;
+  /** Returns a list of mime-types of supported file formats */
+  virtual QStringList supportedMimeFormats() = 0;
 
   /** Returns the human-readable, (possibly translated,) label to display in save dialog that
    * the user can select to save in this format.
@@ -184,19 +173,49 @@ private:
   KLFMainWin *mMainWin;
 };
 
+/**
+ * A helper that runs in a different thread that generates previews in real-time as user types text,
+ * without blocking the GUI.
+ */
+class KLF_EXPORT KLFPreviewBuilderThread : public QThread
+{
+  Q_OBJECT
 
-class KLFLatexPreviewThread;
+public:
+  KLFPreviewBuilderThread(QObject *parent, KLFBackend::klfInput input, KLFBackend::klfSettings settings,
+			  int labelwidth, int labelheight);
+  virtual ~KLFPreviewBuilderThread();
+  void run();
+
+signals:
+  void previewAvailable(const QImage& preview, bool latexerror);
+
+public slots:
+  bool inputChanged(const KLFBackend::klfInput& input);
+  void settingsChanged(const KLFBackend::klfSettings& settings, int labelwidth, int labelheight);
+
+protected:
+  KLFBackend::klfInput _input;
+  KLFBackend::klfSettings _settings;
+  int _lwidth, _lheight;
+
+  QMutex _mutex;
+  QWaitCondition _condnewinfoavail;
+
+  bool _hasnewinfo;
+  bool _abort;
+};
+
+
 class KLFAboutDialog;
 class KLFWhatsNewDialog;
 class KLFMainWinPopup;
-
-class KLFMainWinPrivate;
 
 /**
  * KLatexFormula Main Window
  * \author Philippe Faist &lt;philippe.faist@bluewin.ch&gt;
  */
-class KLF_EXPORT KLFMainWin : public QMainWindow, public KLFDropDataHandler
+class KLF_EXPORT KLFMainWin : public QWidget
 {
   Q_OBJECT
   Q_PROPERTY(QString widgetStyle READ widgetStyle WRITE setWidgetStyle)
@@ -210,29 +229,18 @@ public:
 
   bool eventFilter(QObject *obj, QEvent *event);
 
-  bool isExpandedMode() const;
-
   KLFStyle currentStyle() const;
 
-  QFont txtLatexFont() const;
-  QFont txtPreambleFont() const;
+  KLFBackend::klfSettings backendSettings() const { return _settings; }
 
-  /** The current configuration of the KLFBackend. Does not account for corrections, eg. overriding
-   * bbox margins.
-   */
-  KLFBackend::klfSettings backendSettings() const;
-  /** This function accounts for corrections eg. overriding bbox margins. Use backendSettings() to get
-   * the raw backend settings themselves.
-   */
-  KLFBackend::klfSettings currentSettings() const;
+  virtual QFont txtLatexFont() const;
+  virtual QFont txtPreambleFont() const;
+
+  KLFBackend::klfSettings currentSettings() const { return _settings; }
 
   void applySettings(const KLFBackend::klfSettings& s);
 
-  KLFBackend::klfOutput currentKLFBackendOutput() const;
-
-  KLFBackend::klfInput currentInputState() const;
-
-  QString currentInputLatex() const;
+  KLFBackend::klfOutput currentKLFBackendOutput() const { return _output; }
 
   enum altersetting_which { altersetting_LBorderOffset = 100,
 			    altersetting_TBorderOffset,
@@ -243,24 +251,35 @@ public:
 			    altersetting_Dvips,
 			    altersetting_Gs,
 			    altersetting_Epstopdf,
-			    altersetting_OutlineFonts, //!< bool given as an int value
-			    altersetting_CalcEpsBoundingBox, //!< bool given as an int value
-                            altersetting_WantSVG, //!< bool given as an int value
-                            altersetting_WantPDF //!< bool given as an int value
+			    altersetting_OutlineFonts //!< bool given as an int value
   };
+  /** This function allows to temporarily modify a given setting with a new value. KLatexFormula
+   * will NOT remember the new setting in later executions.
+   *
+   * Used eg. for command-line mode.
+   *
+   * Note you have to use the correct function for each setting, if the setting requires an int
+   * use this function, if it requires a string use alterSetting(altersetting_which, QString).
+   */
+  void alterSetting(altersetting_which, int ivalue);
+  /** See alterSetting(altersetting_which, int) */
+  void alterSetting(altersetting_which, QString svalue);
 
-  KLFLibBrowser * libBrowserWidget();
-  KLFLatexSymbols * latexSymbolsWidget();
-  KLFStyleManager * styleManagerWidget();
-  KLFSettings * settingsDialog();
-  QMenu * styleMenu();
+  KLFLibBrowser * libBrowserWidget() { return mLibBrowser; }
+  KLFLatexSymbols * latexSymbolsWidget() { return mLatexSymbols; }
+  KLFStyleManager * styleManagerWidget() { return mStyleManager; }
+  KLFSettings * settingsDialog() { return mSettingsDialog; }
+  QMenu * styleMenu() { return mStyleMenu; }
   KLFLatexEdit *latexEdit();
   KLFLatexSyntaxHighlighter * syntaxHighlighter();
   KLFLatexSyntaxHighlighter * preambleSyntaxHighlighter();
 
-  KLFConfig * klfConfig();
+  KLFConfig * klfConfig() { return & klfconfig; }
 
-  QString widgetStyle() const;
+  QHash<QWidget*,bool> currentWindowShownStatus(bool mainWindowToo = false);
+  QHash<QWidget*,bool> prepareAllWindowShownStatus(bool visibleStatus, bool mainWindowToo = false);
+
+  QString widgetStyle() const { return _widgetstyle; }
 
   void registerHelpLinkAction(const QString& path, QObject *object, const char * member, bool wantUrlParam);
 
@@ -274,56 +293,14 @@ public:
   bool canOpenData(const QByteArray& data);
   bool canOpenData(const QMimeData *mimeData);
 
-  QList<KLFAbstractOutputSaver*> registeredOutputSavers();
-  QList<KLFAbstractDataOpener*> registeredDataOpeners();
-
-  //! Reimplemented from KLFDropDataHandler
-  bool canOpenDropData(const QMimeData * data);
-
-  bool saveOutputToFile(const KLFBackend::klfOutput& output, const QString& fname, const QString& format,
-			KLFAbstractOutputSaver * saver = NULL);
-
-
-  bool isApplicationVisible() const;
-
 signals:
 
   void evaluateFinished(const KLFBackend::klfOutput& output);
-
-  void previewAvailable(const QImage& preview, const QImage& largePreview);
-  void previewRealTimeError(const QString& errmsg, int errcode);
 
   // dialogs (e.g. stylemanager) should connect to this in case styles change unexpectedly
   void stylesChanged();
 
   void applicationLocaleChanged(const QString& newLocale);
-
-  void klfConfigChanged();
-
-  /** Emitted when view controls (eg. large preview button) are enabled/disabled */
-  void userViewControlsActive(bool active);
-  /** Emitted when save controls (eg. save button) are enabled/disabled */
-  void userSaveControlsActive(bool active);
-
-  void userActivity();
-
-  void userInputChanged();
-
-  /** emitted whenever the formula currently being edited is replaced by something else, like a restored
-   * formula from the library or a blank input from clear button, etc.
-   */
-  void inputCleared();
-
-  void aboutToCopyData();
-  void copiedData(const QString& profile);
-  void aboutToDragData();
-  void draggedDataWasDropped(const QString& mimeType);
-  void fileOpened(const QString& fname, KLFAbstractDataOpener * usingDataOpener);
-  void dataOpened(const QString& mimetype, const QByteArray& data, KLFAbstractDataOpener * usingDataOpener);
-
-  void aboutToSaveAs();
-  /** \note if \c usingSaver is NULL, the built-in klfbackend saver was used */
-  void savedToFile(const QString& fileName, const QString& format, KLFAbstractOutputSaver * usingSaver);
 
 public slots:
 
@@ -332,17 +309,14 @@ public slots:
   void slotClearLatex();
   void slotClearAll();
   void slotLibrary(bool showlib);
-  void slotToggleLibrary();
+  void slotLibraryButtonRefreshState(bool on);
   void slotSymbols(bool showsymbs = true);
-  void slotToggleSymbols();
+  void slotSymbolsButtonRefreshState(bool on);
   void slotExpandOrShrink();
   void slotExpand(bool expanded = true);
   void slotSetLatex(const QString& latex);
   void slotSetMathMode(const QString& mathmode);
   void slotSetPreamble(const QString& preamble);
-  void slotSetUserScript(const QString& userScript);
-  void slotShowLastUserScriptOutput();
-  void slotReloadUserScripts();
   /** If \c line is already in the preamble, then does nothing. Otherwise appends
    * \c line to the preamble text. */
   void slotEnsurePreambleCmd(const QString& line);
@@ -355,19 +329,17 @@ public slots:
   // will actually save only if output non empty.
   void slotEvaluateAndSave(const QString& output, const QString& format);
 
-  void pasteLatexFromClipboard(QClipboard::Mode mode = QClipboard::Clipboard);
-
   bool openFile(const QString& file);
   bool openFiles(const QStringList& fileList);
   bool openData(const QMimeData *mimeData, bool *openerFound = NULL);
-  //! Reimplemented from KLFDropDataHandler
-  int openDropData(const QMimeData *mimeData);
   bool openData(const QByteArray& data);
 
   bool openLibFiles(const QStringList& files, bool showLibrary = true);
   bool openLibFile(const QString& file, bool showLibrary = true);
 
-  bool executeURLCommandsFromFile(const QString& fname);
+  void setApplicationLocale(const QString& locale);
+
+  void retranslateUi(bool alsoBaseUi = true);
 
   bool loadDefaultStyle();
   bool loadNamedStyle(const QString& sty);
@@ -382,13 +354,19 @@ public slots:
 
   void slotShowBigPreview();
 
+  void slotPresetDPISender();
   void slotLoadStyle(int stylenum);
   void slotLoadStyle(const KLFStyle& style);
   void slotSaveStyle();
-  void slotSaveStyleAsDefault();
   void slotStyleManager();
   void slotSettings();
 
+
+  void refreshWindowSizes();
+
+  void refreshShowCorrectClearButton();
+
+  void refreshStylePopupMenus();
   void loadStyles();
   void loadLibrary(); // load library stuff
   void loadLibrarySavedState();
@@ -407,41 +385,101 @@ public slots:
   void showAbout();
   void showWhatsNew();
   void showSettingsHelpLinkAction(const QUrl& link);
-
   void helpLinkAction(const QUrl& link);
 
   void setWidgetStyle(const QString& qtstyle);
-  void setMacBrushedMetalLook(bool metallook);
-  void refreshAllWindowStyleSheets();
 
   void setTxtLatexFont(const QFont& f);
   void setTxtPreambleFont(const QFont& f);
 
-  void setApplicationLocale(const QString& locale);
-  void retranslateUi(bool alsoBaseUi = true);
+  void showRealTimePreview(const QImage& preview, bool latexerror);
 
-  /** This function allows to temporarily modify a given setting with a new value. KLatexFormula
-   * will NOT remember the new setting in later executions.
-   *
-   * Used eg. for command-line mode.
-   *
-   * Note you have to use the correct function for each setting, if the setting requires an int
-   * use this function, if it requires a string use alterSetting(altersetting_which, QString).
-   */
-  void alterSetting(int altersettingWhich, int ivalue);
-  /** See alterSetting(altersetting_which, int) */
-  void alterSetting(int altersettingWhich, QString svalue);
+  void updatePreviewBuilderThreadInput();
 
+  void displayError(const QString& errormsg);
+
+  void setWindowShownStatus(const QHash<QWidget*,bool>& windowshownflags);
+
+  void refreshAllWindowStyleSheets();
 
   void setQuitOnClose(bool quitOnClose);
 
-  void hideApplication();
-
-
   void quit();
 
+private slots:
+  // private : only as slot to an action containing the style # as user data
+  void slotLoadStyleAct();
+
+  void slotOpenHistoryLibraryResource();
+
+  void slotNewSymbolTyped(const QString& symbol);
+  void slotPopupClose();
+  void slotPopupAction(const QUrl& helpLinkUrl);
+  void slotPopupAcceptAll();
+
+  void slotEditorContextMenuInsertActions(const QPoint& pos, QList<QAction*> *actionList);
+  void slotInsertMissingPackagesFromActionSender();
 
 protected:
+  Ui::KLFMainWin *u;
+
+  KLFLibBrowser *mLibBrowser;
+  KLFLatexSymbols *mLatexSymbols;
+  KLFStyleManager *mStyleManager;
+  KLFSettings *mSettingsDialog;
+  KLFAboutDialog *mAboutDialog;
+  KLFWhatsNewDialog *mWhatsNewDialog;
+
+  KLFMainWinPopup *mPopup;
+
+  /** \internal */
+  struct HelpLinkAction {
+    HelpLinkAction(const QString& p, QObject *obj, const char *func, bool param)
+      : path(p), reciever(obj), memberFunc(func), wantParam(param) { }
+    QString path;
+    QObject *reciever;
+    QByteArray memberFunc;
+    bool wantParam;
+  };
+  QList<HelpLinkAction> mHelpLinkActions;
+
+  KLFLibResourceEngine *mHistoryLibResource;
+
+  KLFStyleList _styles;
+
+  bool try_load_style_list(const QString& fileName);
+
+  QMenu *mStyleMenu;
+
+  bool _loadedlibrary;
+  bool _firstshow;
+
+  KLFBackend::klfSettings _settings; // settings we pass to KLFBackend
+  bool _settings_altered;
+
+  KLFBackend::klfOutput _output; // output from KLFBackend
+  //  KLFBackend::klfInput _lastrun_input; // input that generated _output (now _output.input)
+
+  /** If TRUE, then the output contained in _output is up-to-date, meaning that we favor displaying
+   * _output.result instead of the image given by mPreviewBuilderThread. */
+  bool _evaloutput_uptodate;
+  /** The Thread that will create real-time previews of formulas. */
+  KLFPreviewBuilderThread *mPreviewBuilderThread;
+
+  QLabel *mExportMsgLabel;
+  void showExportMsgLabel(const QString& msg, int timeout = 3000);
+  int pExportMsgLabelTimerId;
+
+  /** Returns the input corresponding to the current GUI state. If \c isFinal is TRUE, then
+   * the input data may be "remembered" as used (the exact effect depends on the setting), eg.
+   * math mode is memorized into combo box choices. Typically \c isFinal is TRUE when called
+   * from slotEvaluate() and FALSE when called to update the preview builder thread. */
+  KLFBackend::klfInput collectInput(bool isFinal);
+
+  QList<QAction*> pExportProfileQuickMenuActionList;
+
+  QSize _shrinkedsize;
+  QSize _expandedsize;
 
   bool event(QEvent *e);
 #ifdef Q_WS_X11
@@ -453,19 +491,27 @@ protected:
   void showEvent(QShowEvent *e);
   void timerEvent(QTimerEvent *e);
 
-private:
+  bool _ignore_close_event;
 
-  KLF_DECLARE_PRIVATE(KLFMainWin) ;
+  QList<QWidget*> pWindowList;
+  /** "last" window status flags are used in eventFilter() to detect individual dialog
+   * geometries resetting */
+  QHash<QWidget*,bool> pLastWindowShownStatus;
+  QHash<QWidget*,QRect> pLastWindowGeometries;
+  /** "saved" window status flags are used in hideEvent() to save the individual dialog visible
+   * states, as the "last" status flags will be overridden by all the windows hiding. */
+  QHash<QWidget*,bool> pSavedWindowShownStatus;
+  //  QHash<QWidget*, bool> _lastwindowshownstatus;
+  //  QHash<QWidget*, QRect> _lastwindowgeometries;
+  //  QHash<QWidget*, bool> _savedwindowshownstatus;
 
-  Ui::KLFMainWin *u;
+  QString _widgetstyle;
 
-private slots:
+  void getMissingCmdsFor(const QString& symbol, QStringList * missingCmds, QString *guiText,
+			 bool wantHtmlText = true);
 
-  void slotCycleParenModifiers(bool forward = true);
-  void slotCycleParenModifiersBack() { slotCycleParenModifiers(false); }
-  void slotCycleParenTypes(bool forward = true);
-  void slotCycleParenTypesBack() { slotCycleParenTypes(false); }
-
+  QList<KLFAbstractOutputSaver*> pOutputSavers;
+  QList<KLFAbstractDataOpener*> pDataOpeners;
 };
 
 #endif

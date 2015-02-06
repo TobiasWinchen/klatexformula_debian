@@ -1,11 +1,9 @@
-klatexformula (3.2.9-1) UNRELEASED; urgency=medium
+klatexformula (3.2.11-1) unstable; urgency=medium
 
   * New upstream release
-  * Updated to debhelper 9
-  * Minimum debian/rules files now using dh
-  * Updated to standards version 3.9.5
+  * Updated to standards version 3.9.6
 
- -- Tobias Winchen <winchen@physik.rwth-aachen.de>  Sun, 01 Jun 2014 17:21:09 +0200
+ -- Tobias Winchen <winchen@physik.rwth-aachen.de>  Mon, 22 Dec 2014 07:04:21 +0100
 
 klatexformula (3.2.7-1) unstable; urgency=low
 

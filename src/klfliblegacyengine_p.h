@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfliblegacyengine_p.h 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfliblegacyengine_p.h 911 2014-08-10 22:24:01Z phfaist $ */
 
 
 /** \file
@@ -124,6 +124,9 @@ public:
   /** upon modification, DON'T FORGET to set \ref haschanges ! */
   KLFLegacyData::KLFLibraryResourceList resources;
 
+  /** eg. if we read a corrupt file, leave it corrupt. */
+  bool flagForceReadOnly;
+
   /** Metadata, may be used for any purpose.
    *
    * upon modification, DON'T FORGET to set \ref haschanges !
@@ -149,7 +152,7 @@ public:
   {
     return KLFLibEntry(KLFLibEntry::stripCategoryTagsFromLatex(item.latex), item.datetime,
 		       item.preview.toImage(), item.preview.size(), item.category,
-		       item.tags, toStyle(item.style));
+		       item.tags, item.style.toNewStyle());
   }
   static inline KLFLegacyData::KLFLibraryItem toLegacyLibItem(const KLFLibEntry& entry)
   {
@@ -162,30 +165,8 @@ public:
     item.tags = entry.tags();
     item.preview = QPixmap::fromImage(entry.preview());
     item.datetime = entry.dateTime();
-    item.style = toLegacyStyle(entry.style());
+    item.style = KLFLegacyData::KLFLegacyStyle::fromNewStyle(entry.style());
     return item;
-  }
-  static inline KLFLegacyData::KLFStyle toLegacyStyle(const KLFStyle& style)
-  {
-    KLFLegacyData::KLFStyle oldstyle;
-    oldstyle.name = style.name;
-    oldstyle.fg_color = style.fg_color;
-    oldstyle.bg_color = style.bg_color;
-    oldstyle.mathmode = style.mathmode;
-    oldstyle.preamble = style.preamble;
-    oldstyle.dpi = style.dpi;
-    return oldstyle;
-  }
-  static inline KLFStyle toStyle(const KLFLegacyData::KLFStyle& oldstyle)
-  {
-    KLFStyle style;
-    style.name = oldstyle.name;
-    style.fg_color = oldstyle.fg_color;
-    style.bg_color = oldstyle.bg_color;
-    style.mathmode = oldstyle.mathmode;
-    style.preamble = oldstyle.preamble;
-    style.dpi = oldstyle.dpi;
-    return style;
   }
 
 signals:
@@ -209,6 +190,8 @@ private:
   KLFLibLegacyFileDataPrivate(const QString& fname) : refcount(0), filename(fname)
   {
     klfDbg(" filename is "<<filename ) ;
+
+    flagForceReadOnly = true;
 
     staticFileDataObjects[filename] = this;
 

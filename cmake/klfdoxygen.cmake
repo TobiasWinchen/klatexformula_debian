@@ -1,13 +1,15 @@
 # CMake definitions for building doxygen API documentation
 # ========================================================
-# $Id: klfdoxygen.cmake 507 2010-09-22 02:04:08Z philippe $
+# $Id: klfdoxygen.cmake 887 2014-07-24 16:24:56Z phfaist $
 
 
 # Configure doxygen targets
 # -------------------------
 
 if(NOT DEFINED DOXYGEN OR DOXYGEN STREQUAL "")
-  find_program(DOXYGEN "doxygen")
+  #  find_program(DOXYGEN "doxygen" /Applications/Doxygen.app/Contents/Resources)
+  include(FindDoxygen)
+  set(DOXYGEN "${DOXYGEN_EXECUTABLE}" CACHE FILEPATH "Path to doxygen executable (optional)")
 endif(NOT DEFINED DOXYGEN OR DOXYGEN STREQUAL "")
 
 if(DOXYGEN)
@@ -76,12 +78,12 @@ if(DOXYGEN)
     endforeach(dep)
   endmacro(KLFMakeDoxygenTarget)
 
-  KLFMakeDoxygenTarget("${KLF_APIDOC_DIR}" klfbackend "" ""  "")
-  KLFMakeDoxygenTarget("${KLF_APIDOC_DIR}" klftools "" ""  "klfbackend")
+  KLFMakeDoxygenTarget("${KLF_APIDOC_DIR}" klftools "" ""  "")
+  KLFMakeDoxygenTarget("${KLF_APIDOC_DIR}" klfbackend "" ""  "klftools")
   KLFMakeDoxygenTarget("${KLF_APIDOC_DIR}" klfapp "" ""  "klfbackend;klftools")
 
-  KLFMakeDoxygenTarget("${KLF_APIDOCSF_DIR}" klfbackend ".sfweb" "_sfweb"  "")
-  KLFMakeDoxygenTarget("${KLF_APIDOCSF_DIR}" klftools ".sfweb" "_sfweb"  "klfbackend")
+  KLFMakeDoxygenTarget("${KLF_APIDOCSF_DIR}" klftools ".sfweb" "_sfweb"  "")
+  KLFMakeDoxygenTarget("${KLF_APIDOCSF_DIR}" klfbackend ".sfweb" "_sfweb"  "klftools")
   KLFMakeDoxygenTarget("${KLF_APIDOCSF_DIR}" klfapp ".sfweb" "_sfweb"  "klfbackend;klftools")
 
 
@@ -90,6 +92,7 @@ if(DOXYGEN)
   add_custom_target(doc
     COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/apidoc/index.html" "${KLF_APIDOC_DIR}/index.html"
     COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/apidoc/f.gif" "${KLF_APIDOC_DIR}/f.gif"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/apidoc/headerbg.jpg" "${KLF_APIDOC_DIR}/headerbg.jpg"
     COMMAND "${CMAKE_COMMAND}" -E create_symlink "${klfapidocdirname}" "${klf_tar_dirname}"
     COMMAND tar cvhfj "${klf_tar_dirname}.tar.bz2" "${klf_tar_dirname}"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
@@ -97,15 +100,15 @@ if(DOXYGEN)
     VERBATIM
     )
 
-  add_dependencies(doc_klfapp  doc_klftools  doc_klfbackend) # depends on klfbackend.tag and klftools.tag
-  add_dependencies(doc_klftools  doc_klfbackend) # depends on klfbackend.tag
+  #add_dependencies(doc_klfapp  doc_klftools  doc_klfbackend) # depends on klfbackend.tag and klftools.tag
+  #add_dependencies(doc_klfbackend  doc_klftools) # depends on klftools.tag
 
   add_dependencies(doc  doc_klfbackend doc_klftools doc_klfapp)
 
   # and the sourceforge-hosted docs (internal...)
-  add_dependencies(doc_klfapp_sfweb
-		   doc_klftools_sfweb doc_klfbackend_sfweb) # depends on klfbackend.tag and klftools.tag
-  add_dependencies(doc_klftools_sfweb doc_klfbackend_sfweb) # depends on klfbackend.tag
+  #add_dependencies(doc_klfapp_sfweb
+  #		   doc_klftools_sfweb doc_klfbackend_sfweb) # depends on klfbackend.tag and klftools.tag
+  #add_dependencies(doc_klfbackend_sfweb doc_klftools_sfweb) # depends on klftools.tag
 
   message(STATUS "doxygen developer API documentation can be generated with 'make doc'")
 else(DOXYGEN)

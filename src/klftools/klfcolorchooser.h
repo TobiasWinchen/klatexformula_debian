@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfcolorchooser.h 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfcolorchooser.h 866 2013-11-24 13:56:22Z phfaist $ */
 
 #ifndef KLFCOLORCHOOSER_H
 #define KLFCOLORCHOOSER_H
@@ -48,14 +48,19 @@ class KLF_EXPORT KLFColorClickSquare : public QWidget
 {
   Q_OBJECT
 
-  Q_PROPERTY(QColor color READ color WRITE setColor USER true)
+  Q_PROPERTY(QColor color READ color WRITE setColor USER true) ;
+  Q_PROPERTY(int sqSize READ sqSize WRITE setSqSize) ;
+  Q_PROPERTY(bool removable READ removable WRITE setRemovable) ;
 public:
   KLFColorClickSquare(QColor color = Qt::white, int size = 16, bool removable = true, QWidget *parent = 0);
+  explicit KLFColorClickSquare(QWidget *parent);
 
   virtual QSize sizeHint() { return QSize(_size, _size); }
 
-  QColor color() const { return _color; }
-
+  inline QColor color() const { return _color; }
+  inline int sqSize() const { return _size; }
+  inline bool removable() const { return _removable; }
+  
 signals:
   void activated();
   void colorActivated(const QColor& color);
@@ -68,9 +73,12 @@ public slots:
     emit activated();
     emit colorActivated(_color);
   }
+  void setSqSize(int sqsize);
+  void setRemovable(bool removable);
 
 protected:
   void paintEvent(QPaintEvent *event);
+  void resizeEvent(QResizeEvent *event);
   void keyPressEvent(QKeyEvent *event);
   void mousePressEvent(QMouseEvent *event);
   void contextMenuEvent(QContextMenuEvent *event);
@@ -79,6 +87,8 @@ private:
   QColor _color;
   int _size;
   bool _removable;
+
+  void initwidget();
 
 private slots:
   void internalWantRemove();
@@ -273,6 +283,9 @@ public:
   QString paneType() const { return _colorcomponent + "+" + _colorcomponent_b; }
   QColor color() const { return _color; }
 
+  QSize sizeHint() const;
+  QSize minimumSizeHint() const;
+
 signals:
   void colorChanged(const QColor& color);
 
@@ -285,6 +298,7 @@ protected:
   virtual void mousePressEvent(QMouseEvent *e);
   virtual void mouseMoveEvent(QMouseEvent *e);
   virtual void wheelEvent(QWheelEvent *e);
+  virtual void keyPressEvent(QKeyEvent *e);
 
 private:
   QImage _img;
@@ -383,6 +397,8 @@ namespace Ui { class KLFColorDialog; }
 class KLF_EXPORT KLFColorDialog : public QDialog
 {
   Q_OBJECT
+
+  Q_PROPERTY(QColor color READ color WRITE setColor USER true)
 public:
   /** Constructor. If you build the dialog this way, you will have to initialize the \ref colorChooseWidget()
    * manually. Consider using \ref getColor() instead. */
@@ -392,6 +408,8 @@ public:
   /** Accessor to the KLFColorChooseWidget that is displayed in the dialog. */
   KLFColorChooseWidget *colorChooseWidget();
 
+  QColor color() const;
+
   /** static method to invoke a new instance of the dialog, display it to user with the given settings (starts
    * displaying the color \c startwith, and allows the user to select (semi-)transparent colors if \c alphaenabled
    * is set).
@@ -400,8 +418,15 @@ public:
    */
   static QColor getColor(QColor startwith = Qt::black, bool alphaenabled = true, QWidget *parent = 0);
 
+public slots:
+
+  void setColor(const QColor& color);
+
 private:
   Ui::KLFColorDialog *u;
+
+private slots:
+  void slotAccepted();
 };
 
 
@@ -410,6 +435,7 @@ private:
 // ------------------------------------------------------------------------------------
 
 class QStyle;
+class KLFRelativeFont;
 
 class KLF_EXPORT KLFColorChooser : public QPushButton
 {
@@ -462,10 +488,10 @@ public slots:
   void setColor(const QColor& color);
   void setAllowDefaultState(bool allow);
   void setDefaultStateString(const QString& str);
-  void setAutoAddToList(bool autoadd) { _autoadd = autoadd; }
-  void setShowSize(const QSize& size) { _size = size; }
-  void setPixXAlignFactor(float xalignfactor) { _xalignfactor = xalignfactor; }
-  void setPixYAlignFactor(float yalignfactor) { _yalignfactor = yalignfactor; }
+  void setAutoAddToList(bool autoadd);
+  void setShowSize(const QSize& size);
+  void setPixXAlignFactor(float xalignfactor);
+  void setPixYAlignFactor(float yalignfactor);
   void setAlphaEnabled(bool alpha_enabled);
   /** equivalent to \code setColor(QColor()) \endcode */
   void setDefaultColor();
@@ -492,6 +518,7 @@ private:
   bool _alphaenabled;
 
   QMenu *mMenu;
+  KLFRelativeFont *menuRelFont;
 
   void _setpix();
 

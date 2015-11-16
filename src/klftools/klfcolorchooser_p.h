@@ -19,7 +19,12 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfcolorchooser_p.h 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfcolorchooser_p.h 667 2011-07-24 15:44:22Z phfaist $ */
+
+/** \file
+ * This file contains internal definitions for file klfcolorchooser.cpp.
+ * \internal
+ */
 
 #ifndef KLFCOLORCHOOSER_P_H
 #define KLFCOLORCHOOSER_P_H

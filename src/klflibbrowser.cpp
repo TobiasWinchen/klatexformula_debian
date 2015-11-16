@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibbrowser.cpp 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klflibbrowser.cpp 881 2014-06-15 21:23:43Z phfaist $ */
 
 #include <QDebug>
 #include <QFile>
@@ -47,7 +47,7 @@
 
 KLFLibBrowser::KLFLibBrowser(QWidget *parent)
   : QWidget(
-#if defined(Q_OS_WIN32)
+#if defined(Q_WS_WIN) || defined(Q_WS_MAC)
 	    0 /* parent */
 #else
 	    parent /* 0 */
@@ -55,6 +55,7 @@ KLFLibBrowser::KLFLibBrowser(QWidget *parent)
 	    , Qt::Window)
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  Q_UNUSED(parent) ;
 
   u = new Ui::KLFLibBrowser;
   u->setupUi(this);
@@ -63,8 +64,8 @@ KLFLibBrowser::KLFLibBrowser(QWidget *parent)
   KLF_DEBUG_ASSIGN_REF_INSTANCE(u->searchBar, "libbrowser-searchbar") ;
   u->searchBar->registerShortcuts(this);
   // set found/not-found colors
-  u->searchBar->setColorFound(klfconfig.LibraryBrowser.colorFound);
-  u->searchBar->setColorNotFound(klfconfig.LibraryBrowser.colorNotFound);
+  klfconfig.LibraryBrowser.colorFound.connectQObjectProperty(u->searchBar, "colorFound");
+  klfconfig.LibraryBrowser.colorNotFound.connectQObjectProperty(u->searchBar, "colorNotFound");
 
   pResourceMenu = new QMenu(u->tabResources);
   // connect actions
@@ -480,7 +481,7 @@ bool KLFLibBrowser::openResource(KLFLibResourceEngine *resource, uint resourceRo
   KLFLibBrowserViewContainer * openview = findOpenResource(resource);
   if (openview != NULL) {
     qDebug("KLFLibBrowser::openResource(%p,%u): This resource is already open.",
-	   resource, resourceRoleFlags);
+	   (void*)resource, resourceRoleFlags);
     if ((resourceRoleFlags & OpenNoRaise) == 0)
       u->tabResources->setCurrentWidget(openview);
     updateResourceRoleFlags(openview, resourceRoleFlags);
@@ -847,7 +848,7 @@ bool KLFLibBrowser::slotResourceClose(KLFLibBrowserViewContainer *view, bool for
   int tabindex = u->tabResources->indexOf(view);
   if (tabindex < 0) {
     qWarning("KLFLibBrowser::closeResource(url): can't find view in tab widget?!?\n"
-	     "\turl=%s, viewwidget=%p", qPrintable(view->url().toString()), view);
+	     "\turl=%s, viewwidget=%p", qPrintable(view->url().toString()), (void*)view);
     return false;
   }
 
@@ -1463,6 +1464,15 @@ void KLFLibBrowser::slotCut()
 void KLFLibBrowser::slotCopy()
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+
+  // first determine who had widget focus
+  QWidget *focusWidget = QApplication::focusWidget();
+  if (u->wEntryEditor->isAncestorOf(focusWidget)) {
+    u->wEntryEditor->slotCopy();
+    return;
+  }
+
+  // otherwise perform the copy from the visible lib view
 
   KLFAbstractLibView * view = curLibView();
   if ( view == NULL )

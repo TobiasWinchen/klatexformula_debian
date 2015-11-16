@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibentryeditor.cpp 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klflibentryeditor.cpp 698 2011-08-08 08:28:12Z phfaist $ */
 
 
 #include <QWidget>
@@ -28,16 +28,18 @@
 #include <QEvent>
 #include <QKeyEvent>
 #include <QPixmap>
+#include <QApplication>
+#include <QClipboard>
 
 #include <klfdisplaylabel.h>
+#include <klflatexedit.h>
+#include <klfrelativefont.h>
 
 #include "klfconfig.h"
 #include "klflib.h"
-#include "klflatexedit.h"
 
 #include <ui_klflibentryeditor.h>
 #include "klflibentryeditor.h"
-
 
 
 
@@ -51,7 +53,12 @@ KLFLibEntryEditor::KLFLibEntryEditor(QWidget *parent)
 
   pCurrentStyle = KLFStyle();
 
-  u->lblPreview->setLabelFixedSize(klfconfig.UI.labelOutputFixedSize);
+  KLFRelativeFont *rf = new KLFRelativeFont(this, u->tabsEntry);
+  /** \bug ###: only on mac? */
+  rf->setRelPointSize(-2);
+  rf->setThorough(true);
+
+  u->lblPreview->setFixedSize(klfconfig.UI.smallPreviewSize);
 
   u->cbxCategory->setInsertPolicy(QComboBox::InsertAlphabetically);
   u->cbxCategory->setDuplicatesEnabled(false);
@@ -80,6 +87,9 @@ KLFLibEntryEditor::KLFLibEntryEditor(QWidget *parent)
   u->txtPreviewLatex->setFont(klfconfig.UI.preambleEditFont);
   u->txtStyPreamble->setFont(klfconfig.UI.preambleEditFont);
   u->txtStyPreamble->setHeightHintLines(4);
+
+  KLF_CONNECT_CONFIG_SH_LATEXEDIT(u->txtPreviewLatex) ;
+  KLF_CONNECT_CONFIG_SH_LATEXEDIT(u->txtStyPreamble) ;
 }
 void KLFLibEntryEditor::retranslateUi(bool alsoBaseUi)
 {
@@ -225,6 +235,12 @@ void KLFLibEntryEditor::displayStyle(bool valid, const KLFStyle& style)
     }
     u->lblStyMathMode->setText(style.mathmode);
     u->txtStyPreamble->setPlainText(style.preamble);
+    if (style.userScript().isEmpty()) {
+      u->frmUserScript->hide();
+    } else {
+      u->frmUserScript->show();
+      u->lblUserScript->setText(style.userScript);
+    }
   } else {
     u->lblStyDPI->setText(QLatin1String("-"));
     u->lblStyColFg->setText(QString());
@@ -233,6 +249,27 @@ void KLFLibEntryEditor::displayStyle(bool valid, const KLFStyle& style)
     u->lblStyColBg->setPixmap(QPixmap());
     u->lblStyMathMode->setText(QString());
     u->txtStyPreamble->setPlainText(QString());
+    u->frmUserScript->hide();
+  }
+}
+
+void KLFLibEntryEditor::slotCopy()
+{
+  QWidget *fw = QApplication::focusWidget();
+  if (!isAncestorOf(fw))
+    return;
+
+  if (fw->inherits("QTextEdit")) {
+    qobject_cast<QTextEdit*>(fw)->copy();
+  } else if (fw->inherits("QLineEdit")) {
+    qobject_cast<QLineEdit*>(fw)->copy();
+  } else if (fw->inherits("QLabel")) {
+#if QT_VERSION >= 0x040700
+    QLabel *lbl = qobject_cast<QLabel*>(fw);
+    if (lbl->hasSelectedText()) {
+      QApplication::clipboard()->setText(lbl->selectedText());
+    }
+#endif
   }
 }
 

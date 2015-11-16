@@ -19,15 +19,18 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfkateplugin.cpp 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfkateplugin.cpp 903 2014-08-10 02:15:11Z phfaist $ */
 
 #include <QLabel>
 #include <QGridLayout>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QTimer>
+#include <QMessageBox>
 
 #include <ktexteditor/document.h>
+#include <ktexteditor/highlightinterface.h>
+#include <ktexteditor/attribute.h>
 
 #include <kpluginfactory.h>
 #include <kpluginloader.h>
@@ -42,8 +45,12 @@
 #include "klfkateplugin.h"
 #include "klfkateplugin_config.h"
 
+#include "klfprogerr.h"
 
-KLFKtePlugin *KLFKtePlugin::plugin = NULL;
+#include "ui_klfktepreviewwidget.h"
+
+
+KLFKtePlugin *KLFKtePlugin::staticInstance = NULL;
 
 K_PLUGIN_FACTORY_DEFINITION(KLFKtePluginFactory,
 			    registerPlugin<KLFKtePlugin>("ktexteditor_klf");
@@ -56,19 +63,34 @@ K_EXPORT_PLUGIN(KLFKtePluginFactory("ktexteditor_klf", "ktexteditor_plugins"))
 KLFKtePlugin::KLFKtePlugin(QObject *parent, const QVariantList &/*args*/)
   : KTextEditor::Plugin(parent)
 {
-  plugin = this;
+  staticInstance = this;
+
+  pConfigData = new KLFKteConfigData();
+
+  pLatexPreviewThread = new KLFLatexPreviewThread(this);
+  pLatexPreviewThread->start();
+  pLatexPreviewThread->setPriority(QThread::LowestPriority);
+
   readConfig();
 }
 
 KLFKtePlugin::~KLFKtePlugin()
 {
-  plugin = NULL;
+  staticInstance = NULL;
+
+  delete pConfigData;
+
+  // note: destruction of pConfigData and pLatexPreviewThread is dealt with automatically
+  // via QObject destruction chain, because we're their parent.
 }
 
 void KLFKtePlugin::addView(KTextEditor::View *view)
 {
-  KLFKtePluginView *nview = new KLFKtePluginView(view);
+  KLFKtePluginView *nview = new KLFKtePluginView(this, view);
   pViews.append(nview);
+
+  connect(nview, SIGNAL(requestedDontPopupAutomatically()),
+          this, SLOT(setDontPopupAutomatically()));
 }
 
 void KLFKtePlugin::removeView(KTextEditor::View *view)
@@ -78,6 +100,7 @@ void KLFKtePlugin::removeView(KTextEditor::View *view)
       KLFKtePluginView *nview = pViews.at(z);
       pViews.removeAll(nview);
       delete nview;
+      break;
     }
   }
 }
@@ -85,111 +108,20 @@ void KLFKtePlugin::removeView(KTextEditor::View *view)
 void KLFKtePlugin::readConfig()
 {
   KConfigGroup cg(KGlobal::config(), "KLatexFormula Plugin");
-  KLFKteConfigData::inst()->readConfig(&cg);
+  pConfigData->readConfig(&cg);
 }
 
 void KLFKtePlugin::writeConfig()
 {
   KConfigGroup cg(KGlobal::config(), "KLatexFormula Plugin");
-  KLFKteConfigData::inst()->writeConfig(&cg);
+  pConfigData->writeConfig(&cg);
 }
 
 
-
-// ----------------------------------
-
-
-KLFKteLatexRunThread::KLFKteLatexRunThread(QObject *parent)
-  : QThread(parent),   _hasnewinfo(false), _abort(false)
+void KLFKtePlugin::setDontPopupAutomatically()
 {
-}
-
-KLFKteLatexRunThread::~KLFKteLatexRunThread()
-{
-  _mutex.lock();
-  _abort = true;
-  _condnewinfoavail.wakeOne();
-  _mutex.unlock();
-  wait();
-}
-
-void KLFKteLatexRunThread::run()
-{
-  KLFBackend::klfInput input;
-  KLFBackend::klfSettings settings;
-  KLFBackend::klfOutput output;
-  QImage img;
-
-  for (;;) {
-    _mutex.lock();
-    bool abrt = _abort;
-    _mutex.unlock();
-    if (abrt)
-      return;
-
-    // fetch info
-    _mutex.lock();
-    input = _input;
-    settings = _settings;
-    settings.epstopdfexec = "";
-    _hasnewinfo = false;
-    _mutex.unlock();
-
-    // render equation
-    if ( input.latex.isEmpty() ) {
-      emit previewError(i18n("No Latex Equation"), -1000);
-    } else {
-      // and GO!
-      // fprintf(stderr, "KLFKteLatexRunThread::run(): running getLatexFormula ...\n");
-      output = KLFBackend::getLatexFormula(input, settings);
-      img = output.result;
-      // fprintf(stderr, "... status=%d\n", output.status);
-      if (output.status == 0) {
-	QSize popupMaxSize = KLFKteConfigData::inst()->popupMaxSize;
-	if (img.width() > popupMaxSize.width() || img.height() > popupMaxSize.height())
-	  img = img.scaled(popupMaxSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-      } else {
-	img = QImage();
-      }
-    }
-
-    _mutex.lock();
-    bool abort = _abort;
-    bool hasnewinfo = _hasnewinfo;
-    _mutex.unlock();
-
-    if (abort)
-      return;
-
-    // fprintf(stderr, "thread::run(): emitting signal. image size=(%d,%d)\n", img.width(), img.height());
-    if (!img.isNull())
-      emit previewAvailable(img);
-    else
-      emit previewError(output.errorstr, output.status);
-
-    if (hasnewinfo)
-      continue;
-
-    _mutex.lock();
-    _condnewinfoavail.wait(&_mutex);
-    _mutex.unlock();
-  }
-}
-bool KLFKteLatexRunThread::setNewInput(const KLFBackend::klfInput& input)
-{
-  QMutexLocker mutexlocker(&_mutex);
-  _input = input;
-  _hasnewinfo = true;
-  _condnewinfoavail.wakeOne();
-  return true;
-}
-void KLFKteLatexRunThread::setSettings(const KLFBackend::klfSettings& settings)
-{
-  _mutex.lock();
-  _settings = settings;
-  _hasnewinfo = true;
-  _condnewinfoavail.wakeOne();
-  _mutex.unlock();
+  pConfigData->autopopup = false;
+  writeConfig();
 }
 
 
@@ -198,7 +130,7 @@ void KLFKteLatexRunThread::setSettings(const KLFBackend::klfSettings& settings)
 
 
 KLFKtePixmapWidget::KLFKtePixmapWidget(QWidget *parent)
-  : QWidget(parent), pPix(QPixmap())
+  : QWidget(parent), pPix(QPixmap()), pSemiTransparent(false)
 {
   setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
   setMinimumSize(QSize(10,10));
@@ -208,11 +140,16 @@ KLFKtePixmapWidget::~KLFKtePixmapWidget()
 {
 }
 
+void KLFKtePixmapWidget::setSemiTransparent(bool val)
+{
+  pSemiTransparent = val;
+}
+
 void KLFKtePixmapWidget::setPix(const QPixmap& pix)
 {
   pPix = pix;
   setMinimumSize(pPix.size());
-  resize(pPix.size());
+  //resize(pPix.size());
   update();
 }
 
@@ -221,43 +158,41 @@ void KLFKtePixmapWidget::paintEvent(QPaintEvent */*e*/)
   int x = (width()-pPix.width()) / 2;
   int y = (height()-pPix.height()) / 2;
   QPainter p(this);
+  p.save();
+  if (pSemiTransparent) {
+    p.setOpacity(0.7);
+  }
   p.drawPixmap(x,y,pPix);
+  p.restore();
 }
 
 
 // --------------------------------
 
 
-KLFKtePreviewWidget::KLFKtePreviewWidget(KTextEditor::View *vparent)
-  : QWidget(vparent, Qt::ToolTip)
+KLFKtePreviewWidget::KLFKtePreviewWidget(KLFKtePluginView * pluginView, KTextEditor::View *vparent)
+  : QWidget(vparent, Qt::ToolTip), pPluginView(pluginView)
 {
+  u = new Ui::KLFKtePreviewWidget();
+  u->setupUi(this);
+
   setAttribute(Qt::WA_ShowWithoutActivating, true);
   //setAttribute(Qt::WA_PaintOnScreen, true);
 
-  QGridLayout *l = new QGridLayout(this);
-  lbl = new KLFKtePixmapWidget(this);
-  klfLinks =
-    new QLabel(i18n("<a href=\"klfkteaction:/invoke_klf\">open in KLatexFormula</a> | "
-		    "<a href=\"klfkteaction:/no_autopopup\">don't popup automatically</a> | "
-		    "<a href=\"klfkteaction:/close\">close</a>"), this);
-  klfLinks->setWordWrap(false);
   // smaller font
-  QFont f = klfLinks->font();
+  QFont f = u->klfLinks->font();
   f.setPointSize(QFontInfo(f).pointSize()-1);
-  klfLinks->setFont(f);
-
-  l->addWidget(lbl, 0, 0, 2, 2, Qt::AlignCenter);
-  l->addWidget(klfLinks, 2, 0, 2, 1);
-  l->setColumnStretch(0, 1);
+  u->klfLinks->setFont(f);
 
   installEventFilter(this);
-  lbl->installEventFilter(this);
+  u->lbl->installEventFilter(this);
   vparent->installEventFilter(this);
 
-  connect(klfLinks, SIGNAL(linkActivated(const QString&)), this, SLOT(linkActivated(const QString&)));
+  connect(u->klfLinks, SIGNAL(linkActivated(const QString&)), this, SLOT(linkActivated(const QString&)));
 }
 KLFKtePreviewWidget::~KLFKtePreviewWidget()
 {
+  delete u;
 }
 
 bool KLFKtePreviewWidget::eventFilter(QObject *obj, QEvent *event)
@@ -281,9 +216,8 @@ void KLFKtePreviewWidget::linkActivated(const QString& url)
   } else if (url == "klfkteaction:/close") {
     hide();
   } else if (url == "klfkteaction:/no_autopopup") {
-    KLFKteConfigData::inst()->autopopup = false;
-    KLFKtePlugin::self()->writeConfig();
     hide();
+    emit requestedDontPopupAutomatically();
   }
 }
 
@@ -312,44 +246,97 @@ static int popupXPos(int mywidth, int viewx, int viewwidth, int viewposx)
 }
 void KLFKtePreviewWidget::showPreview(const QImage& preview, QWidget *view, const QPoint& pos)
 {
+  u->lblErrorNotice->hide();
+  u->lbl->setSemiTransparent(u->lblCompilingNotice->isVisible());
+
+  u->lbl->setPix(QPixmap::fromImage(preview));
+  u->klfLinks->setShown(pPluginView->configData()->popupLinks);
+
+  reshowPreview(view, pos);
+}
+
+void KLFKtePreviewWidget::reshowPreview(QWidget *view, const QPoint& pos)
+{
   QPoint globViewPos = view->mapToGlobal(view->pos());
-  lbl->setPix(QPixmap::fromImage(preview));
   //adjustSize();
-  klfLinks->setShown(KLFKteConfigData::inst()->popupLinks);
   resize(sizeHint()+QSize(4,4));
   move(popupXPos(width(), globViewPos.x(), view->width(), pos.x()),
        globViewPos.y()+pos.y()+35);
+
   show();
 
-  if (KLFKteConfigData::inst()->transparencyPercent)
-    setWindowOpacity(1.0 - (KLFKteConfigData::inst()->transparencyPercent / 100.0));
+  if (pPluginView->configData()->transparencyPercent)
+    setWindowOpacity(1.0 - (pPluginView->configData()->transparencyPercent / 100.0));
   
   // schedule re-paint to workaround bug where label is not repainted some times
-  QTimer::singleShot(20, lbl, SLOT(repaint()));
+  QTimer::singleShot(20, u->lbl, SLOT(repaint()));
 }
 
+
+void KLFKtePreviewWidget::showPreviewError(const QString& errstr)
+{
+  Q_UNUSED(errstr) ;
+
+  QString errstr2 = errstr;
+  if (errstr2.size() > 500) {
+    errstr2 = errstr2.left(500-4) + " ...";
+  }
+
+  u->lblErrorNotice->show();
+  u->lblErrorNotice->setToolTip(errstr2);
+
+  u->lblCompilingNotice->hide();
+  u->lbl->setSemiTransparent(true);
+  update();
+}
+
+bool KLFKtePreviewWidget::isCompiling() const
+{
+  return u->lblCompilingNotice->isVisible();
+}
+
+void KLFKtePreviewWidget::setCompiling(bool compiling)
+{
+  u->lblCompilingNotice->setVisible(compiling);
+  u->lbl->setSemiTransparent(u->lblErrorNotice->isVisible() || compiling);
+  //  update();
+}
 
 
 // ---------------------------------
 
 
-KLFKtePluginView::KLFKtePluginView(KTextEditor::View *view)
+
+
+KLFKtePluginView::KLFKtePluginView(KLFKtePlugin * mainPlugin, KTextEditor::View *view)
   : QObject(view),
     KXMLGUIClient(view),
+    pMainPlugin(mainPlugin),
     pView(view),
+    pIsGoodHighlightingMode(false),
+    pParser(NULL),
     pPreventNextShow(false)
 {
   setComponentData(KLFKtePluginFactory::componentData());
 
   KLFBackend::detectSettings(&klfsettings);
+
+  klfsettings.outlineFonts = false; // we don't care about font outlining.
+  klfsettings.wantPDF = false; // and about PDF.
+  klfsettings.wantSVG = false; // and also about SVG.
   
-  aPreviewSel = new KAction(i18n("Preview Selection or Current Equation"), this);
-  aPreviewSel->setShortcut(Qt::CTRL + Qt::SHIFT + Qt::Key_K);
+  klfDbg("new view!") ;
+
+  aPreviewSel = new KAction(i18n("Show Popup For Current Equation"), this);
   aInvokeKLF = new KAction(i18n("Invoke KLatexFormula"), this);
+  aInvokeKLF->setShortcut(Qt::CTRL + Qt::SHIFT + Qt::Key_K);
+  aShowLastError = new KAction(i18n("Show Last Error"), this);
   actionCollection()->addAction("klf_preview_selection", aPreviewSel);
   actionCollection()->addAction("klf_invoke_klf", aInvokeKLF);
-  connect(aPreviewSel, SIGNAL(triggered()), this, SLOT(slotPreview()));
+  actionCollection()->addAction("klf_display_last_error", aShowLastError);
+  connect(aPreviewSel, SIGNAL(triggered()), this, SLOT(slotPreparePreview()));
   connect(aInvokeKLF, SIGNAL(triggered()), this, SLOT(slotInvokeKLF()));
+  connect(aShowLastError, SIGNAL(triggered()), this, SLOT(slotShowLastError()));
   
   setXMLFile("klfkatepluginui.rc");
 
@@ -362,121 +349,106 @@ KLFKtePluginView::KLFKtePluginView(KTextEditor::View *view)
   connect(pView, SIGNAL(cursorPositionChanged(KTextEditor::View*, const KTextEditor::Cursor&)),
 	  this, SLOT(slotReparseCurrentContext()));
   connect(pView, SIGNAL(selectionChanged(KTextEditor::View *)),
-	  this, SLOT(slotSelectionChanged()));
+  	  this, SLOT(slotReparseCurrentContext()));
 
   connect(pView, SIGNAL(contextMenuAboutToShow(KTextEditor::View*, QMenu*)),
 	  this, SLOT(slotContextMenuAboutToShow(KTextEditor::View*, QMenu*)));
 
-  pPreview = new KLFKtePreviewWidget(pView);
+  pPreview = new KLFKtePreviewWidget(this, pView);
 
-  pLatexRunThread = new KLFKteLatexRunThread(this);
-  pLatexRunThread->start();
-  pLatexRunThread->setSettings(klfsettings);
+  pContLatexPreview = new KLFContLatexPreview(pMainPlugin->latexPreviewThread());
+  pContLatexPreview->setPreviewSize(configData()->popupMaxSize);
+  klfDbg("preview size is "<<pContLatexPreview->previewSize());
+  pContLatexPreview->setSettings(klfsettings);
 
-  connect(pLatexRunThread, SIGNAL(previewAvailable(const QImage&)),
+  connect(pContLatexPreview, SIGNAL(previewImageAvailable(const QImage&)),
 	  this, SLOT(slotReadyPreview(const QImage&)), Qt::QueuedConnection);
-  connect(pLatexRunThread, SIGNAL(previewError(const QString&, int)),
-	  this, SLOT(slotHidePreview()), Qt::QueuedConnection);
+  connect(pContLatexPreview, SIGNAL(previewError(const QString&, int)),
+  	  this, SLOT(slotPreviewError(const QString&, int)), Qt::QueuedConnection);
+
+  connect(pContLatexPreview, SIGNAL(compiling(bool)),
+          pPreview, SLOT(setCompiling(bool)), Qt::QueuedConnection);
+
 
   connect(pPreview, SIGNAL(invokeKLF()), this, SLOT(slotInvokeKLF()));
+  connect(pPreview, SIGNAL(requestedDontPopupAutomatically()),
+          this, SIGNAL(requestedDontPopupAutomatically()));
+
+
+  klfDbg("pView()->document()'s class name: "<<pView->document()->metaObject()->className()) ;
+  if (pView->document()->inherits("KateDocument")) {
+    // OK, we got a KatePart editor.
+    KTextEditor::HighlightInterface *hiface = qobject_cast<KTextEditor::HighlightInterface*>(pView->document());
+    KLF_ASSERT_NOT_NULL(hiface, "HighlightInterface is NULL!", ; );
+    if (hiface != NULL) {
+      pParser = createKatePartParser(pView->document(), hiface);
+    }
+  }
+  if (pParser == NULL) {
+    pParser = createDummyParser(pView->document());
+  }
 }
 
 KLFKtePluginView::~KLFKtePluginView()
 {
-  delete pPreview;
+  if (pParser != NULL) {
+    delete pParser;
+  }
+  if (pPreview != NULL) {
+    delete pPreview;
+  }
 }
 
 void KLFKtePluginView::slotHighlightingModeChanged(KTextEditor::Document *document)
 {
   if (document == pView->document()) {
-    if (KLFKteConfigData::inst()->onlyLatexMode)
-      pIsGoodHighlightingMode =
-	! QString::compare(pView->document()->highlightingMode(), "LaTeX", Qt::CaseInsensitive);
-    else
-      pIsGoodHighlightingMode = true;
+    pIsGoodHighlightingMode =
+      ! QString::compare(pView->document()->highlightingMode(), "LaTeX", Qt::CaseInsensitive);
   }
 }
 
 void KLFKtePluginView::slotReparseCurrentContext()
 {
-  //  qDebug()<<KLF_FUNC_NAME<<"()";
-
-  if (!pIsGoodHighlightingMode)
-    return;
-
-  KTextEditor::Document *doc = pView->document();
-
-  KTextEditor::Cursor curPos = pView->cursorPosition();
-
-  if (pView->selectionRange().isValid()) {
-    slotSelectionChanged();
+  if (!pIsGoodHighlightingMode) {
     return;
   }
 
-  // math-mode regex
-  //  QRegExp rxmm("[^\\](\\\\(begin\\{(equation|eqnarray)\\*?\\}|\\(|\\[)|\\$|\\$\\$)"
-  //   	       "(.*[^\\])" // 4th capture
-  //   	       "(\\\\(end\\{(equation|eqnarray)\\*?\\}|\\)|\\])|\\$|\\$\\$)");
-  //  QRegExp rxmm("(\\\\(\\(|\\[)|\\$|(\\$\\$))"
-  //	       "(.*)" // 4th capture
-  //	       "(\\\\(\\)|\\])|\\$|\\$\\$)");
-  QRegExp rxmm("(\\\\(\\(|\\[|begin\\{(equation|eqnarray)\\*?\\})|\\$|\\$\\$)"
-  	       "(.*)" // 4th capture
-  	       "(\\\\(\\)|\\]|end\\{(equation|eqnarray)\\*?\\})|\\$|\\$\\$)");
-  rxmm.setMinimal(true);
+  KLF_ASSERT_NOT_NULL(pParser, "parser object is NULL!", return; ) ;
 
-  QString text;
-  const int K = 20; // search within beginning of document and K lines after current position
-  int l = 0;
-  int curOffset = curPos.column();
-  while (l < doc->lines() && l <= curPos.line() + K) {
-    QString line = doc->line(l)+"\n";
-    text += line;
-    if (l < curPos.line()) // as long as we are above the current cursor, count the offset to cursor
-      curOffset += line.length();
-    ++l;
-  }
+  Cur curPos = pView->cursorPosition();
 
-  //  qDebug()<<KLF_FUNC_NAME<<": collected full text is:\n"<<text;
-  //  qDebug()<<KLF_FUNC_NAME<<": regex pattern is:\n"<<rxmm.pattern();
-  //  qDebug()<<KLF_FUNC_NAME<<": Matching regex to doc text. ; cur cursor position=(line="<<curPos.line()
-  //	  <<",col="<<curPos.column()<<"), curOffset="<<curOffset<<": "<<("..."+text.mid(curOffset-10,10)+"\033[7m"+text.mid(curOffset,1)+"\033[0m"+text.mid(curOffset+1,10)+"...");
-  // now match regex to text.
-  int matchIndex = rxmm.lastIndexIn(text, curOffset-1);
-  //  qDebug()<<KLF_FUNC_NAME<<": matchIndex="<<matchIndex<<": "<<("..."+text.mid(matchIndex-10,10)+"\033[7m"+text.mid(matchIndex,1)+"\033[0m"+text.mid(matchIndex+1,10)+"...");
-  // check if
-  //  * we matched at all
-  //  * the cursor is in the equation (ie. matchpos+matchlength >= cursorpos)
-  if (matchIndex < 0 || matchIndex < curOffset-rxmm.matchedLength()) {
-    //    qDebug()<<KLF_FUNC_NAME<<": match failed. matchIndex="<<matchIndex;
-    pCurMathContext.isValidMathContext = false;
-    slotHidePreview();
+  if (!curPos.isValid()) {
     return;
   }
-  //  qDebug()<<KLF_FUNC_NAME<<": match succeeded! match pos="<<matchIndex;
 
-  // match, setup the math context structure
-  pCurMathContext.isValidMathContext = true;
-  pCurMathContext.latexequation = rxmm.cap(4);
-  QString mathmodebegin = rxmm.cap(1);
-  QString mathmodeend = rxmm.cap(5);
-  pCurMathContext.mathmodebegin = mathmodebegin;
-  pCurMathContext.mathmodeend = mathmodeend;
-  QString beginenviron = rxmm.cap(3);
-  if (beginenviron.length() > 0) {
-    if (beginenviron == "equation") {
-      mathmodebegin = "\\["; // latex doesn't like 'equation*' environment when opened in KLF (?)
-      mathmodeend = "\\]";
-    } else {
-      mathmodebegin = "\\begin{"+beginenviron+"*}"; // force '*' for no line numbering
-      mathmodeend = "\\end{"+beginenviron+"*}"; // force '*' for no line numbering
+  MathModeContext context = pParser->parseContext(curPos);
+
+  if (context == pCurMathContext) {
+    if (configData()->autopopup) {
+      slotShowSamePreview();
     }
+    return;
   }
-  pCurMathContext.klfmathmode = mathmodebegin + "..." + mathmodeend;
 
-  if (KLFKteConfigData::inst()->autopopup)
-    slotPreview();
+  pCurMathContext = context;
+
+  klfDbg("parsed math mode context : "<<pCurMathContext) ;
+
+  if (!pCurMathContext.isValid()) {
+    slotHidePreview();
+    klfDbg("Not in math mode.") ;
+    return;
+  }
+
+  if (configData()->autopopup) {
+    slotPreparePreview();
+  }
 }
+
+
+
+
+
 
 void KLFKtePluginView::slotSelectionChanged()
 {
@@ -485,16 +457,22 @@ void KLFKtePluginView::slotSelectionChanged()
   if (!pIsGoodHighlightingMode)
     return;
 
-  pCurMathContext.isValidMathContext = true; // ....... hack .........
-  pCurMathContext.latexequation = pView->selectionText();
-  pCurMathContext.mathmodebegin = "\\[";
-  pCurMathContext.mathmodeend = "\\]";
-  pCurMathContext.klfmathmode = "\\[ ... \\]";
+  // Actually, maybe don't do anything special for selections.
+
+  /*
+  KTextEditor::Range selrange = pView->selectionRange();
+
+  pCurMathContext = MathModeContext();
+  pCurMathContext.start = selrange.start();
+  pCurMathContext.end = selrange.end();
+  pCurMathContext.latexmath = pView->selectionText();
+  pCurMathContext.startcmd = "\\[";
+  pCurMathContext.endcmd = "\\]";*/
 }
 
 void KLFKtePluginView::slotContextMenuAboutToShow(KTextEditor::View */*view*/, QMenu * /*menu*/)
 {
-  pPreventNextShow = true; // don't show the preview
+  //  pPreventNextShow = true; // don't show the preview
 
   // Actually not needed, this is done via XML gui
   /*
@@ -505,29 +483,39 @@ void KLFKtePluginView::slotContextMenuAboutToShow(KTextEditor::View */*view*/, Q
 }
 
 
-void KLFKtePluginView::slotPreview()
+void KLFKtePluginView::slotPreparePreview()
 {
-  slotPreview(pCurMathContext);
+  if (pView->selectionRange().isValid()) {
+    // actually, maybe don't do anything special for selections....
+    // slotSelectionChanged(); // make the selection the current math mode context
+  }
+
+  slotPreparePreview(pCurMathContext);
 }
 
-void KLFKtePluginView::slotPreview(const MathContext& context)
+void KLFKtePluginView::slotShowSamePreview()
+{
+  if (pCurMathContext.isValid()) {
+    showPreview(QImage());
+  } else {
+    slotHidePreview();
+  }
+}
+
+void KLFKtePluginView::slotPreparePreview(const MathModeContext& context)
 {
   if (!pIsGoodHighlightingMode)
     return;
 
-  // Note: Don't complain if the equation doesn't parse, my latex parser can very easily be fooled if eg.
-  // the cursor is placed between to inlined equations like : ...and we define $R$ and $S$ to...
-  // if the cursor is on the "and", then it sees the (wrong) inlined equation "$ and $"
-
   KLFBackend::klfInput klfinput;
-  klfinput.latex = context.latexequation;
-  klfinput.mathmode = context.klfmathmode;
-  klfinput.preamble = KLFKteConfigData::inst()->preamble;
+  klfinput.latex = context.latexmath;
+  klfinput.mathmode = context.fullMathModeWithoutNumbering();
+  klfinput.preamble = configData()->preamble;
   klfinput.fg_color = qRgb(0, 0, 0); // black
   klfinput.bg_color = qRgba(255, 255, 255, 0); // transparent
   klfinput.dpi = 180;
 
-  pLatexRunThread->setNewInput(klfinput);
+  pContLatexPreview->setInput(klfinput);
 }
 
 void KLFKtePluginView::slotHidePreview()
@@ -537,6 +525,14 @@ void KLFKtePluginView::slotHidePreview()
 
 void KLFKtePluginView::slotReadyPreview(const QImage& preview)
 {
+  showPreview(preview);
+}
+
+void KLFKtePluginView::showPreview(const QImage& preview)
+{
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  klfDbg("preview!! size="<<preview.size()) ;
+
   if (!pIsGoodHighlightingMode)
     return;
 
@@ -545,25 +541,46 @@ void KLFKtePluginView::slotReadyPreview(const QImage& preview)
     return;
   }
 
-  pPreview->showPreview(preview, pView, pView->cursorPositionCoordinates());
+  if (preview.isNull()) {
+    pPreview->reshowPreview(pView, pView->cursorPositionCoordinates());
+  } else {
+    pPreview->showPreview(preview, pView, pView->cursorPositionCoordinates());
+  }
+}
+
+void KLFKtePluginView::slotPreviewError(const QString& errorString, int errorCode)
+{
+  Q_UNUSED(errorCode) ;
+
+  pLastError = KLFProgErr::extractLatexError(errorString);
+
+  klfDbg("Got error: "<<errorString);
+
+  pPreview->showPreviewError(pLastError);
 }
 
 
 void KLFKtePluginView::slotInvokeKLF()
 {
-  if (pCurMathContext.isValidMathContext) {
+  if (pCurMathContext.isValid()) {
     // given that we use startDetached(), --daemonize is superfluous
     KProcess::startDetached(QStringList()
-			    << KLFKteConfigData::inst()->klfpath
+			    << configData()->klfpath
 			    << "-I"
-			    << "--latexinput="+pCurMathContext.latexequation
-			    << "--mathmode="+pCurMathContext.klfmathmode
+			    << "--latexinput="+pCurMathContext.latexmath.trimmed()
+			    << "--mathmode="+pCurMathContext.fullMathModeWithoutNumbering()
 			    );
   } else {
     KProcess::startDetached(QStringList()
-			    << KLFKteConfigData::inst()->klfpath
+			    << configData()->klfpath
 			    );
   }
+}
+
+
+void KLFKtePluginView::slotShowLastError()
+{
+  KLFProgErr::showError(pView, pLastError);
 }
 
 

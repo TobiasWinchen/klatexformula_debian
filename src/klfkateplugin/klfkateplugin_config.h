@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfkateplugin_config.h 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfkateplugin_config.h 902 2014-08-09 23:44:15Z phfaist $ */
 
 #ifndef KLFKATEPLUGIN_CONFIG_H
 #define KLFKATEPLUGIN_CONFIG_H
@@ -28,30 +28,8 @@
 
 namespace Ui { class KLFKatePluginConfigWidget; }
 
-class KLFKteConfigData : public QObject
-{
-  Q_OBJECT
-public:
-  static KLFKteConfigData *inst();
-  
-  void readConfig(KConfigGroup *cfg);
-  void writeConfig(KConfigGroup *cfg);
 
-  bool autopopup;
-  bool onlyLatexMode;
-  int transparencyPercent;
-  QString preamble;
-  QString klfpath;
-  QSize popupMaxSize;
-  bool popupLinks;
-
-private:
-  KLFKteConfigData(QObject *parent) : QObject(parent) { }
-
-  static KLFKteConfigData *instance;
-};
-
-
+class KLFKteConfigData;
 
 
 class KLFKteConfig  :  public KCModule
@@ -63,6 +41,7 @@ public:
   virtual ~KLFKteConfig();
   
   virtual void save();
+  virtual void saveViaConfigData(KLFKteConfigData * d);
   virtual void load();
   virtual void defaults();
   

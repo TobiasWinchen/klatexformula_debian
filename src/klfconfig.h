@@ -19,12 +19,13 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfconfig.h 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klfconfig.h 866 2013-11-24 13:56:22Z phfaist $ */
 
 #ifndef KLFCONFIG_H
 #define KLFCONFIG_H
 
 #include <qglobal.h>
+#include <QDebug>
 #include <QString>
 #include <QFont>
 #include <QSize>
@@ -32,8 +33,91 @@
 #include <QSettings>
 #include <QTextCharFormat>
 #include <QMap>
+#include <QHash>
+#include <QSettings>
 
 #include <klfbackend.h>
+#include <klfutil.h>
+#include <klfdatautil.h>
+#include <klfconfigbase.h>
+
+
+template<class T>
+inline bool klf_config_read_value(QSettings &s, const QString& baseName, T * target,
+				  const char * listOrMapType  = NULL)
+{
+  QVariant defVal = QVariant::fromValue<T>(*target);
+  QVariant valstrv = s.value(baseName, QVariant());
+  if (valstrv.isNull()) {
+    klfDbg("No entry "<<baseName<<" in config.") ;
+    return false;
+  }
+  QString valstr = valstrv.toString();
+  QVariant val = klfLoadVariantFromText(valstr.toLatin1(), defVal.typeName(), listOrMapType);
+  if (val.isValid()) {
+    *target = val.value<T>();
+    return true;
+  }
+  return false;
+}
+
+template<class T>
+inline void klf_config_read(QSettings &s, const QString& baseName, KLFConfigProp<T> *target,
+			    const char * listOrMapType = NULL)
+{
+  T value = *target;
+  if (klf_config_read_value(s, baseName, &value, listOrMapType))
+    *target = value;
+}
+template<>
+inline void klf_config_read<QTextCharFormat>(QSettings &s, const QString& baseName,
+					     KLFConfigProp<QTextCharFormat> *target,
+					     const char * /*listOrMapType*/)
+{
+  qDebug("klf_config_read<QTextCharFormat>(%s)", qPrintable(baseName));
+  QTextFormat fmt = *target;
+  klf_config_read_value(s, baseName, &fmt);
+  *target = fmt.toCharFormat();
+}
+
+template<class T>
+inline void klf_config_read_list(QSettings &s, const QString& baseName, KLFConfigProp<QList<T> > *target)
+{
+  QVariantList vlist = klfListToVariantList(target->value());
+  klf_config_read_value(s, baseName, &vlist, QVariant::fromValue<T>(T()).typeName());
+  *target = klfVariantListToList<T>(vlist);
+}
+
+
+template<class T>
+inline void klf_config_write_value(QSettings &s, const QString& baseName, const T * value)
+{
+  QVariant val = QVariant::fromValue<T>(*value);
+  QByteArray datastr = klfSaveVariantToText(val);
+  s.setValue(baseName, QVariant::fromValue<QString>(QString::fromLocal8Bit(datastr)));
+}
+template<class T>
+inline void klf_config_write(QSettings &s, const QString& baseName, const KLFConfigProp<T> * target)
+{
+  T temp = *target;
+  klf_config_write_value(s, baseName, &temp);
+}
+template<>
+inline void klf_config_write<QTextCharFormat>(QSettings &s, const QString& baseName,
+					      const KLFConfigProp<QTextCharFormat> * target)
+{
+  klfDbg("<QTextCharFormat>, baseName="<<baseName) ;
+  QTextFormat f = *target;
+  klf_config_write_value(s, baseName, &f);
+}
+template<class T>
+inline void klf_config_write_list(QSettings &s, const QString& baseName, const KLFConfigProp<QList<T> > * target)
+{
+  QVariantList vlist = klfListToVariantList(target->value());
+  klf_config_write_value(s, baseName, &vlist);
+}
+
+
 
 class KLFConfig;
 
@@ -138,15 +222,9 @@ public:
  *
  * See also \ref KLFSettings for a graphical interface for editing these settings.
  */
-class KLF_EXPORT KLFConfig {
+class KLF_EXPORT KLFConfig : public KLFConfigBase
+{
 public:
-
-  /** this doesn't do anything. It actually leaves every entry with undefined values.
-      This is why it's important to call loadDefaults() quickly after building an instance
-      of KLFConfig. readFromConfig() isn't enough, beacause it assumes the default values
-      are already stored in the current fields. */
-  KLFConfig();
-
 
   QString homeConfigDir;
   QString globalShareDir;
@@ -156,96 +234,122 @@ public:
   QString homeConfigDirPlugins;
   QString homeConfigDirPluginData;
   QString homeConfigDirI18n;
+  QString homeConfigDirUserScripts;
 
   struct {
 
-    bool thisVersionMajFirstRun;
-    bool thisVersionMajMinFirstRun;
-    bool thisVersionMajMinRelFirstRun;
-    bool thisVersionExactFirstRun;
+    KLFConfigProp<bool> thisVersionMajFirstRun;
+    KLFConfigProp<bool> thisVersionMajMinFirstRun;
+    KLFConfigProp<bool> thisVersionMajMinRelFirstRun;
+    KLFConfigProp<bool> thisVersionExactFirstRun;
 
     /** The library file name, relative to homeConfigDir. */
-    QString libraryFileName;
+    KLFConfigProp<QString> libraryFileName;
     /** The lib scheme to use to store the library. This scheme will be given the full path
      * to the library in the URL path part. */
-    QString libraryLibScheme;
+    KLFConfigProp<QString> libraryLibScheme;
 
   } Core;
 
   struct {
 
-    QString locale; //!< When setting this, don't forget to call QLocale::setDefault().
-    bool useSystemAppFont;
-    QFont applicationFont;
-    QFont latexEditFont;
-    QFont preambleEditFont;
-    QSize previewTooltipMaxSize;
-    QSize labelOutputFixedSize;
-    QString lastSaveDir;
-    int symbolsPerLine;
-    QList<QColor> userColorList;
-    QList<QColor> colorChooseWidgetRecent;
-    QList<QColor> colorChooseWidgetCustom;
-    int maxUserColors;
-    bool enableToolTipPreview;
-    bool enableRealTimePreview;
-    int autosaveLibraryMin;
-    bool showHintPopups;
-    bool clearLatexOnly;
-    QString copyExportProfile;
-    QString dragExportProfile;
-    bool glowEffect;
-    QColor glowEffectColor;
-    int glowEffectRadius;
-    QStringList customMathModes;
-    bool showExportProfilesLabel;
-    bool menuExportProfileAffectsDrag;
-    bool menuExportProfileAffectsCopy;
+    KLFConfigProp<QString> locale; //!< When setting this, don't forget to call QLocale::setDefault().
+    KLFConfigProp<bool> useSystemAppFont;
+    KLFConfigProp<QFont> applicationFont;
+    KLFConfigProp<QFont> latexEditFont;
+    KLFConfigProp<QFont> preambleEditFont;
+    KLFConfigProp<bool> editorTabInsertsTab;
+    KLFConfigProp<bool> editorWrapLines;
+    KLFConfigProp<QSize> previewTooltipMaxSize;
+    KLFConfigProp<QSize> labelOutputFixedSize; //!< No Longer used (3.3.0alpha)
+    KLFConfigProp<QSize> smallPreviewSize; //!< Size of preview to store e.g. in history/library items
+    //    KLFConfigProp<QSize> savedWindowSize;
+    KLFConfigProp<QString> detailsSideWidgetType; //!< "ShowHide","Drawer", or "Float" (or any custom type!)
+    KLFConfigProp<QString> lastSaveDir;
+    KLFConfigProp<int> symbolsPerLine;
+    KLFConfigProp<bool> symbolIncludeWithPreambleDefs;
+    KLFConfigProp<QList<QColor> > userColorList;
+    KLFConfigProp<QList<QColor> > colorChooseWidgetRecent;
+    KLFConfigProp<QList<QColor> > colorChooseWidgetCustom;
+    KLFConfigProp<int> maxUserColors;
+    KLFConfigProp<bool> enableToolTipPreview;
+    KLFConfigProp<bool> enableRealTimePreview;
+    KLFConfigProp<bool> realTimePreviewExceptBattery;
+    KLFConfigProp<int> autosaveLibraryMin;
+    KLFConfigProp<bool> showHintPopups;
+    KLFConfigProp<bool> clearLatexOnly;
+    KLFConfigProp<bool> glowEffect;
+    KLFConfigProp<QColor> glowEffectColor;
+    KLFConfigProp<int> glowEffectRadius;
+    KLFConfigProp<QStringList> customMathModes;
+    KLFConfigProp<bool> emacsStyleBackspaceSearch;
+    KLFConfigProp<bool> macBrushedMetalLook;
 
   } UI;
 
   struct {
 
-    unsigned int configFlags;
-    QTextCharFormat fmtKeyword;
-    QTextCharFormat fmtComment;
-    QTextCharFormat fmtParenMatch;
-    QTextCharFormat fmtParenMismatch;
-    QTextCharFormat fmtLonelyParen;
+    KLFConfigProp<QString> copyExportProfile;
+    KLFConfigProp<QString> dragExportProfile;
+    KLFConfigProp<bool> showExportProfilesLabel;
+    KLFConfigProp<bool> menuExportProfileAffectsDrag;
+    KLFConfigProp<bool> menuExportProfileAffectsCopy;
+    KLFConfigProp<double> oooExportScale;
+    KLFConfigProp<int> htmlExportDpi;
+    KLFConfigProp<int> htmlExportDisplayDpi;
+
+  } ExportData;
+
+  struct {
+
+    KLFConfigProp<bool> enabled;
+    KLFConfigProp<bool> highlightParensOnly;
+    KLFConfigProp<bool> highlightLonelyParens;
+    //KLFConfigProp<bool> matchParenTypes;
+    KLFConfigProp<QTextCharFormat> fmtKeyword;
+    KLFConfigProp<QTextCharFormat> fmtComment;
+    KLFConfigProp<QTextCharFormat> fmtParenMatch;
+    KLFConfigProp<QTextCharFormat> fmtParenMismatch;
+    KLFConfigProp<QTextCharFormat> fmtLonelyParen;
 
   } SyntaxHighlighter;
 
   struct {
 
-    QString tempDir;
-    QString execLatex;
-    QString execDvips;
-    QString execGs;
-    QString execEpstopdf;
-    QStringList execenv;
-    double lborderoffset;
-    double tborderoffset;
-    double rborderoffset;
-    double bborderoffset;
-    bool outlineFonts;
+    KLFConfigProp<QString> tempDir;
+    KLFConfigProp<QString> execLatex;
+    KLFConfigProp<QString> execDvips;
+    KLFConfigProp<QString> execGs;
+    KLFConfigProp<QString> execEpstopdf;
+    KLFConfigProp<QStringList> execenv;
+    KLFConfigProp<QString> setTexInputs;
+    KLFConfigProp<double> lborderoffset;
+    KLFConfigProp<double> tborderoffset;
+    KLFConfigProp<double> rborderoffset;
+    KLFConfigProp<double> bborderoffset;
+    KLFConfigProp<bool> calcEpsBoundingBox;
+    KLFConfigProp<bool> outlineFonts;
+    KLFConfigProp<bool> wantPDF;
+    KLFConfigProp<bool> wantSVG;
+    KLFConfigProp<QStringList> userScriptAddPath;
 
   } BackendSettings;
 
   struct {
 
-    QColor colorFound;
-    QColor colorNotFound;
+    KLFConfigProp<QColor> colorFound;
+    KLFConfigProp<QColor> colorNotFound;
 
-    bool restoreURLs;
-    bool confirmClose;
-    bool groupSubCategories;
-    int iconViewFlow;
-    bool historyTagCopyToArchive;
-    QString lastFileDialogPath;
+    KLFConfigProp<bool> restoreURLs;
+    KLFConfigProp<bool> confirmClose;
+    KLFConfigProp<bool> groupSubCategories;
+    KLFConfigProp<int> iconViewFlow;
+    KLFConfigProp<bool> historyTagCopyToArchive;
+    KLFConfigProp<QString> lastFileDialogPath;
 
-    int treePreviewSizePercent;
-    int listPreviewSizePercent;
-    int iconPreviewSizePercent;
+    KLFConfigProp<int> treePreviewSizePercent;
+    KLFConfigProp<int> listPreviewSizePercent;
+    KLFConfigProp<int> iconPreviewSizePercent;
 
   } LibraryBrowser;
 
@@ -254,6 +358,12 @@ public:
     QMap<QString, QMap<QString, QVariant> > pluginConfig;
 
   } Plugins;
+
+  struct {
+    
+    QMap<QString, QMap<QString, QVariant> > userScriptConfig;
+
+  } UserScripts;
 
   /** Not a saved setting. This is set in loadDefaults() */
   QFont defaultCMUFont;
@@ -297,6 +407,26 @@ private:
 
 KLF_EXPORT extern KLFConfig klfconfig;
 
+
+
+
+#define KLF_CONNECT_CONFIG_SH_LATEXEDIT(latexedit)				\
+  klfconfig.SyntaxHighlighter.enabled					\
+  .connectQObjectProperty((latexedit)->syntaxHighlighter(), "highlightEnabled") ; \
+  klfconfig.SyntaxHighlighter.highlightParensOnly			\
+  .connectQObjectProperty((latexedit)->syntaxHighlighter(), "highlightParensOnly") ; \
+  klfconfig.SyntaxHighlighter.highlightLonelyParens			\
+  .connectQObjectProperty((latexedit)->syntaxHighlighter(), "highlightLonelyParens") ; \
+  klfconfig.SyntaxHighlighter.fmtKeyword				\
+  .connectQObjectProperty((latexedit)->syntaxHighlighter(), "fmtKeyword") ; \
+  klfconfig.SyntaxHighlighter.fmtComment				\
+  .connectQObjectProperty((latexedit)->syntaxHighlighter(), "fmtComment") ; \
+  klfconfig.SyntaxHighlighter.fmtParenMatch				\
+  .connectQObjectProperty((latexedit)->syntaxHighlighter(), "fmtParenMatch") ; \
+  klfconfig.SyntaxHighlighter.fmtParenMismatch				\
+  .connectQObjectProperty((latexedit)->syntaxHighlighter(), "fmtParenMismatch") ; \
+  klfconfig.SyntaxHighlighter.fmtLonelyParen				\
+  .connectQObjectProperty((latexedit)->syntaxHighlighter(), "fmtLonelyParen") ;
 
 
 

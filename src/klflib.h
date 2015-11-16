@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflib.h 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klflib.h 881 2014-06-15 21:23:43Z phfaist $ */
 
 #ifndef KLFLIB_H
 #define KLFLIB_H
@@ -512,7 +512,7 @@ public:
      * Note that views may assume that implementing sub-resource properties means also providing
      * sensible values and/or loaded/stored values for the built-in sub-resource properties
      * described in the \ref SubResourceProperty enum. */
-    FeatureSubResourceProps	= 0x0010,
+    FeatureSubResourceProps	= 0x0010
   };
 
   /**

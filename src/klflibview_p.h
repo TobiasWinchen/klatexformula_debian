@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibview_p.h 754 2012-01-05 21:56:47Z phfaist $ */
+/* $Id: klflibview_p.h 755 2012-01-10 10:14:39Z phfaist $ */
 
 
 /** \file
@@ -50,11 +50,13 @@
 #include <QDirModel>
 #include <QCompleter>
 
-#include <ui_klfliblocalfilewidget.h>
+#include <klfiteratorsearchable.h>
 
 #include "klflib.h"
 #include "klflibview.h"
 #include "klfconfig.h"
+
+#include <ui_klfliblocalfilewidget.h>
 
 class KLFLibDefTreeView;
 
@@ -395,6 +397,110 @@ private:
 };
 
 
+// -----------------------------------------
+
+
+class KLFLibViewSearchable : public KLFIteratorSearchable<QModelIndex>
+{
+  KLFLibDefaultView *v;
+  inline KLFLibModel *m() { return v->pModel; }
+
+public:
+  KLFLibViewSearchable(KLFLibDefaultView *view)
+    : v(view)
+  {
+  }
+
+  SearchIterator searchIterBegin()
+  {
+    KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+    KLF_ASSERT_NOT_NULL(m(), "Model is NULL!", return QModelIndex() ) ;
+    return m()->walkNextIndex(QModelIndex());
+  }
+  SearchIterator searchIterEnd()
+  {
+    KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+    return QModelIndex();
+  }
+  SearchIterator searchIterAdvance(const SearchIterator& pos, bool forward)
+  {
+    KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+    KLF_ASSERT_NOT_NULL(m(), "Model is NULL!", return QModelIndex() ) ;
+    return forward ? m()->walkNextIndex(pos) : m()->walkPrevIndex(pos);
+  }
+
+  virtual SearchIterator searchIterStartFrom(bool /*forward*/)
+  {
+    KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+    KLF_ASSERT_NOT_NULL(m(), "Model is NULL!", return QModelIndex() ) ;
+
+    return v->currentVisibleIndex(true); // always first visible index
+  }
+
+  virtual bool searchIterMatches(const SearchIterator& pos, const QString& queryString)
+  {
+    KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+    KLF_ASSERT_NOT_NULL(m(), "Model is NULL!", return false ) ;
+    KLF_ASSERT_NOT_NULL(m()->pCache, "Model Cache is NULL!", return false ) ;
+
+    Qt::CaseSensitivity cs = Qt::CaseInsensitive;
+    if (queryString.contains(QRegExp("[A-Z]")))
+      cs = Qt::CaseSensitive;
+    KLFLibModelCache::NodeId n = m()->pCache->getNodeForIndex(pos);
+    return KLF_DEBUG_TEE( m()->pCache->searchNodeMatches(n, queryString, cs) ) ;
+  }
+
+  virtual void searchMoveToIterPos(const SearchIterator& pos)
+  {
+    KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+    v->pDelegate->setSearchIndex(pos);
+    if ( ! pos.isValid() ) {
+      //      v->pView->scrollToTop();
+      //      // unselect all
+      //      v->pView->selectionModel()->setCurrentIndex(QModelIndex(), QItemSelectionModel::Clear);
+      return;
+    } else {
+      v->pView->scrollTo(pos, QAbstractItemView::EnsureVisible);
+    }
+    if (v->pViewType == KLFLibDefaultView::CategoryTreeView) {
+      // if tree view, expand item
+      qobject_cast<QTreeView*>(v->pView)->expand(pos);
+    }
+    // select the item
+    v->pView->selectionModel()->setCurrentIndex(pos,
+						QItemSelectionModel::ClearAndSelect|
+						QItemSelectionModel::Rows);
+    v->updateDisplay();
+  }
+
+  virtual void searchPerformed(const SearchIterator& resultMatchPosition, bool found, const QString& queryString)
+  {
+    KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+    Q_UNUSED(resultMatchPosition) ;
+    Q_UNUSED(found) ;
+    v->pDelegate->setSearchString(queryString);
+  }
+  virtual void searchAborted()
+  {
+    KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+    v->pDelegate->setSearchString(QString());
+    v->pDelegate->setSearchIndex(QModelIndex());
+    v->updateDisplay(); // repaint widget to update search underline
+    KLFIteratorSearchable<QModelIndex>::searchAborted();
+  }
+
+  virtual void searchReinitialized()
+  {
+    KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+    v->pDelegate->setSearchString(QString());
+    v->pDelegate->setSearchIndex(QModelIndex());
+    v->updateDisplay();
+    KLFIteratorSearchable<QModelIndex>::searchReinitialized();
+  }
+
+
+  KLF_DEBUG_DECLARE_REF_INSTANCE("libview-searchable") ;
+};
 
 
 
@@ -532,48 +638,45 @@ public:
 
 
   QModelIndex curVisibleIndex(bool firstOrLast) const {
-    Q_UNUSED(firstOrLast)
-
-    // In the future, firstOrLast will be used to search forwards or backwards from the right point
-    klfDbg( "curVisibleIndex: offset y is "<<scrollOffset().y() ) ;
-    QModelIndex it = QModelIndex();
-    while ((it = pModel->walkNextIndex(it)).isValid()) {
+    /*
+      int off_y = scrollOffset().y();
+      klfDbg( "curVisibleIndex: offset y is "<<off_y ) ;
+      QModelIndex it = QModelIndex();
+      while ((it = pModel->walkNextIndex(it)).isValid()) {
       klfDbg( "\texploring item it="<<it<<"; bottom="<<thisConstView()->visualRect(it).bottom() ) ;
       if (thisConstView()->visualRect(it).bottom() >= 0) {
-	// first index from the beginning, that is after our scroll offset.
+      // first index from the beginning, that is after our scroll offset.
       return it;
       }
-    }
-    return pModel->walkNextIndex(QModelIndex());
-    /*
-      QModelIndex index;
-      QPoint offset = scrollOffset();
-      klfDbg( " offset="<<offset ) ;
-      int xStart, yStart;
-      int xStep, yStep;
-      if (firstOrLast) {
+      }
+    */
+    QModelIndex index;
+    QPoint offset = scrollOffset();
+    klfDbg( " offset="<<offset ) ;
+    int xStart, yStart;
+    int xStep, yStep;
+    if (firstOrLast) {
       xStep = 40;
       yStep = 40;
       xStart = xStep/2;
       yStart = yStep/2;
-      } else {
+    } else {
       xStep = -40;
       yStep = -40;
       xStart = thisConstView()->width() - xStep/2;
       yStart = thisConstView()->height() - yStep/2;
-      }
-      int xpos, ypos;
-      for (xpos = xStart; xpos > 0 && xpos < thisConstView()->width(); xpos += xStep) {
+    }
+    int xpos, ypos;
+    for (xpos = xStart; xpos > 0 && xpos < thisConstView()->width(); xpos += xStep) {
       for (ypos = yStart; ypos > 0 && ypos < thisConstView()->height(); ypos += yStep) {
-      if ((index = thisConstView()->indexAt(QPoint(xpos,ypos))).isValid()) {
-      klfDbg( ": Found index = "<<index<<" at pos=("<<xpos<<","<<ypos<<"); "
-      <<" with offset "<<offset ) ;
-      return firstOrLast ? pModel->walkPrevIndex(index) : pModel->walkNextIndex(index);
+	if ((index = thisConstView()->indexAt(QPoint(xpos,ypos))).isValid()) {
+	  klfDbg( ": Found index = "<<index<<" at pos=("<<xpos<<","<<ypos<<"); "
+		  <<" with offset "<<offset ) ;
+	  return firstOrLast ? pModel->walkPrevIndex(index) : pModel->walkNextIndex(index);
+	}
       }
-      }
-      }
-      return firstOrLast ? pModel->walkNextIndex(QModelIndex()) : pModel->walkPrevIndex(QModelIndex());
-    */
+    }
+    return firstOrLast ? pModel->walkNextIndex(QModelIndex()) : pModel->walkPrevIndex(QModelIndex());
   }
 
   virtual void modelInitialized() { }

@@ -1,5 +1,14 @@
 <RCC>
   <qresource>
+    <file>pics/tab-scripts.png</file>
+    <file>pics/tab-addons.png</file>
+    <file>pics/tab-advanced.png</file>
+    <file>pics/tab-latex.png</file>
+    <file>pics/tab-editor.png</file>
+    <file>pics/tab-library.png</file>
+    <file>pics/tab-interface.png</file>
+    <file>pics/info.png</file>
+    <file>pics/infowarn.png</file>
     <file>pics/exportprofile.png</file>
     <file>pics/clearedit.png</file>
     <file>pics/importexport.png</file>
@@ -31,12 +40,17 @@
     <file>pics/library.png</file>
     <file>pics/switchshrinked.png</file>
     <file>pics/switchexpanded.png</file>
+    <file>pics/switchshrinked_drawer.png</file>
+    <file>pics/switchexpanded_drawer.png</file>
     <file>pics/cut.png</file>
     <file>pics/copy.png</file>
     <file>pics/paste.png</file>
     <file>pics/move.png</file>
     <file>pics/refresh.png</file>
     <file>pics/transparenticon16.png</file>
+    <file>pics/showtoolwindow.png</file>
+    <file>pics/hidetoolwindow.png</file>
+    <file>pics/iconhere.png</file>
   </qresource>
   <qresource prefix="/pics">
     <file>klatexformula-16.png</file>
@@ -51,17 +65,20 @@
     <file>data/cmunsx.otf</file>
     <file>data/cmdl-help.txt</file>
     <file>data/about.html</file>
-    <file>data/whats-new-3.2.html</file>
-    <file>data/latexsymbols.xml</file>
+    <file>data/whats-new-3.3.html</file>
     <file>data/symbolspixmapcache_base</file>
     <file>data/defaultlibrary.klf</file>
     <file>data/ooodrawingtemplate</file>
+  </qresource>
+  <qresource>
+    <file>conf/latexsymbols.d/latexsymbols.xml</file>
     <file>conf/export_mime_profiles.d/export_default.xml</file>
+    <file>conf/latexfontdefs.d/defaultfontdefs.xml</file>
   </qresource>
   <qresource>
     <file>data/cmdl-help_fr.txt</file>
     <file>data/about_fr.html</file>
-    <file>data/whats-new-3.2_fr.html</file>
+    <file>data/whats-new-3.3_fr.html</file>
   </qresource>
   <qresource>
     <file>data/cmdl-help_cs.txt</file>

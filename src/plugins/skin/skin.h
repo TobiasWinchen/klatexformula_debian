@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: skin.h 627 2011-04-12 12:36:22Z phfaist $ */
+/* $Id: skin.h 789 2012-06-01 07:09:57Z phfaist $ */
 
 #ifndef PLUGINS_SKIN_H
 #define PLUGINS_SKIN_H
@@ -86,7 +86,7 @@ public:
   }
   */
 
-  static Skin loadSkin(const QString& fn, bool getStyleSheet = true);
+  static Skin loadSkin(KLFPluginConfigAccess *cfg, const QString& fn, bool getStyleSheet = true);
 
   bool getModifiedAndReset() { bool m = _modified; _modified = false; return m; }
 

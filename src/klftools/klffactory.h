@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klffactory.h 603 2011-02-26 23:14:55Z phfaist $ */
+/* $Id: klffactory.h 673 2011-07-27 13:45:42Z phfaist $ */
 
 #ifndef KLFFACTORY_H
 #define KLFFACTORY_H
@@ -62,20 +62,21 @@ private:
  * Factories need to be explicitely registered and unregistered, they are done so in the
  * KLFFactoryBase constructor and destructor.
  *
- * The usage of KLFFactoryManager and KLFFactoryBase is for example:
+ * Example usage of KLFFactoryManager and KLFFactoryBase. Note that MyFactory is a base class
+ * which can be derived to actually implement your factories.
  * \code
  *  // in .h:
  *  class MyFactory : public KLFFactoryBase {
  *  public:
  *    MyFactory() : KLFFactoryBase(&pFactoryManager) { }
  *
- *    virtual QStringList supportedTypes() const { ..... }
+ *    virtual QStringList supportedTypes() const = 0;
  *
- *    ... virtual MyObject * createMyObject(const QString& ofThisObjectType) = 0; ...
+ *    virtual MyObject * createMyObject(const QString& ofThisObjectType, ...params...) = 0;
  *
  *    ...
  *
- *    MyFactory * findFactoryFor(...) {
+ *    static MyFactory * findFactoryFor(...) {
  *      return dynamic_cast<MyFactory*>(pFactoryManager.findFactoryFor(...));
  *    }
  *

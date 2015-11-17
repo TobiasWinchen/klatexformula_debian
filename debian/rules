@@ -1,28 +1,55 @@
 #!/usr/bin/make -f
 
-include /usr/share/cdbs/1/rules/debhelper.mk
-include /usr/share/cdbs/1/class/cmake.mk
-DEB_CMAKE_NORMAL_ARGS+=-DKLF_INSTALL_DESKTOP=TRUE -DKLF_INSTALL_KLFAPP_STATIC_LIBS=FALSE -DKLF_LIBKLFAPP_STATIC=FALSE -DKLF_LIBKLFBACKEND_STATIC=FALSE -DKLF_LIBKLFTOOLS_STATIC=FALSE -DKLF_INSTALL_APIDOC_DIR=share/doc/libklatexformula3-doc -DKLF_INSTALL_RCCRESOURCES_DIR=lib/klatexformula/rccresources -DKLF_INSTALL_LIB_DIR=lib
-build/klatexformula::
-		/usr/bin/docbook-to-man debian/klatexformula.1.sgml > debian/klatexformula.1
+%:
+	dh $@ --parallel
 
-clean/klatexformula::
-	rm Doxyfile.klftools
-	rm Doxyfile.klfapp
-	rm welcome_installer_withlatex.txt
-	rm Doxyfile.klfbackend.sfweb
-	rm Doxyfile.klfapp.sfweb
-	rm cmake_uninstall.cmake
-	rm klf_test_condition.cmake
-	rm Doxyfile.klftools.sfweb
-	rm klf_test_condition.cmake.in
-	rm cmake_uninstall_script.cmake
-	rm Doxyfile.klftools
-	rm Doxyfile.klfbackend
-	rm welcome_installer.txt
-	rm src/klf_xtradata.qrc
-	rm src/klatexformula.desktop
-	rm src/plugins/info_baseplugins.xml
-	rm src/plugins/plugindirinfo.xml
-	rm src/plugins/klfbaseplugins.qrc
-	rm src/klfkateplugin/ktexteditor_klf_automoc.cpp.files
+override_dh_auto_configure:
+	cmake . -DKLF_INSTALL_DESKTOP=TRUE -DKLF_INSTALL_KLFAPP_STATIC_LIBS=FALSE -DKLF_LIBKLFAPP_STATIC=FALSE -DKLF_LIBKLFBACKEND_STATIC=FALSE -DKLF_LIBKLFTOOLS_STATIC=FALSE -DKLF_INSTALL_APIDOC_DIR=share/doc/libklatexformula3-doc -DKLF_INSTALL_RCCRESOURCES_DIR=lib/klatexformula/rccresources -DKLF_INSTALL_LIB_DIR=lib -DKLF_INSTALL_DESPLUGIN_DIR=lib/klatexformula/qt4/plugins/designer 
+	#-DKLF_INSTALL_RUN_POST_INSTALL=FALSE 
+	#-DKLF_BUILD_BACKEND_AUTO=FALSE
+
+override_dh_auto_build:
+	/usr/bin/docbook-to-man debian/klatexformula.1.sgml > ${CURDIR}/debian/klatexformula.1
+	dh_auto_build
+
+override_dh_install:
+	 chrpath -d $(CURDIR)/debian/tmp/usr/bin/klatexformula
+	 chrpath -d $(CURDIR)/debian/tmp/usr/lib/libklfapp.so
+	 chrpath -d $(CURDIR)/debian/tmp/usr/lib/libklfbackend.so
+	 chrpath -d $(CURDIR)/debian/tmp/usr/lib/libklftools.so
+	 dh_install
+
+override_dh_clean:
+	dh_clean
+	rm -f Doxyfile.klftools
+	rm -f Doxyfile.klfapp
+	rm -f welcome_installer_withlatex.txt
+	rm -f Doxyfile.klfbackend.sfweb
+	rm -f Doxyfile.klfapp.sfweb
+	rm -f cmake_uninstall.cmake
+	rm -f klf_test_condition.cmake
+	rm -f Doxyfile.klftools.sfweb
+	rm -f klf_test_condition.cmake.in
+	rm -f cmake_uninstall_script.cmake
+	rm -f Doxyfile.klftools
+	rm -f Doxyfile.klfbackend
+	rm -f welcome_installer.txt
+	rm -f src/klf_xtradata.qrc
+	rm -f src/klatexformula.desktop
+	rm -f src/plugins/info_baseplugins.xml
+	rm -f src/plugins/plugindirinfo.xml
+	rm -f src/plugins/klfbaseplugins.qrc
+	rm -f src/klfkateplugin/ktexteditor_klf_automoc.cpp.files
+	rm -f src/klatexformula.1.bkp.gz
+	rm -f CMakeCache.txt
+	rm -rf CMakeTmp/
+	rm -rf src/CMakeFiles/
+	rm -rf src/klfbackend/CMakeFiles/
+	rm -rf src/klfbackend/__/
+	rm -rf src/klfkateplugin/CMakeFiles/
+	rm -rf src/klftools/CMakeFiles/
+	rm -rf src/klftools/__/
+	rm -rf src/plugins/CMakeFiles/
+	rm -rf src/plugins/buffers/CMakeFiles/
+	rm -rf src/plugins/skin/CMakeFiles/
+	rm -rf src/plugins/systrayicon/CMakeFiles/

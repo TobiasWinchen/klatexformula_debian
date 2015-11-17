@@ -1,3 +1,4 @@
 version=3
-
-http://sf.net/klatexformula/klatexformula-(\d.*)\.tar.gz
+opts=uversionmangle=s/(\d)(beta\d*)$/$1~$2/ \
+https://qa.debian.org/cgi-bin/fakeupstream.cgi?upstream=sf/klatexformula \
+.*=klatexformula(?:[_\-]v?|)(\d[^\s/]*)\.(?:tar\.xz|txz|tar\.bz2|tbz2|tar\.gz|tgz)

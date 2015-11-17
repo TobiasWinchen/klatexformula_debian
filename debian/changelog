@@ -1,15 +1,20 @@
-klatexformula (3.2.11-1) unstable; urgency=medium
+klatexformula (3.3.0~beta-1) unstable; urgency=medium
 
   * New upstream release
+  * Minimum debian/rules file now using dh
   * Updated to standards version 3.9.6
+  * Updated to debhelper 9
+  * Removed menu file 
+  * Removed uninstall target (Closes:  #803761)
+  * Use updated watch file
 
- -- Tobias Winchen <winchen@physik.rwth-aachen.de>  Mon, 22 Dec 2014 07:04:21 +0100
+ -- Tobias Winchen <winchen@physik.rwth-aachen.de>  Mon, 07 Dec 2015 23:13:37 +0100
 
 klatexformula (3.2.7-1) unstable; urgency=low
 
   * New upstream release
     - Fixes check on epstopdf (Closes: #712019)
-  * Update standards ersion to 3.9.4
+  * Update standards version to 3.9.4
   * Added libklatexformula3 to section libs
 
  -- Tobias Winchen <winchen@physik.rwth-aachen.de>  Mon, 22 Jul 2013 17:50:27 +0200

@@ -1,0 +1,14 @@
+Description: Fix the isntallation of development headers
+Last-Update: 2015-11-16
+
+--- a/cmake/klfinstallpaths.cmake
++++ b/cmake/klfinstallpaths.cmake
+@@ -448,7 +448,7 @@
+ 
+ 
+ # ---------------------------------------------------
+-
++set(inst_pubheader_dir "include" CACHE PATH "The target directory for public headers" FORCE)
+ 
+ macro(KLFInstallLibrary targetlib varOptBase inst_lib_dir inst_pubheader_dir)
+ 

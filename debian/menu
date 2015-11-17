@@ -1,2 +1,0 @@
-?package(klatexformula):needs="X11" section="Applications/Office"\
-  title="klatexformula" command="/usr/bin/klatexformula"

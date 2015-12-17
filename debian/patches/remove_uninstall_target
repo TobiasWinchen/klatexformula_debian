@@ -1,3 +1,6 @@
+Description: Remove the uninstall target 
+Last-Update: 2015-12-17
+
 --- a/cmake/klfinstallpaths.cmake
 +++ b/cmake/klfinstallpaths.cmake
 @@ -544,17 +544,3 @@

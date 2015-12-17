@@ -1,4 +1,4 @@
-Description: Fix the isntallation of development headers
+Description: Fix the installation of development headers
 Last-Update: 2015-11-16
 
 --- a/cmake/klfinstallpaths.cmake

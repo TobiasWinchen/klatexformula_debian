@@ -1,2 +1,3 @@
 fixDevHeaderInstall
 remove_uninstall_target
+add_keywords_entry_to_desktop_file

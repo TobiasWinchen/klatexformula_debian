@@ -7,6 +7,8 @@ klatexformula (3.3.0~beta-1) unstable; urgency=medium
   * Removed menu file 
   * Removed uninstall target (Closes:  #803761)
   * Use updated watch file
+  * Ammended .desktop file
+  * Added hardening flags
 
  -- Tobias Winchen <winchen@physik.rwth-aachen.de>  Mon, 07 Dec 2015 23:13:37 +0100
 

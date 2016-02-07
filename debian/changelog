@@ -1,9 +1,9 @@
-klatexformula (3.3.0~beta-2) UNRELEASED; urgency=medium
+klatexformula (3.3.0~beta-2) unstable; urgency=medium
 
   * Updated maintainer e-mail address and vcs-git repository
+  * Use manpage generated with help2man
 
-
- -- Tobias Winchen <tobias@winchen.de>  Sun, 07 Feb 2016 14:03:11 +0100
+ -- Tobias Winchen <tobias@winchen.de>  Sun, 07 Feb 2016 16:52:21 +0100
 
 klatexformula (3.3.0~beta-1) unstable; urgency=medium
 

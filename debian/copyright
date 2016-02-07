@@ -9,7 +9,7 @@ License: GPL-2+
 
 Files: src/klftools/qtcolortriangle.cpp src/klftools/qtcolortriangle.h 
 Copyright: 2009, Nokia Corporation and/or its subsidiary(-ies) <qt-info@nokia.com>
-					 2009, Philippe Faist <philippe.faist@bluewin.ch> 
+           2009, Philippe Faist <philippe.faist@bluewin.ch> 
 License: GPL-2.1+ 
  On Debian systems, the full text of the GNU General Public
  License version 2 can be found in the file
@@ -22,36 +22,36 @@ License: GPL-2+
 Files: *.otf
 Copyright: 2005, Andrey V. Panov
 License: X11-License
-	Permission is hereby granted, free of charge, to any person obtaining a copy of
-	this software and associated documentation files (the "Software"), to deal in
-	the Software without restriction, including without limitation the rights to use,
-	copy, modify, merge, publish, distribute, and/or sell copies of the Software,
-	and to permit persons to whom the Software is furnished to do so, provided that
-	the above copyright notice(s) and this permission notice appear in all copies of
-	the Software and that both the above copyright notice(s) and this permission
-	notice appear in supporting documentation.
-	.	
-	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-	FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS. IN NO EVENT
-	SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE LIABLE FOR ANY
-	CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES
-	WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF
-	CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION
-	WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-	.
-	Except as contained in this notice, the name of a copyright holder shall not be
-	used in advertising or otherwise to promote the sale, use or other dealings in
-	this Software without prior written authorization of the copyright holder.
-	.
-	As a special exception, if you create a document which uses these fonts, and
-	embed these fonts or unaltered portions of these fonts into the document, these
-	fonts does not by itself cause the resulting document to be covered by the X11
-	License. This exception does not however invalidate any other reasons why the
-	document might be covered by the X11 License. If you modify these fonts, you may
-	extend this exception to your version of the fonts, but you are not obligated to
-	do so. If you do not wish to do so, delete this exception statement from your
-	version.
+  Permission is hereby granted, free of charge, to any person obtaining a copy of
+  this software and associated documentation files (the "Software"), to deal in
+  the Software without restriction, including without limitation the rights to use,
+  copy, modify, merge, publish, distribute, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so, provided that
+  the above copyright notice(s) and this permission notice appear in all copies of
+  the Software and that both the above copyright notice(s) and this permission
+  notice appear in supporting documentation.
+  .
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+  FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS. IN NO EVENT
+  SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE BE LIABLE FOR ANY
+  CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES
+  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF
+  CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION
+  WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  .
+  Except as contained in this notice, the name of a copyright holder shall not be
+  used in advertising or otherwise to promote the sale, use or other dealings in
+  this Software without prior written authorization of the copyright holder.
+  .
+  As a special exception, if you create a document which uses these fonts, and
+  embed these fonts or unaltered portions of these fonts into the document, these
+  fonts does not by itself cause the resulting document to be covered by the X11
+  License. This exception does not however invalidate any other reasons why the
+  document might be covered by the X11 License. If you modify these fonts, you may
+  extend this exception to your version of the fonts, but you are not obligated to
+  do so. If you do not wish to do so, delete this exception statement from your
+  version.
 
 Files: src/plugins/skin/stylesheets/pics/bg_galaxy.jpg 
 Copyright: Public Domain
@@ -69,5 +69,5 @@ License: GPL-3+
  `/usr/share/common-licenses/GPL-3'.
 
 License: GPL-2+
-	On Debian systems, the complete text of the GNU General
-	Public License version 2 can be found in `/usr/share/common-licenses/GPL-2'.
+  On Debian systems, the complete text of the GNU General
+  Public License version 2 can be found in `/usr/share/common-licenses/GPL-2'.

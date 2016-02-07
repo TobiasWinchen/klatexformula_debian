@@ -1,11 +1,11 @@
 Source: klatexformula
 Section: tex
 Priority: extra
-Maintainer: Tobias Winchen <winchen@physik.rwth-aachen.de> 
+Maintainer: Tobias Winchen <tobias@winchen.de> 
 Build-Depends: debhelper (>= 9), docbook-to-man, cmake, libqt4-dev, pkg-kde-tools, kdelibs5-dev, libx11-dev, chrpath
 Standards-Version: 3.9.6
-Vcs-git: git://github.com/winchen/klatexformula_debian.git
-Vcs-Browser: https://github.com/winchen/klatexformula_debian
+Vcs-git: git://github.com/TobiasWinchen/klatexformula_debian.git
+Vcs-Browser: https://github.com/TobiasWinchen/klatexformula_debian
 Homepage: http://klatexformula.sourceforge.net/
 
 Package: klatexformula

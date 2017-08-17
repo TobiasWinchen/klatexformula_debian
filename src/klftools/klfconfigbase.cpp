@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfconfigbase.cpp 794 2012-06-18 13:04:32Z phfaist $ */
+/* $Id: klfconfigbase.cpp 983 2016-12-31 21:03:44Z phfaist $ */
 
 #include "klfconfigbase.h"
 
@@ -156,6 +156,7 @@ void KLFConfigBase::disconnectQObject(QObject * object)
   QHash<QString,QList<ObjConnection> >::iterator pit;
   for (pit = pObjConnections.begin(); pit != pObjConnections.end(); ++pit) {
     const QString& pname = pit.key();
+    Q_UNUSED(pname) ;
     QList<ObjConnection> & clistref = pit.value();
     for (QList<ObjConnection>::iterator it = clistref.begin(); it != clistref.end(); ++it) {
       if ((*it).object == object) {

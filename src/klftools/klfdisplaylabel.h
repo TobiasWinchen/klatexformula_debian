@@ -19,13 +19,13 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdisplaylabel.h 683 2011-07-31 13:47:08Z phfaist $ */
+/* $Id: klfdisplaylabel.h 960 2016-12-27 05:15:17Z phfaist $ */
 
 #ifndef KLFDISPLAYLABEL_H
 #define KLFDISPLAYLABEL_H
 
 #include <QLabel>
-#include <QPixmap>
+#include <QPicture>
 #include <QTemporaryFile>
 
 #include <klfdefs.h>
@@ -102,7 +102,7 @@ protected:
 
 private:
 
-  QPixmap calc_display_pixmap();
+  QPicture calc_display_picture();
   void display_state(DisplayState state);
 
   DisplayState pDisplayState;

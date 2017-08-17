@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfiteratorsearchable.h 679 2011-07-30 12:17:10Z phfaist $ */
+/* $Id: klfiteratorsearchable.h 983 2016-12-31 21:03:44Z phfaist $ */
 
 #ifndef KLF_ITERATORSEARCHABLE_H
 #define KLF_ITERATORSEARCHABLE_H
@@ -201,6 +201,7 @@ public:
   virtual SearchIterator searchIterFind(const SearchIterator& startPos, const QString& queryString, bool forward)
   {
     KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+    Q_UNUSED(queryString) ;
     klfDbg( " s="<<queryString<<" from "<<startPos<<" forward="<<forward
 	    <<"; searchQueryString()="<<searchQueryString() ) ;
     pCurPos = startPos;

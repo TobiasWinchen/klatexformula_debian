@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmainwin_p.h 909 2014-08-10 17:58:33Z phfaist $ */
+/* $Id: klfmainwin_p.h 1006 2017-02-02 22:20:05Z phfaist $ */
 
 #ifndef KLFMAINWIN_P_H
 #define KLFMAINWIN_P_H
@@ -42,6 +42,7 @@
 #include <QTextCodec>
 
 #include <klfutil.h>
+#include <klfdatautil.h>
 #include <klflatexpreviewthread.h>
 #include "klflibview.h"
 #include "klfmain.h"
@@ -49,6 +50,14 @@
 #include "klfmime.h"
 
 #include "klfmainwin.h"
+
+#if defined(KLF_WS_MAC)
+#include "macosx/klfmacclipboard.h"
+#elif defined(KLF_WS_WIN)
+#include "mswin/klfwinclipboard.h"
+#else
+// nothing to do on X11
+#endif
 
 #include <ui_klfaboutdialog.h>
 #include <ui_klfwhatsnewdialog.h>
@@ -160,7 +169,7 @@ private:
 
 // -------------------------------------------
 
-#ifdef Q_WS_MAC
+#ifdef KLF_WS_MAC
 void klf_mac_win_show_without_activating(QWidget *w);
 #endif
 
@@ -173,7 +182,7 @@ public:
   KLFMainWinPopup(KLFMainWin *mainwin)
     : QLabel(mainwin, Qt::Window|Qt::FramelessWindowHint|Qt::CustomizeWindowHint|
 	     Qt::WindowStaysOnTopHint
-#ifdef Q_WS_X11
+#ifdef KLF_WS_X11
 	     |Qt::X11BypassWindowManagerHint
 #endif
 	     ),
@@ -194,7 +203,7 @@ public:
     setFont(f);
     setWordWrap(true);
 
-#ifdef Q_WS_X11
+#ifdef KLF_WS_X11
     setAttribute(Qt::WA_X11DoNotAcceptFocus, true);
 #endif
     setAttribute(Qt::WA_ShowWithoutActivating, true);
@@ -242,7 +251,7 @@ public slots:
     QLabel::show();
     setStyleSheet(styleSheet());
 
-#ifdef Q_WS_MAC
+#ifdef KLF_WS_MAC
     //    klf_mac_win_show_without_activating(this);
     _mainWin->activateWindow();
 #endif
@@ -373,18 +382,21 @@ public:
 	return true;
       return false;
     }
-    if (isKlfImage(&buf, &isimg))
+    if (isKlfImage(&buf, &isimg)) {
       return true;
-    if (isimg) // no try going further, we can't otherwise read image ...
+    }
+    if (isimg) { // no try going further, we can't otherwise read image ...
       return false;
+    }
 
     // try to read beginning with a QDataStream to look for a known x-klf-libentries header
     QDataStream stream(&buf);
     stream.setVersion(QDataStream::Qt_4_4);
     QString headerstr;
     stream >> headerstr;
-    if (headerstr == QLatin1String("KLF_LIBENTRIES"))
+    if (headerstr == QLatin1String("KLF_LIBENTRIES")) {
       return true;
+    }
     // *** see note in openData() for library formats. ***
     // don't try to open .klf or .klf.db formats.
 
@@ -693,6 +705,11 @@ private:
     style.mathmode = pdfmeta.value("KLFInputMathMode");
     style.preamble = pdfmeta.value("KLFInputPreamble");
     style.dpi = pdfmeta.value("KLFInputDPI").toInt();
+    //style.fontname = pdfmeta.value("KLFFontName");// font name not saved, but instructions in preamble
+    style.fontsize = pdfmeta.value("KLFInputFontSize").toInt();
+    style.vectorscale = pdfmeta.value("KLFInputVectorScale").toDouble();
+    style.userScript = pdfmeta.value("KLFInputUserScript");
+    style.userScriptInput = klfLoadVariantFromText(pdfmeta.value("KLFInputUserScriptParams").toLocal8Bit(), "QVariantMap").toMap();
 
     mainWin()->slotLoadStyle(style);
     mainWin()->slotSetLatex(latex);
@@ -729,75 +746,6 @@ private:
 };
 
 
-
-
-
-
-class KLFAddOnDataOpener : public QObject, public KLFAbstractDataOpener
-{
-  Q_OBJECT
-public:
-  KLFAddOnDataOpener(KLFMainWin *mainwin) : QObject(mainwin), KLFAbstractDataOpener(mainwin) { }
-  virtual ~KLFAddOnDataOpener() { }
-
-  virtual QStringList supportedMimeTypes()
-  {
-    return QStringList();
-  }
-
-  virtual bool canOpenFile(const QString& file)
-  {
-    if (QFileInfo(file).suffix() == "rcc")
-      return true;
-    QFile f(file);
-    bool r = f.open(QIODevice::ReadOnly);
-    if (!r) { // can't open file
-      return false;
-    }
-    // check if file is RCC file (begins with 'qres')
-    if (f.read(4) == "qres")
-      return true;
-    // not a Qt RCC file
-    return false;
-  }
-
-  virtual bool canOpenData(const QByteArray& /*data*/)
-  {
-    // Dropped files are opened by the basic data opener, which handles "text/uri-list"
-    // by calling the main window's openFiles()
-    return false;
-  }
-
-  virtual bool openFile(const QString& file)
-  {
-    KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
-    klfDbg("file="<<file);
-
-    if (!canOpenFile(file)) {
-      klfDbg("file is not openable by us: "<<file);
-      return false;
-    }
-
-    mainWin()->settingsDialog()->show();
-    mainWin()->settingsDialog()->showControl(KLFSettings::ManageAddOns);
-    mainWin()->settingsDialog()->importAddOn(file, true);
-
-    return true;
-  }
-
-  virtual bool openData(const QByteArray& /*data*/, const QString& /*mimetype*/)
-  {
-    return false;
-  }
-};
-
-
-/** \todo WRITEME!!!!!!!!! */
-class KLFKLFOutputSaver : public QObject, public KLFAbstractOutputSaver
-{
-  Q_OBJECT
-public:
-};
 
 
 class KLFTexDataOpener : public QObject, public KLFAbstractDataOpener
@@ -891,146 +839,6 @@ public:
 };
 
 
-class KLFTexOutputSaver : public QObject, public KLFAbstractOutputSaver
-{
-  Q_OBJECT
-public:
-  KLFTexOutputSaver(QObject *parent)
-    : QObject(parent), KLFAbstractOutputSaver()
-  {
-  }
-
-  virtual ~KLFTexOutputSaver()
-  {
-  }
-
-  virtual QStringList supportedMimeFormats(KLFBackend::klfOutput * output)
-  {
-    Q_UNUSED(output);
-
-    KLF_ASSERT_NOT_NULL(output, "output pointer is NULL!", return QStringList() );
-
-    return QStringList() << QLatin1String("text/tex");
-  }
-
-  /** Returns the human-readable, (possibly translated,) label to display in save dialog that
-   * the user can select to save in this format.
-   *
-   * \param key is a mime-type returned by \ref supportedMimeFormats().
-   */
-  virtual QString formatTitle(const QString& key)
-  {
-    Q_UNUSED(key);
-    return tr("LaTeX source");
-  }
-
-  virtual QStringList formatFilePatterns(const QString& key)
-  {
-    Q_UNUSED(key);
-    return QStringList() << "*.klftex" << "*.tex";
-  }
-
-  virtual bool saveToFile(const QString& key, const QString& fileName, const KLFBackend::klfOutput& output)
-  {
-    Q_UNUSED(key);
-
-    QByteArray data = "%%KLF:LaTeX-save\n";
-    data += "%%KLF:date: "+QDateTime::currentDateTime().toString(Qt::ISODate) + "\n%%KLF: \n";
-
-    data += output.input.latex.toUtf8();
-    if (!data.endsWith("\n"))
-      data += "\n";
-    data += "%%KLF: \n";
-    data += "%%KLF: ";
-
-    // save style now as a LaTeX comment
-    KLFStyle style(output.input);
-    style.userScript = QFileInfo(style.userScript).fileName(); // only save file name as script path may differ
-    QByteArray styledata = klfSave(&style, "XML");
-    styledata = "\n"+styledata;
-    styledata.replace("\n", "\n%%KLF:style: ");
-
-    data += styledata + "\n";
-
-
-    // and write to file:
-
-    QFile f(fileName);
-    bool r = f.open(QIODevice::WriteOnly);
-    if (!r) {
-      QMessageBox::critical(NULL, tr("Error"), tr("Failed to write file %1").arg(fileName));
-      qWarning()<<KLF_FUNC_NAME<<": Failed to write to file "<<fileName;
-      return false;
-    }
-    f.write(data);
-    return true;
-  }
-
-};
-
-
-
-
-class KLFUserScriptOutputSaver : public QObject, public KLFAbstractOutputSaver
-{
-  Q_OBJECT
-public:
-  KLFUserScriptOutputSaver(const QString& userscript, QObject *parent)
-    : QObject(parent), KLFAbstractOutputSaver(), pUserScript(userscript, NULL)
-  {
-  }
-
-  virtual ~KLFUserScriptOutputSaver()
-  {
-  }
-
-  virtual QStringList supportedMimeFormats(KLFBackend::klfOutput * output)
-  {
-    return pUserScript.availableMimeTypes(output);
-  }
-
-  /** Returns the human-readable, (possibly translated,) label to display in save dialog that
-   * the user can select to save in this format.
-   *
-   * \param key is a mime-type returned by \ref supportedMimeFormats().
-   */
-  virtual QString formatTitle(const QString& key)
-  {
-    int i = pUserScript.info().findMimeType(key);
-    return pUserScript.info().outputFormatDescription(i);
-  }
-
-  virtual QStringList formatFilePatterns(const QString& key)
-  {
-    int i = pUserScript.info().findMimeType(key);
-    return QStringList() << "*."+pUserScript.info().outputFilenameExtension(i);
-  }
-
-  virtual bool saveToFile(const QString& key, const QString& fileName, const KLFBackend::klfOutput& output)
-  {
-    QByteArray data = pUserScript.getData(key, output);
-    if (!data.size()) {
-      klfWarning("User Script "<<pUserScript.info().scriptName()<<": Error occurred while trying to get data.") ;
-      return false;
-    }
-
-    QFile f(fileName);
-    bool r = f.open(QIODevice::WriteOnly);
-    if (!r) {
-      QMessageBox::critical(NULL, tr("Error"), tr("Failed to write file %1").arg(fileName));
-      qWarning()<<KLF_FUNC_NAME<<": Failed to write to file "<<fileName;
-      return false;
-    }
-    f.write(data);
-    return true;
-  }
-
-private:
-  KLFExportUserScript pUserScript;
-};
-
-
-
 
 
 
@@ -1039,7 +847,7 @@ private:
 // --------------------------------------------------------------------------
 
 
-class KLFMainWinPrivate : public QObject
+struct KLFMainWinPrivate : public QObject
 {
   Q_OBJECT
 public:
@@ -1047,6 +855,42 @@ public:
   {
     pMacOSXMenu = NULL;
     pCheckForUpdatesAction = NULL;
+
+    mLibBrowser = NULL;
+    mLatexSymbols = NULL;
+    mStyleManager = NULL;
+    mSettingsDialog = NULL;
+    mAboutDialog = NULL;
+    mWhatsNewDialog = NULL;
+
+    mPopup = NULL;
+
+    pMacOSXMenu = NULL;
+    pCheckForUpdatesAction = NULL;
+    
+    mShortcutNextParenType = NULL;
+    mShortcutNextParenModifierType = NULL;
+
+    mHistoryLibResource = NULL;
+
+    mStyleMenu = NULL;
+
+    pLatexPreviewThread = NULL;
+    pContLatexPreview = NULL;
+
+    pUserScriptSettings = NULL;
+
+    pExporterManager = NULL;
+    
+#if defined(KLF_WS_MAC)
+    macFlavorsConverter = NULL;
+#elif defined(KLF_WS_WIN)
+    winFormatsConverter = NULL;
+#else
+  // no special needs on X11
+#endif
+
+    pCmdIface = NULL;
   }
 
 
@@ -1136,8 +980,18 @@ public:
   void getMissingCmdsFor(const QString& symbol, QStringList * missingCmds, QString *guiText,
 			 bool wantHtmlText = true);
 
-  QList<KLFAbstractOutputSaver*> pOutputSavers;
+  KLFExporterManager * pExporterManager;
   QList<KLFAbstractDataOpener*> pDataOpeners;
+
+  KLFMimeExportProfileManager pMimeExportProfileManager;
+
+#if defined(KLF_WS_MAC)
+  KLFMacPasteboardMime * macFlavorsConverter;
+#elif defined(KLF_WS_WIN)
+  KLFWinClipboard * winFormatsConverter;
+#else
+  // no special needs on X11
+#endif
 
   KLFCmdIface *pCmdIface;
 
@@ -1195,6 +1049,7 @@ public slots: // .. but in private API
   void showRealTimePreview(const QImage& preview, const QImage& largePreview);
   void showRealTimeError(const QString& errorstr, int errcode);
 
+  QSize calcPreviewSize();
   void updatePreviewThreadInput();
   void updatePreviewThreadSettings();
 

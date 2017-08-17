@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id$ */
+/* $Id: klfapp.cpp 1011 2017-02-06 19:54:48Z phfaist $ */
 
 #include <QSessionManager>
 #include <QMessageBox>
@@ -38,7 +38,7 @@ KLFGuiApplication::~KLFGuiApplication()
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
 }
 
-void KLFGuiApplication::saveState(QSessionManager& sm)
+void KLFGuiApplication::saveState(QSessionManager& )
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
   /** \todo .... */

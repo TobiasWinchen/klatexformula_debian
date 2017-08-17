@@ -1,18 +1,30 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!-- Default Latex Font Selection Definitions for KLatexFormula -->
-<!-- $Id: defaultfontdefs.xml 888 2014-07-24 17:25:51Z phfaist $ -->
+<!-- $Id: defaultfontdefs.xml 995 2017-01-10 19:57:24Z phfaist $ -->
 <latex-font-defs-list version="1.0" minklfversion="3.3.0alpha">
 
   <font-def>
     <identifier>Times</identifier>
-    <title>Times</title>
+    <title>Times (txfonts)</title>
     <latexdefs>\usepackage{txfonts}</latexdefs>
   </font-def>
 
   <font-def>
+    <identifier>Times-mathptmx</identifier>
+    <title>Times (mathptmx)</title>
+    <latexdefs>\usepackage{mathptmx}</latexdefs>
+  </font-def>
+
+  <font-def>
     <identifier>Palatino</identifier>
-    <title>Palatino</title>
+    <title>Palatino (pxfonts)</title>
     <latexdefs>\usepackage{pxfonts}</latexdefs>
+  </font-def>
+
+  <font-def>
+    <identifier>Palatino-newpxmath</identifier>
+    <title>Palatino (newpxmath)</title>
+    <latexdefs>\usepackage{newpxmath}</latexdefs>
   </font-def>
 
   <font-def>
@@ -34,9 +46,65 @@
   </font-def>
 
   <font-def>
+    <identifier>Garamond-EB</identifier>
+    <title>Garamond</title>
+    <latexdefs>\usepackage[cmintegrals,cmbraces]{newtxmath}
+\usepackage{ebgaramond-maths}</latexdefs>
+  </font-def>
+
+  <font-def>
+    <identifier>Linux Libertine</identifier>
+    <title>Linux Libertine</title>
+    <latexdefs>\usepackage{libertine}
+\usepackage[libertine]{newtxmath}</latexdefs>
+  </font-def>
+
+  <font-def>
+    <identifier>Stix</identifier>
+    <title>Stix</title>
+    <latexdefs>\usepackage{stix}</latexdefs>
+  </font-def>
+
+  <font-def>
+    <identifier>Kerkis</identifier>
+    <title>Kerkis</title>
+    <latexdefs>\usepackage{kmath,kerkis}</latexdefs>
+  </font-def>
+
+  <font-def>
+    <identifier>kp-fonts</identifier>
+    <title>kp-fonts</title>
+    <latexdefs>\usepackage{kpfonts}</latexdefs>
+  </font-def>
+
+  <font-def>
+    <identifier>kp-fonts-sans</identifier>
+    <title>kp-fonts (sans serif)</title>
+    <latexdefs>\usepackage[sfmath]{kpfonts}</latexdefs>
+  </font-def>
+    
+  <font-def>
     <identifier>Computer Modern Sans Serif</identifier>
     <title>Computer Modern Sans Serif</title>
     <latexdefs>\usepackage[EULERGREEK]{sansmath}\sansmath</latexdefs>
+  </font-def>
+
+  <font-def>
+    <identifier>Computer Modern Bright</identifier>
+    <title>Computer Modern Bright</title>
+    <latexdefs>\usepackage{cmbright}</latexdefs>
+  </font-def>
+
+  <font-def>
+    <identifier>Kurier</identifier>
+    <title>Kurier</title>
+    <latexdefs>\usepackage[math]{kurier}</latexdefs>
+  </font-def>
+    
+  <font-def>
+    <identifier>Iwona</identifier>
+    <title>Iwona</title>
+    <latexdefs>\usepackage[math]{iwona}</latexdefs>
   </font-def>
 
   <font-def>

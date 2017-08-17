@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfblockprocess.h 780 2012-05-12 13:41:36Z phfaist $ */
+/* $Id: klfblockprocess.h 969 2016-12-29 07:44:24Z phfaist $ */
 
 #ifndef KLFBLOCKPROCESS_H
 #define KLFBLOCKPROCESS_H
@@ -89,6 +89,23 @@ public:
     return exitCode();
   }
 
+  // detect python, shell, etc. interpreters using some standard paths
+  static QString detectInterpreterPath(const QString& interp,
+                                       const QStringList & addpaths = QStringList());
+
+
+  /** \brief The interpter path to use for the given extension.
+   *
+   * This function will be queried by \ref startProcess() when we have to execute a
+   * script.
+   *
+   * Subclasses may reimplement to e.g. query user settings etc. Subclasses may of course
+   * also make use of \ref detectInterpreterPath().
+   *
+   * The default implementation treats some common script extensions ("py", "rb", "sh")
+   * and tries to find the interpreter using \ref detectInterpreterPath().
+   */
+  virtual QString getInterpreterPath(const QString& ext);
 
 public slots:
   /** Starts cmd (which is a list of arguments, the first being the
@@ -122,7 +139,7 @@ private slots:
   void ourProcGotOurStdinData();
 
 private:
-  bool _runstatus;
+  int _runstatus;
   bool mProcessAppEvents;
 };
 

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdebug.cpp 833 2012-08-26 22:22:32Z phfaist $ */
+/* $Id: klfdebug.cpp 1007 2017-02-05 23:19:46Z phfaist $ */
 
 
 // All definitions are in klfdefs.cpp. I may choose to move them here in the future.
@@ -129,13 +129,16 @@ KLF_EXPORT  void klf_qt_msg_clear_warnings_buffer()
  *
  * This function is suitable for use with \ref qInstallMsgHandler() .
  */
-KLF_EXPORT  void klf_qt_msg_handle(QtMsgType type, const char *msg)
+KLF_EXPORT  void klf_qt_msg_handle(QtMsgType type, const QMessageLogContext &/*context*/, const QString &msgstr)
 {
   FILE *fout = stderr;
-  if (klf_qt_msg_fp != NULL)
+  if (klf_qt_msg_fp != NULL) {
     fout = klf_qt_msg_fp;
-
+  }
   ensure_tty_fp();
+
+  QByteArray msgbytes(msgstr.toLatin1());
+  const char * msg = msgbytes.constData();
 
   switch (type) {
   case QtDebugMsg:
@@ -156,7 +159,7 @@ KLF_EXPORT  void klf_qt_msg_handle(QtMsgType type, const char *msg)
       fprintf(klf_fp_tty, "Warning: %s\n", msg);
 #endif
 
-#if defined Q_WS_WIN && defined KLF_DEBUG
+#if defined KLF_WS_WIN && defined KLF_DEBUG
 #  define   SAFECOUNTER_NUM   10
     // only show dialog after having created a QApplication
     if (qApp != NULL && qApp->inherits("QApplication")) {
@@ -182,19 +185,23 @@ KLF_EXPORT  void klf_qt_msg_handle(QtMsgType type, const char *msg)
     fflush(fout);
     // add the message also to the warnings buffer.
     klf_qt_msg_warnings_buffer += QByteArray("Error: ") + msg + "\n";
-#ifdef Q_WS_WIN
-    if (qApp != NULL && qApp->inherits("QApplication")) {
-      QMessageBox::critical(0, QObject::tr("Error", "[[KLF's Qt Message Handler: dialog title]]"),
-			    QObject::tr("KLatexFormula System Error:\n%1",
-					"[[KLF's Qt Message Handler: dialog text]]")
-			    .arg(QString::fromLocal8Bit(msg)));
-    }
-#endif
+    //
+    // These messages can be seen in the "system messages" (Settings -> Advanced
+    // -> System Messages); no need for error dialog
+    //
+    // #ifdef KLF_WS_WIN
+    //     if (qApp != NULL && qApp->inherits("QApplication")) {
+    //       QMessageBox::critical(0, QObject::tr("Error", "[[KLF's Qt Message Handler: dialog title]]"),
+    // 			    QObject::tr("KLatexFormula System Error:\n%1",
+    // 					"[[KLF's Qt Message Handler: dialog text]]")
+    // 			    .arg(QString::fromLocal8Bit(msg)));
+    //     }
+    // #endif
     break;
   case QtFatalMsg:
     fprintf(fout, "Fatal: %s\n", msg);
     fflush(fout);
-#ifdef Q_WS_WIN
+#ifdef KLF_WS_WIN
     if (qApp != NULL && qApp->inherits("QApplication")) {
       QMessageBox::critical(0, QObject::tr("FATAL ERROR",
 					   "[[KLF's Qt Message Handler: dialog title]]"),

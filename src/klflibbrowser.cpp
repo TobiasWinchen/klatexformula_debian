@@ -19,9 +19,11 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibbrowser.cpp 881 2014-06-15 21:23:43Z phfaist $ */
+/* $Id: klflibbrowser.cpp 1004 2017-02-02 20:07:10Z phfaist $ */
 
 #include <QDebug>
+#include <QUrl>
+#include <QUrlQuery>
 #include <QFile>
 #include <QMenu>
 #include <QAction>
@@ -47,7 +49,7 @@
 
 KLFLibBrowser::KLFLibBrowser(QWidget *parent)
   : QWidget(
-#if defined(Q_WS_WIN) || defined(Q_WS_MAC)
+#if defined(KLF_WS_WIN) || defined(KLF_WS_MAC)
 	    0 /* parent */
 #else
 	    parent /* 0 */
@@ -77,6 +79,7 @@ KLFLibBrowser::KLFLibBrowser(QWidget *parent)
   connect(u->aSaveTo, SIGNAL(triggered()), this, SLOT(slotResourceSaveTo()));
   connect(u->aNew, SIGNAL(triggered()), this, SLOT(slotResourceNew()));
   connect(u->aOpen, SIGNAL(triggered()), this, SLOT(slotResourceOpen()));
+  connect(u->aOpenExampleLibrary, SIGNAL(triggered()), this, SLOT(slotResourceOpenExampleLibrary()));
   connect(u->aClose, SIGNAL(triggered()), this, SLOT(slotResourceClose()));
   // and add them to menu
   pResourceMenu->addAction((new KLFLibBrowserTabMenu(u->tabResources))->menuAction());
@@ -93,6 +96,7 @@ KLFLibBrowser::KLFLibBrowser(QWidget *parent)
   pResourceMenu->addSeparator();
   pResourceMenu->addAction(u->aNew);
   pResourceMenu->addAction(u->aOpen);
+  pResourceMenu->addAction(u->aOpenExampleLibrary);
   /// \todo .......... save as copy action ............
   //  pResourceMenu->addAction(u->aSaveTo);
   pResourceMenu->addAction(u->aClose);
@@ -358,7 +362,7 @@ QString KLFLibBrowser::displayTitle(KLFLibResourceEngine *resource)
     basestr = resource->title();
   }
   if (!resource->canModifyData(KLFLibResourceEngine::AllActionsData)) {
-    basestr = "# "+basestr;
+    // basestr = "# "+basestr; // this is confusing
   }
   return basestr;
 }
@@ -904,8 +908,10 @@ bool KLFLibBrowser::slotResourceNewSubRes()
 
   // see remark in comment below
   QUrl url = res->url();
-  url.removeAllQueryItems("klfDefaultSubResource");
-  url.addQueryItem("klfDefaultSubResource", name);
+  QUrlQuery urlq(url);
+  urlq.removeAllQueryItems("klfDefaultSubResource");
+  urlq.addQueryItem("klfDefaultSubResource", name);
+  url.setQuery(urlq);
 
   klfDbg( "KLFLibBrowser::slotRes.New.S.Res(): Create sub-resource named "<<name<<", opening "<<url ) ;
 
@@ -983,6 +989,31 @@ bool KLFLibBrowser::slotResourceOpen()
   if ( ! r ) {
     QMessageBox::critical(this, tr("Error"), tr("Failed to open library resource `%1'!")
 			  .arg(url.toString()));
+  }
+  return r;
+}
+
+bool KLFLibBrowser::slotResourceOpenExampleLibrary()
+{
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+
+  QString importfname = QLatin1String(":/data/defaultlibrary.klf");
+  QUrl importliburl = QUrl::fromLocalFile(importfname);
+  QString scheme = KLFLibBasicWidgetFactory::guessLocalFileScheme(importfname);
+  if (scheme.isEmpty()) {
+    // assume .klf if not able to guess
+    scheme = "klf+legacy";
+  }
+  importliburl.setScheme(scheme);
+  QUrlQuery importliburlq(importliburl);
+  importliburlq.addQueryItem("klfReadOnly", "true");
+  importliburlq.addQueryItem("klfDefaultSubResource", "Archive");
+  importliburl.setQuery(importliburlq);
+
+  bool r = openResource(importliburl, NoChangeFlag, "default");
+  if (! r ) {
+    QMessageBox::critical(this, tr("Error"), tr("Failed to open library resource `%1'!")
+			  .arg(importliburl.toString()));
   }
   return r;
 }
@@ -1208,8 +1239,9 @@ void KLFLibBrowser::slotEntriesSelected(const KLFLibEntryList& entries)
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
   klfDbg( "(): "<<entries ) ;
-  if (entries.size()>=1)
+  if (entries.size() >= 1) {
     klfDbg( "Tag of first selected entry="<<entries[0].property(KLFLibEntry::Tags) ) ;
+  }
 
   KLFAbstractLibView *view = curLibView();
   if (view != NULL) {
@@ -1561,7 +1593,9 @@ void KLFLibBrowser::slotOpenAll()
   QStringList subreslist = KLFLibEngineFactory::listSubResources(baseUrl);
   for (k = 0; k < subreslist.size(); ++k) {
     QUrl url = baseUrl;
-    url.addQueryItem("klfDefaultSubResource", subreslist[k]);
+    QUrlQuery urlq(url);
+    urlq.addQueryItem("klfDefaultSubResource", subreslist[k]);
+    url.setQuery(urlq);
     bool r = openResource(url);
     if ( !r )
       QMessageBox::critical(this, tr("Error"), tr("Failed to open resource %1!").arg(url.toString()));
@@ -1596,8 +1630,9 @@ bool KLFLibBrowser::slotExport()
   for (k = 0; k < exportUrls.size(); ++k) {
     klfDbg("Exporting "<<exportUrls[k]<<" ...");
     QUrl u = exportUrls[k];
-    QString usr = u.hasQueryItem("klfDefaultSubResource")
-      ? u.queryItemValue("klfDefaultSubResource")
+    QUrlQuery uq(u);
+    QString usr = uq.hasQueryItem("klfDefaultSubResource")
+      ? uq.queryItemValue("klfDefaultSubResource")
       : QString();
     QString sr = usr;
     if (usr.isEmpty()) {

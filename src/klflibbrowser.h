@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibbrowser.h 604 2011-02-27 23:34:37Z phfaist $ */
+/* $Id: klflibbrowser.h 1004 2017-02-02 20:07:10Z phfaist $ */
 
 
 #ifndef KLFLIBBROWSER_H
@@ -169,6 +169,7 @@ protected slots:
   bool slotResourceNewSubRes();
   bool slotResourceDelSubRes();
   bool slotResourceOpen();
+  bool slotResourceOpenExampleLibrary();
   bool slotResourceNew();
   bool slotResourceSaveTo();
 

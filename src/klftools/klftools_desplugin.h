@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klftools_desplugin.h 801 2012-07-15 13:13:44Z phfaist $ */
+/* $Id: klftools_desplugin.h 978 2016-12-31 05:16:11Z phfaist $ */
 
 /* Qt DESIGNER PLUGIN FOR KLFSearchBar WIDGET */
 
@@ -28,8 +28,9 @@
 
 #include <QString>
 #include <QWidget>
-#include <QtDesigner/QDesignerCustomWidgetInterface>
+#include <QtUiPlugin/QDesignerCustomWidgetInterface>
 #include <QtDesigner/QDesignerContainerExtension>
+
 
 #include <klfsearchbar.h>
 #include <klfcolorchooser.h>
@@ -39,7 +40,6 @@
 #include <klfpathchooser.h>
 
 
-/** \bug **** PROPER CMAKE VARIABLES FOR KLFSEARCHBAR_DESPLUGIN CMAKE TARGET ******  */
 
 class KLFSearchBarDesPlugin : public QObject, public QDesignerCustomWidgetInterface
 {
@@ -301,28 +301,6 @@ private:
 };
 
 
-
-
-// -----------------------
-
-
-class KLFToolsDesPlugin : public QObject, public QDesignerCustomWidgetCollectionInterface
-{
-  Q_OBJECT
-  Q_INTERFACES(QDesignerCustomWidgetCollectionInterface)
-
-public:
-  KLFToolsDesPlugin(QObject* parent = NULL);
-  virtual ~KLFToolsDesPlugin();
-
-  QList<QDesignerCustomWidgetInterface*> customWidgets() const
-  {
-    return _widgetPlugins;
-  }
-
-private:
-   QList<QDesignerCustomWidgetInterface*> _widgetPlugins;
-};
 
 
 #endif

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflatexedit.cpp 866 2013-11-24 13:56:22Z phfaist $ */
+/* $Id: klflatexedit.cpp 973 2016-12-30 07:38:23Z phfaist $ */
 
 #include <QObject>
 #include <QWidget>
@@ -212,7 +212,7 @@ KLFLatexEdit::KLFLatexEdit(QWidget *parent)
 
   setProperty("paletteDefault", QVariant::fromValue<QPalette>(palette()));
   QPalette pal = palette();
-  pal.setColor(QPalette::Base, QColor(255, 255, 255, 80)); // quite transparent, but lighter
+  pal.setColor(QPalette::Base, QColor(255, 255, 255, 150)); // quite transparent, but lighter
   setProperty("paletteMacBrushedMetalLook", QVariant::fromValue<QPalette>(pal));
 
   setWordWrapMode(QTextOption::WrapAnywhere);

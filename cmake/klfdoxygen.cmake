@@ -1,6 +1,6 @@
 # CMake definitions for building doxygen API documentation
 # ========================================================
-# $Id: klfdoxygen.cmake 887 2014-07-24 16:24:56Z phfaist $
+# $Id: klfdoxygen.cmake 1009 2017-02-06 01:06:54Z phfaist $
 
 
 # Configure doxygen targets
@@ -37,10 +37,6 @@ if(DOXYGEN)
     "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.klftools.in"
     "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile.klftools"
     IMMEDIATE @ONLY)
-  configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.klfapp.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile.klfapp"
-    IMMEDIATE @ONLY)
   # HTML doxygen API documentation (for my sourceforge pages)
   set(KLF_DOXYGEN_SF "_sf")
   configure_file(
@@ -50,10 +46,6 @@ if(DOXYGEN)
   configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.klftools.in"
     "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile.klftools.sfweb"
-    IMMEDIATE @ONLY)
-  configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.klfapp.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile.klfapp.sfweb"
     IMMEDIATE @ONLY)
 
   macro(KLFMakeDoxygenTarget apidocdir targetbasename doxsuffix targetsuffix othertargetdeps)
@@ -80,11 +72,9 @@ if(DOXYGEN)
 
   KLFMakeDoxygenTarget("${KLF_APIDOC_DIR}" klftools "" ""  "")
   KLFMakeDoxygenTarget("${KLF_APIDOC_DIR}" klfbackend "" ""  "klftools")
-  KLFMakeDoxygenTarget("${KLF_APIDOC_DIR}" klfapp "" ""  "klfbackend;klftools")
 
   KLFMakeDoxygenTarget("${KLF_APIDOCSF_DIR}" klftools ".sfweb" "_sfweb"  "")
   KLFMakeDoxygenTarget("${KLF_APIDOCSF_DIR}" klfbackend ".sfweb" "_sfweb"  "klftools")
-  KLFMakeDoxygenTarget("${KLF_APIDOCSF_DIR}" klfapp ".sfweb" "_sfweb"  "klfbackend;klftools")
 
 
   set(klf_tar_dirname "klatexformula-apidoc-${KLF_VERSION}")
@@ -99,16 +89,22 @@ if(DOXYGEN)
     COMMENT "Creating API doc archive"
     VERBATIM
     )
+  add_custom_target(doc_sfweb
+    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/apidoc/index.html" "${KLF_APIDOCSF_DIR}/index.html"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/apidoc/f.gif" "${KLF_APIDOCSF_DIR}/f.gif"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/apidoc/headerbg.jpg" "${KLF_APIDOCSF_DIR}/headerbg.jpg"
+    COMMENT "Creating API for web hosting on sourceforge.net"
+    VERBATIM
+    )
 
-  #add_dependencies(doc_klfapp  doc_klftools  doc_klfbackend) # depends on klfbackend.tag and klftools.tag
-  #add_dependencies(doc_klfbackend  doc_klftools) # depends on klftools.tag
+  add_dependencies(doc_klfbackend  doc_klftools) # depends on klftools.tag
 
-  add_dependencies(doc  doc_klfbackend doc_klftools doc_klfapp)
+  add_dependencies(doc  doc_klfbackend doc_klftools)
 
   # and the sourceforge-hosted docs (internal...)
-  #add_dependencies(doc_klfapp_sfweb
-  #		   doc_klftools_sfweb doc_klfbackend_sfweb) # depends on klfbackend.tag and klftools.tag
-  #add_dependencies(doc_klfbackend_sfweb doc_klftools_sfweb) # depends on klftools.tag
+  add_dependencies(doc_klfbackend_sfweb doc_klftools_sfweb) # depends on klftools.tag
+
+  add_dependencies(doc_sfweb  doc_klfbackend_sfweb doc_klftools_sfweb)
 
   message(STATUS "doxygen developer API documentation can be generated with 'make doc'")
 else(DOXYGEN)
@@ -120,33 +116,23 @@ endif(DOXYGEN)
 
 
 
-# Install Doxygen API Documentation?
-# ----------------------------------
-#
-#KLFDeclareCacheVarOptionCondition(specificoption cachetype cachestring updatenoticestring condition forcedvalue defaultvalue)
-KLFDeclareCacheVarOptionCondition(KLF_INSTALL_APIDOC_DIR
-  STRING "Install API documentation to this location (relative to CMAKE_INSTALL_PREFIX or absolute)" #cachetype/string
-  "Cannot install developer doxygen documentation as doxygen is not available!" # updatenotice
-  "DOXYGEN" # condition
-  "" # forced value
-  "" # default value
-  )
-if(KLF_INSTALL_APIDOC_DIR)
-  message(STATUS "API documentation will be installed to ${KLF_INSTALL_APIDOC_DIR} (KLF_INSTALL_APIDOC_DIR)")
+if(DOXYGEN)
+  set(default_KLF_INSTALL_APIDOC_DIR "${CMAKE_INSTALL_DOCDIR}/apidoc")
+  KLFSetIfNotDefined(KLF_INSTALL_APIDOC_DIR ${default_KLF_INSTALL_APIDOC_DIR})
+  if(KLF_INSTALL_APIDOC_DIR)
+    message(STATUS "API documentation will be installed to ${KLF_INSTALL_APIDOC_DIR} (KLF_INSTALL_APIDOC_DIR)")
 
-  # Make sure that make all will generate doxygen doc
-  add_custom_target(doc_all ALL)
-  add_dependencies(doc_all  doc_noautorebuild_klfbackend doc_noautorebuild_klftools doc_noautorebuild_klfapp)
+    # Make sure that make all will generate doxygen doc
+    add_custom_target(doc_all ALL)
+    add_dependencies(doc_all  doc_noautorebuild_klfbackend doc_noautorebuild_klftools)
 
-  install(DIRECTORY "${KLF_APIDOC_DIR}/klfbackend" "${KLF_APIDOC_DIR}/klftools" "${KLF_APIDOC_DIR}/klfapp"
-    DESTINATION "${KLF_INSTALL_APIDOC_DIR}"
-    FILES_MATCHING REGEX "\\.(html|css|png|gif|jpe?g)$")
-  install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/apidoc/index.html" "${CMAKE_CURRENT_SOURCE_DIR}/apidoc/f.gif"
-    "${KLF_APIDOC_DIR}/klfbackend.tag" "${KLF_APIDOC_DIR}/klftools.tag" "${KLF_APIDOC_DIR}/klfapp.tag"
-    DESTINATION "${KLF_INSTALL_APIDOC_DIR}")
+    install(DIRECTORY "${KLF_APIDOC_DIR}/klfbackend" "${KLF_APIDOC_DIR}/klftools"
+      DESTINATION "${KLF_INSTALL_APIDOC_DIR}"
+      FILES_MATCHING REGEX "\\.(html|css|png|gif|jpe?g)$")
+    install(FILES "${CMAKE_SOURCE_DIR}/apidoc/index.html" "${CMAKE_SOURCE_DIR}/apidoc/f.gif"
+      "${KLF_APIDOC_DIR}/klfbackend.tag" "${KLF_APIDOC_DIR}/klftools.tag"
+      DESTINATION "${KLF_INSTALL_APIDOC_DIR}")
 
-else(KLF_INSTALL_APIDOC_DIR)
-  message(STATUS "Developer API documentation will not be installed (KLF_INSTALL_APIDOC_DIR)")
-endif(KLF_INSTALL_APIDOC_DIR)
-
+  endif()
+endif()
 

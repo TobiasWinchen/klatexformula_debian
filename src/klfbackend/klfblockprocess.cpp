@@ -19,77 +19,83 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfblockprocess.cpp 923 2014-08-31 21:29:56Z phfaist $ */
+/* $Id: klfblockprocess.cpp 1013 2017-02-07 03:02:14Z phfaist $ */
 
 #include <QProcess>
-#include <QApplication>
+#include <QCoreApplication>
 #include <QEventLoop>
 #include <QFile>
+#include <QThread>
 
 #include <klfutil.h>
+#include <klfsysinfo.h>
 #include "klfblockprocess.h"
 
 static bool is_binary_file(QString fn)
 {
+  klfDbg("is_binary_file("<<fn<<")") ;
   if (!QFile::exists(fn)) {
     fn = klfSearchPath(fn);
+    klfDbg("is_binary_file: file doesn't exist directly, path search gave "<<fn) ;
   }
   QFile fpeek(fn);
   if (!fpeek.open(QIODevice::ReadOnly)) {
     klfDbg("fn="<<fn<<", Can't peek into file "<<fn<<"!") ;
-  } else {
-    QByteArray line;
-    int n = 0, j;
-    while (n++ < 3 && (line = fpeek.readLine()).size()) {
-      for (j = 0; j < line.size(); ++j) {
-        if ((int)line[j] >= 127 || (int)line[j] <= 0) {
-          return true;
-        }
+    return true; // assumption by default
+  }
+  QByteArray line;
+  int n = 0, j;
+  while (n++ < 5 && (line = fpeek.readLine(1024)).size()) {
+    for (j = 0; j < line.size(); ++j) {
+      if ((int)line[j] >= 127 || (int)line[j] <= 0) {
+        klfDbg("fn="<<fn<<" found binary char '"<<(char)line[j]<<"'=="<<(int)line[j]
+               <<" on line "<<n<<", column "<< j) ;
+        return true;
       }
     }
-    return false;
   }
+  klfDbg("fn="<<fn<<", file seems to be ascii based on the first few lines") ;
   return false;
 }
 
-
-#if defined(Q_OS_WIN32)
-const static QString script_extra_paths = QString("C:\\Python27");
-static QByteArray get_script_process_type(const QString& name)
-{
-  // e.g. KLF_PYTHON_EXECUTABLE
-  QString envname = QString("KLF_%1_EXECUTABLE").arg(name.toUpper());
-  QByteArray path = qgetenv(envname.toLatin1().constData());
-  if (path.size() > 0)
-    return path;
-  // try to find the executable somewhere on the system
-  // allow suffixes to the executables, e.g. for python27
-  path = klfSearchPath(name+"*.exe", script_extra_paths).toLocal8Bit();
-  if (path.size() > 0)
-    return path;
-  return QByteArray();
-}
-static QByteArray get_script_process(QString fn)
-{
-  fn = fn.toLower();
-  if (fn.endsWith(".py")) {
-    return get_script_process_type(QLatin1String("python"));
-  }
-  if (fn.endsWith(".rb")) {
-    return get_script_process_type(QLatin1String("ruby"));
-  }
-  if (fn.endsWith(".sh")) {
-    return get_script_process_type(QLatin1String("bash"));
-  }
-  if (fn.endsWith(".pl")) {
-    return get_script_process_type(QLatin1String("perl"));
-  }
-  return QByteArray();
-}
+#if defined(Q_OS_WIN)
+const static QString script_extra_paths = QString("C:\\Python27;C:\\Python*");
+const static QString exe_suffix = ".exe";
+#elif defined(Q_OS_MAC)
+const static QString script_extra_paths =
+                "/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin:/usr/local/sbin" // general unix
+                "/usr/local/opt/*/bin:/opt/local/bin:" // homebrew
+                "/opt/local/sbin" // macports
+                "/Library/TeX/texbin:/usr/texbin"; // mactex binaries
+const static QString exe_suffix = "";
+#else
+const static QString script_extra_paths =
+                "/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin:/usr/local/sbin"; // general unix paths
+const static QString exe_suffix = "";
 #endif
 
 
-KLFBlockProcess::KLFBlockProcess(QObject *p)  : QProcess(p)
+// static
+QString KLFBlockProcess::detectInterpreterPath(const QString& interp, const QStringList & addpaths)
+{
+  QString search_paths = script_extra_paths;
+  search_paths += addpaths.join(KLF_PATH_SEP);
+  // first, try exact name (python.exe, bash.exe)
+  QString s = klfSearchPath(interp+exe_suffix, script_extra_paths);
+  if (!s.isEmpty()) {
+    return s;
+  }
+  // otherwise, try name with some suffix (e.g. python2.exe) -- dont directly try with
+  // wildcard, because we want the exact name if it exists (and not some other program,
+  // such as 'bashbug', which happened to be found first)
+  return klfSearchPath(interp+"*"+exe_suffix, script_extra_paths);
+}
+
+
+
+
+KLFBlockProcess::KLFBlockProcess(QObject *p)
+  : QProcess(p)
 {
   mProcessAppEvents = true;
   connect(this, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(ourProcExited()));
@@ -108,6 +114,21 @@ void KLFBlockProcess::ourProcExited()
 {
   _runstatus = 1; // exited
 }
+
+QString KLFBlockProcess::getInterpreterPath(const QString & ext)
+{
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  klfDbg("ext = " << ext) ;
+  if (ext == "py") {
+    return detectInterpreterPath("python");
+  } else if (ext == "sh") {
+    return detectInterpreterPath("bash");
+  } else if (ext == "rb") {
+    return detectInterpreterPath("ruby");
+  }
+  return QString();
+}
+
 bool KLFBlockProcess::startProcess(QStringList cmd, QStringList env)
 {
   return startProcess(cmd, QByteArray(), env);
@@ -121,30 +142,19 @@ bool KLFBlockProcess::startProcess(QStringList cmd, QByteArray stdindata, QStrin
 
   KLF_ASSERT_CONDITION(cmd.size(), "Empty command list given.", return false;) ;
 
-#if defined(Q_OS_UNIX)
-
-  // for epstopdf bug in ubuntu: peek into executable, see if it is script. if it is, run with 'sh' on *nix's.
-  // this is a weird bug with QProcess that will not execute some script files like epstopdf.
-
-  if (!is_binary_file(cmd[0])) {
-    // explicitely add a wrapper ('sh' only works for bash shell scripts, so use 'env') (we're on *nix, so OK)
-    cmd.prepend("/usr/bin/env");
-  }
-
-#endif
-
-#if defined(Q_OS_WIN32)
+  // For scripts, use the interpreter explicitly.  This so that the script doesn't have to
+  // be executable, and also for an old bug on Ubuntu with epstopdf.
+  //
+  // We peek into executable to see if it is script. If it is, use the correct interpreter.
 
   if (!is_binary_file(cmd[0])) {
-    // check what script type it is, and try to use pre-defined executables in shell variables (HACK!!)
-    /// FIXME: This is ugly! Need better solution!
-    QByteArray exec_proc = get_script_process(cmd[0]);
+    // check what script type it is and invoke the corresponding interpreter.
+    QString ext = cmd[0].split('.').last();
+    QByteArray exec_proc = getInterpreterPath(ext).toLocal8Bit();
     if (exec_proc.size()) {
       cmd.prepend(exec_proc);
     }
   }
-
-#endif
 
   QString program = cmd[0];
 
@@ -170,9 +180,10 @@ bool KLFBlockProcess::startProcess(QStringList cmd, QByteArray stdindata, QStrin
   klfDbg("wrote input data (size="<<stdindata.size()<<")") ;
 
   if (mProcessAppEvents) {
-    klfDbg("letting app process events ...") ;
+    klfDbg("letting current thread (="<<QThread::currentThread()<<") process events ...") ;
     while (_runstatus == 0) {
-      qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+      QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents, 1000);
+      klfDbg("events processed, maybe more?") ;
     }
   } else {
     if (!waitForFinished()) {

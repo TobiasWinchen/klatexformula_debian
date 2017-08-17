@@ -19,20 +19,17 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfsparkleupdater.mm 909 2014-08-10 17:58:33Z phfaist $ */
+/* $Id: klfsparkleupdater.mm 1010 2017-02-06 07:07:00Z phfaist $ */
+
 
 #include <QWidget>
 
-#if !defined(QT_MAC_USE_COCOA)
-#error Sparkle framework can only be used with Qt/Cocoa.
-#endif
-
-#include <qmacdefines_mac.h>
 
 #include <objc/runtime.h>
 #include <Cocoa/Cocoa.h>
 #include <Foundation/NSAutoreleasePool.h>
 
+#include <klfdebug.h>
 #include "klfsparkleupdater.h"
 
 #include <SUUpdater.h>
@@ -53,6 +50,9 @@ public:
 KLFSparkleAutoUpdater::KLFSparkleAutoUpdater(QObject * parent, const QString& aUrl)
   : KLFAutoUpdater(parent)
 {
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  klfDbg("Url = " << aUrl) ;
+
   d = new Private;
 
   d->arpool = [[NSAutoreleasePool alloc] init];
@@ -66,6 +66,8 @@ KLFSparkleAutoUpdater::KLFSparkleAutoUpdater(QObject * parent, const QString& aU
 
 KLFSparkleAutoUpdater::~KLFSparkleAutoUpdater()
 {
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+
   [d->updater release];
   [d->arpool release];
   delete d;
@@ -73,6 +75,9 @@ KLFSparkleAutoUpdater::~KLFSparkleAutoUpdater()
 
 void KLFSparkleAutoUpdater::checkForUpdates(bool inBackground)
 {
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  klfDbg("inBackground = " << inBackground) ;
+  
   if (inBackground) {
     [d->updater checkForUpdatesInBackground];
   } else {

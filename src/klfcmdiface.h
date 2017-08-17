@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfcmdiface.h 688 2011-08-01 01:41:25Z phfaist $ */
+/* $Id: klfcmdiface.h 953 2016-12-27 00:13:10Z phfaist $ */
 
 
 #ifndef KLF_CMDIFACE_H_
@@ -31,7 +31,7 @@
 
 #include <klfdefs.h>
 
-class KLFCmdIfacePrivate;
+struct KLFCmdIfacePrivate;
 
 class KLF_EXPORT KLFCmdIface : public QObject
 {

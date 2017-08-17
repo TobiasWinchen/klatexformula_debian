@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfbackend.h 915 2014-08-24 18:44:56Z phfaist $ */
+/* $Id: klfbackend.h 969 2016-12-29 07:44:24Z phfaist $ */
 
 #ifndef KLFBACKEND_H
 #define KLFBACKEND_H
@@ -292,6 +292,12 @@ public:
      * Can be \c NULL, in which case the default generator is used, see
      * \ref DefaultTemplateGenerator. */
     TemplateGenerator *templateGenerator;
+
+    /** Path to interpreters to use for different script formats. The key is the filename
+     *  extension of the script (e.g. "py"), and the value is the path to the
+     *  corresponding interpreter (e.g. "/usr/bin/python")
+     */
+    QMap<QString,QString> userScriptInterpreters;
   };
 
   //! Specific input to KLFBackend::getLatexFormula()

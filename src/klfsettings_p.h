@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id$ */
+/* $Id: klfsettings_p.h 984 2016-12-31 21:11:52Z phfaist $ */
 
 /** \file
  * This header contains (in principle private) auxiliary classes for
@@ -53,9 +53,7 @@ public:
     mainWin = NULL;
     pUserSetDefaultAppFont = false;
     pluginstuffloaded = false;
-#ifdef KLF_EXPERIMENTAL
     advancedConfigEditor = NULL;
-#endif
   }
 
 
@@ -87,9 +85,7 @@ public:
   QMap<QString,QWidget*> pluginConfigWidgets;
   QMap<QString,QTreeWidgetItem*> pluginListItems;
 
-#ifdef KLF_EXPERIMENTAL
   KLFAdvancedConfigEditor *advancedConfigEditor;
-#endif
 
   bool setDefaultFor(const QString& progname, const QString& guessprog, bool required,
 		     KLFPathChooser *destination);
@@ -114,11 +110,11 @@ public slots: // well "public" only for us... :)
   void populateExportProfilesCombos();
   void populateDetailsSideWidgetTypeCombo();
 
-  void initPluginControls();
-  void resetPluginControls();
-  void refreshPluginSelected();
-  void refreshAddOnList();
-  void refreshAddOnSelected();
+  // void initPluginControls();
+  // void resetPluginControls();
+  // void refreshPluginSelected();
+  // void refreshAddOnList();
+  // void refreshAddOnSelected();
 
   void reloadUserScripts();
   void refreshUserScriptList();

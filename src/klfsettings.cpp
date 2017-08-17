@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfsettings.cpp 921 2014-08-31 21:01:12Z phfaist $ */
+/* $Id: klfsettings.cpp 1011 2017-02-06 19:54:48Z phfaist $ */
 
 #include <stdlib.h>
 
@@ -39,9 +39,9 @@
 #include <QEvent>
 #include <QListView> // QListView::LeftToRight|TopToBottom
 #include <QMouseEvent>
-#include <QDesktopServices>
+#include <QStandardPaths>
 #include <QToolBar>
-#include <QPlastiqueStyle>
+#include <QStyleFactory>
 
 #include <klfcolorchooser.h>
 #include <klfpathchooser.h>
@@ -60,28 +60,22 @@
 #include "klfmainwin.h"
 #include "klfconfig.h"
 #include "klfmime.h"
-#include "klfpluginiface.h"
 #include "klfsettings.h"
 #include "klfsettings_p.h"
 #include "klfuiloader.h"
 
 
 
-#ifdef KLF_EXPERIMENTAL
-void klf_show_advanced_config_editor()
-{
-  KLFAdvancedConfigEditor *edit = new KLFAdvancedConfigEditor(NULL, &klfconfig);
-  edit->show();
-}
-#endif
+// void klf_show_advanced_config_editor()
+// {
+//   KLFAdvancedConfigEditor *edit = new KLFAdvancedConfigEditor(NULL, &klfconfig);
+//   edit->show();
+// }
 
 
 
 
 #define KLFSETTINGS_ROLE_PLUGNAME (Qt::UserRole + 5300)
-#define KLFSETTINGS_ROLE_PLUGINDEX (KLFSETTINGS_ROLE_PLUGNAME + 1)
-
-#define KLFSETTINGS_ROLE_ADDONINDEX (Qt::UserRole + 5400)
 
 #define KLFSETTINGS_ROLE_USERSCRIPT (Qt::UserRole + 5500)
 
@@ -98,14 +92,16 @@ void klf_show_advanced_config_editor()
 KLFSettings::KLFSettings(KLFMainWin* parent)
   : QDialog(parent)
 {
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+
   KLF_INIT_PRIVATE(KLFSettings) ;
 
   u = new Ui::KLFSettings;
   u->setupUi(this);
   setObjectName("KLFSettings");
 
-#ifdef Q_WS_MAC
-  setAttribute(Qt::WA_MacBrushedMetal, klfconfig.UI.macBrushedMetalLook);
+#ifdef KLF_WS_MAC
+  //setAttribute(Qt::WA_MacBrushedMetal, klfconfig.UI.macBrushedMetalLook);
   setAutoFillBackground(true);
 #endif
 
@@ -144,10 +140,10 @@ KLFSettings::KLFSettings(KLFMainWin* parent)
   // ---
 
   //  QToolBar * toolBar = new QToolBar(wToolBar);
-#if defined(Q_WS_MAC) || defined(Q_WS_WIN32) || defined(Q_WS_WIN) || defined(Q_WS_WIN64)
+#if defined(KLF_WS_MAC) || defined(KLF_WS_WIN)
   //  u->toolBar->setAttribute(Qt::WA_NoSystemBackground, true);
   //  u->toolBar->setAttribute(Qt::WA_NativeWindow, false);
-  u->toolBar->setStyle(new QPlastiqueStyle());
+  u->toolBar->setStyle(QStyleFactory::create("fusion"));
 #endif
 
 
@@ -162,7 +158,6 @@ KLFSettings::KLFSettings(KLFMainWin* parent)
   SETTINGS_REGISTER_TAB(Editor);
   SETTINGS_REGISTER_TAB(Library);
   SETTINGS_REGISTER_TAB(UserScripts);
-  SETTINGS_REGISTER_TAB(AddOnsPlugins);
   SETTINGS_REGISTER_TAB(Advanced);
 
   // and show the interface tab by default
@@ -192,24 +187,15 @@ KLFSettings::KLFSettings(KLFMainWin* parent)
   
   connect(u->btnPathsReset, SIGNAL(clicked()), this, SLOT(setDefaultPaths()));
 
-  connect(u->lstPlugins, SIGNAL(itemSelectionChanged()), d, SLOT(refreshPluginSelected()));
-  connect(u->lstAddOns, SIGNAL(itemSelectionChanged()), d, SLOT(refreshAddOnSelected()));
-  connect(u->btnImportAddOn, SIGNAL(clicked()), this, SLOT(importAddOn()));
-  connect(u->btnRemoveAddOn, SIGNAL(clicked()), this, SLOT(removeAddOn()));
-  //  connect(u->btnRemovePlugin, SIGNAL(clicked()), this, SLOT(removePlugin()));
-
-  u->lstPlugins->installEventFilter(this);
-  u->lstPlugins->viewport()->installEventFilter(this);
-  u->lstAddOns->installEventFilter(this);
-  u->lstAddOns->viewport()->installEventFilter(this);
-
   connect(u->btnAppFont, SIGNAL(clicked()), d, SLOT(slotChangeFontSender()));
   connect(u->btnEditorFont, SIGNAL(clicked()), d, SLOT(slotChangeFontSender()));
   connect(u->btnPreambleFont, SIGNAL(clicked()), d, SLOT(slotChangeFontSender()));
 
   // prepare some actions as shortcuts for standard fonts
   QFontDatabase fdb;
-  u->aFontCMU->setEnabled( fdb.families().contains("CMU Sans Serif") );
+  u->aFontCMU->setEnabled( fdb.families().filter(
+			       klfconfig.defaultCMUFont.family()
+			       ).size() );
   d->pFontBasePresetActions["CMU"] = u->aFontCMU;
   d->pFontBasePresetActions["TT"] = u->aFontTT;
   d->pFontBasePresetActions["Std"] = u->aFontStd;
@@ -304,39 +290,24 @@ KLFSettings::KLFSettings(KLFMainWin* parent)
   REG_SH_TEXTFORMATENSEMBLE(ParenMismatch);
   REG_SH_TEXTFORMATENSEMBLE(LonelyParen);
 
-  u->btnImportAddOn->setEnabled(klf_addons_canimport);
-  u->btnRemoveAddOn->setEnabled(klf_addons_canimport);
-
-  d->refreshAddOnList();
-  d->refreshAddOnSelected();
-  d->refreshPluginSelected();
 
   // user scripts
 
   connect(u->lstUserScripts, SIGNAL(itemSelectionChanged()), d, SLOT(refreshUserScriptSelected()));
   connect(u->btnReloadUserScripts, SIGNAL(clicked()), d, SLOT(reloadUserScripts()));
 
-  // remove default Qt Designer Page
-  QWidget * w = u->tbxPluginsConfig->widget(u->tbxPluginsConfig->currentIndex());
-  u->tbxPluginsConfig->removeItem(u->tbxPluginsConfig->currentIndex());
-  delete w;
-
-  u->lstPlugins->setColumnWidth(0, 185);
-
-  // dont load plugin data here as this dialog is created BEFORE plugins are loaded
-  d->pluginstuffloaded = false;
-
   // --- 
-
 
   // if we're on a laptop, show the corresponding setting for battery power. Otherwise,
   // hide it.
   u->wRealTimePreviewExceptBattery->setVisible(KLFSysInfo::isLaptop());
 
-
   // ---
 
   retranslateUi(false);
+
+  // shrink to minimal horizontal size, that's more aesthetic with the main buttons on top
+  resize(minimumSizeHint()+QSize(0,50));
 }
 
 void KLFSettings::retranslateUi(bool alsoBaseUi)
@@ -423,7 +394,7 @@ void KLFSettingsPrivate::populateLocaleCombo()
 
 void KLFSettingsPrivate::populateExportProfilesCombos()
 {
-  QList<KLFMimeExportProfile> eplist = KLFMimeExportProfile::exportProfileList();
+  QList<KLFMimeExportProfile> eplist = mainWin->mimeExportProfileList();
 
   K->u->cbxCopyExportProfile->clear();
   K->u->cbxDragExportProfile->clear();
@@ -452,13 +423,9 @@ void KLFSettings::show()
 
   reset();
 
-  if (!d->pluginstuffloaded)
-    d->initPluginControls();
-  else
-    d->resetPluginControls();
-
   d->refreshUserScriptList();
   d->refreshUserScriptSelected();
+
 
   KLF_BLOCK {
     // calculate the minimum width of the main toolbar
@@ -538,18 +505,6 @@ void KLFSettings::showControl(int control)
   case UserScriptInfo:
     __KLF_SHOW_SETTINGS_CONTROL(UserScripts, lstUserScripts) ;
     break;
-  case ManageAddOns:
-    u->tabsAddOnsPlugins->setCurrentWidget(u->tabAddOns);
-    __KLF_SHOW_SETTINGS_CONTROL(AddOnsPlugins, lstAddOns) ;
-    break;
-  case ManagePlugins:
-    u->tabsAddOnsPlugins->setCurrentWidget(u->tabAddOns);
-    __KLF_SHOW_SETTINGS_CONTROL(AddOnsPlugins, lstPlugins) ;
-    break;
-  case PluginsConfig:
-    u->tabsAddOnsPlugins->setCurrentWidget(u->tabPlugins);
-    __KLF_SHOW_SETTINGS_CONTROL(AddOnsPlugins, tbxPluginsConfig->currentWidget()) ;
-    break;
   default:
     qWarning()<<KLF_FUNC_NAME<<": unknown control number requested : "<<control;
   }
@@ -577,48 +532,13 @@ void KLFSettings::showControl(const QString& controlName)
   __KLF_SETTINGS_TEST_STR_CONTROL( controlName, CalcEPSBoundingBox ) ;
   __KLF_SETTINGS_TEST_STR_CONTROL( controlName, LibrarySettings ) ;
   __KLF_SETTINGS_TEST_STR_CONTROL( controlName, UserScriptInfo ) ;
-  __KLF_SETTINGS_TEST_STR_CONTROL( controlName, ManageAddOns ) ;
-  __KLF_SETTINGS_TEST_STR_CONTROL( controlName, ManagePlugins ) ;
-  __KLF_SETTINGS_TEST_STR_CONTROL( controlName, PluginsConfig ) ;
 
   klfWarning("BUG: unknown control name: "<<controlName) ;
 }
 
-static bool treeMaybeUnselect(QTreeWidget *tree, QEvent *event)
-{
-  // tree is non-NULL as ensured by caller.
-
-  if (event->type() != QEvent::MouseButtonPress)
-    return false;
-  QMouseEvent * e = (QMouseEvent*) event;
-  if (e->button() != Qt::LeftButton)
-    return false;
-  QTreeWidgetItem *itemAtClick = tree->itemAt(e->pos());
-  if ( itemAtClick ) {
-    // user clicked on an item, let Qt handle the event and select item etc.
-    return false;
-  }
-  // user clicked out of an item, change Qt's default behavior and un-select all items.
-  QList<QTreeWidgetItem*> selitems = tree->selectedItems();
-  int k;
-  for (k = 0; k < selitems.size(); ++k) {
-    selitems[k]->setSelected(false);
-  }
-  return true;
-}
 
 bool KLFSettings::eventFilter(QObject *object, QEvent *event)
 {
-  // test for one the the treeWidgets
-  QTreeWidget * tree = NULL;
-  if (object == u->lstPlugins || object == u->lstPlugins->viewport())
-    tree = u->lstPlugins;
-  if (object == u->lstAddOns || object == u->lstAddOns->viewport())
-    tree = u->lstAddOns;
-  
-  if ( tree )
-    if ( treeMaybeUnselect(tree, event) )
-      return true;
   return QDialog::eventFilter(object, event);
 }
 
@@ -675,6 +595,11 @@ void KLFSettings::reset()
       d->textformats[k].chkI->setCheckState(Qt::PartiallyChecked);
   }
 
+  u->txtScriptInterpreterPython->setText(
+      klfconfig.BackendSettings.userScriptInterpreters().value("py").toString() );
+  u->txtScriptInterpreterShell->setText(
+      klfconfig.BackendSettings.userScriptInterpreters().value("sh").toString() );
+
   d->pUserSetDefaultAppFont = klfconfig.UI.useSystemAppFont;
   u->btnAppFont->setFont(klfconfig.UI.applicationFont);
   u->btnAppFont->setProperty("selectedFont", klfconfig.UI.applicationFont.toVariant());
@@ -700,9 +625,11 @@ void KLFSettings::reset()
   int sidewidgettypei = u->cbxDetailsSideWidgetType->findData(QVariant(klfconfig.UI.detailsSideWidgetType()));
   u->cbxDetailsSideWidgetType->setCurrentIndex(sidewidgettypei);
   u->chkMacBrushedMetalLook->setChecked(klfconfig.UI.macBrushedMetalLook);
-#ifndef Q_WS_MAC
+//#ifndef KLF_WS_MAC
+// obsolete option, not used because I couldn't obtain a good look with Qt5 and had
+// painting bugs (all black widgets)
   u->chkMacBrushedMetalLook->hide();
-#endif
+//#endif
 
   int copyi = u->cbxCopyExportProfile->findData(QVariant(klfconfig.ExportData.copyExportProfile));
   u->cbxCopyExportProfile->setCurrentIndex(copyi);
@@ -719,217 +646,6 @@ void KLFSettings::reset()
   u->cbxLibIconViewFlow->setSelectedValue(klfconfig.LibraryBrowser.iconViewFlow);
 }
 
-
-void KLFSettingsPrivate::initPluginControls()
-{
-  if (pluginstuffloaded)
-    return;
-  pluginstuffloaded = true;
-
-  int j;
-  int n_pluginconfigpages = 0;
-  QTreeWidgetItem *litem;
-  for (j = 0; j < klf_plugins.size(); ++j) {
-    QString name = klf_plugins[j].name;
-    QString title = klf_plugins[j].title;
-    QString description = klf_plugins[j].description;
-    KLFPluginGenericInterface *instance = klf_plugins[j].instance;
-    
-    litem = new QTreeWidgetItem(K->u->lstPlugins);
-    litem->setCheckState(0,
-			 klfconfig.Plugins.pluginConfig[name]["__loadenabled"].toBool() ?
-			 Qt::Checked : Qt::Unchecked);
-    litem->setText(0, title);
-    
-    litem->setData(0, KLFSETTINGS_ROLE_PLUGNAME, name);
-    litem->setData(0, KLFSETTINGS_ROLE_PLUGINDEX, j);
-
-    pluginListItems[name] = litem;
-
-    if ( instance != NULL ) {
-      pluginConfigWidgets[name] = instance->createConfigWidget( NULL );
-      K->u->tbxPluginsConfig->addItem( pluginConfigWidgets[name] , QIcon(":/pics/bullet22.png"), title );
-      KLFPluginConfigAccess pconfa = klfconfig.getPluginConfigAccess(name);
-      instance->loadFromConfig(pluginConfigWidgets[name], &pconfa);
-      n_pluginconfigpages++;
-    }
-  }
-  if (n_pluginconfigpages == 0) {
-    QLabel * lbl;
-    lbl = new QLabel(tr("No Plugins have been loaded. Please install and enable individual plugins "
-			"first, then come back to this page to configure them."), K->u->tbxPluginsConfig);
-    lbl->hide();
-    lbl->setWordWrap(true);
-    lbl->setMargin(20);
-    K->u->tbxPluginsConfig->addItem(lbl, tr("No Plugins Loaded"));
-  }
-}
-
-void KLFSettingsPrivate::resetPluginControls()
-{
-  // go through all plugins, and load their configs into their corresponding config widget
-  // and see if they are loaded (corresponding checkbox)
-  int k;
-  for (k = 0; k < klf_plugins.size(); ++k) {
-    QString name = klf_plugins[k].name;
-    KLFPluginGenericInterface *instance = klf_plugins[k].instance;
-
-    KLF_ASSERT_CONDITION(pluginListItems.contains(name),
-			 "Plugin "<<name<<" does not have its corresponding check item!",
-			 continue ;) ;
-
-    pluginListItems[name]->setCheckState(0,
-					 klfconfig.Plugins.pluginConfig[name]["__loadenabled"].toBool() ?
-					 Qt::Checked : Qt::Unchecked);
-
-    if (instance != NULL) {
-      if (!pluginConfigWidgets.contains(name)) {
-	qWarning()<<KLF_FUNC_NAME<<": Plugin "<<name<<" does not have its config widget !?!?!";
-	continue;
-      }
-      QWidget *widget = pluginConfigWidgets[name];
-      // load the config into the widget
-      KLFPluginConfigAccess pconfa = klfconfig.getPluginConfigAccess(name);
-      instance->loadFromConfig(widget, &pconfa);
-    }
-  }
-}
-
-void KLFSettingsPrivate::refreshPluginSelected()
-{
-  QList<QTreeWidgetItem*> sel = K->u->lstPlugins->selectedItems();
-  if (sel.size() != 1) {
-    //    u->btnRemovePlugin->setEnabled(false);
-    K->u->lblPluginInfo->setText("");
-    return;
-  }
-  int k = sel[0]->data(0, KLFSETTINGS_ROLE_PLUGINDEX).toInt();
-  if (k < 0 || k >= klf_plugins.size()) {
-    //    u->btnRemovePlugin->setEnabled(false);
-    K->u->lblPluginInfo->setText("");
-    return;
-  }
-
-  int textpointsize = QFontInfo(K->font()).pointSize() - 2;
-  QString textpointsize_s = QString::number(textpointsize);
-  int smallpointsize = QFontInfo(K->font()).pointSize() - 3;
-  QString smallpointsize_s = QString::number(smallpointsize);
-  
-  QString plugininfotext =
-    "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-    "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-    "p, li { white-space: pre-wrap; }\n"
-    "</style></head>\n"
-    "<body style=\"font-size:" + textpointsize_s + "pt;\">\n"
-    "<p style=\"-qt-block-indent: 0; text-indent: 0px; margin-bottom: 0px\">\n"
-    // the name
-    "<tt>" + tr("Name:", "[[settings dialog plugin info text]]") + "</tt>&nbsp;&nbsp;"
-    "<span style=\"font-weight:600;\">" + Qt::escape(klf_plugins[k].title) + "</span><br />\n"
-    // the author
-    "<tt>" + tr("Author:", "[[settings dialog plugin info text]]") + "</tt>&nbsp;&nbsp;"
-    "<span style=\"font-weight:600;\">" + Qt::escape(klf_plugins[k].author) + "</span><br />\n"
-    // the description
-    "<tt>" + tr("Description:", "[[settings dialog plugin info text]]") + "</tt></p>\n"
-    "<p style=\"font-weight: 600; margin-top: 2px; margin-left: 25px;   margin-bottom: 0px;\">"
-    + Qt::escape(klf_plugins[k].description) + "</p>\n"
-    // file location
-    "<p style=\"-qt-block-indent: 0; text-indent: 0px; margin-top: 2px;\">\n"
-    "<tt>" + tr("File Location:", "[[settings dialog plugin info text]]") + "</tt><br />"
-    "<span style=\"font-size: "+smallpointsize_s+"pt;\">"
-    + Qt::escape(QDir::toNativeSeparators(QFileInfo(klf_plugins[k].fpath).canonicalFilePath()))
-    + "</span><br />\n"
-    "</body></html>";
-
-  K->u->lblPluginInfo->setText(plugininfotext);
-}
-
-void KLFSettings::removePlugin()
-{
-  // THIS FUNCTION IS NO LONGER USED. PLUGINS ARE AUTOMATICALLY REMOVED WHEN THE CORRESPONDING
-  // ADD-ON IS REMOVED. THIS FUNCTION IS KEPT IN CASE I CHANGE SOMETHING IN THE FUTURE.
-
-  QList<QTreeWidgetItem*> sel = u->lstPlugins->selectedItems();
-  if (sel.size() != 1) {
-    qWarning("KLFSettings::removePlugin: No Selection or many selection");
-    return;
-  }
-  QTreeWidgetItem * selectedItem = sel[0];
-  int k = selectedItem->data(0, KLFSETTINGS_ROLE_PLUGINDEX).toInt();
-  if (k < 0 || k >= klf_plugins.size()) {
-    qWarning("KLFSettings::removePlugin: Error: What's going on?? k=%d > klf_plugins.size=%d", k, klf_plugins.size());
-    return;
-  }
-
-  QMessageBox confirmdlg(this);
-  confirmdlg.setIcon(QMessageBox::Warning);
-  confirmdlg.setWindowTitle(tr("Remove Plugin?"));
-  confirmdlg.setText(tr("<qt>Are you sure you want to remove Plugin <i>%1</i>?</qt>").arg(klf_plugins[k].title));
-  confirmdlg.setDetailedText(tr("The Plugin File %1 will be removed from disk.").arg(klf_plugins[k].fpath));
-  confirmdlg.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
-  confirmdlg.setEscapeButton(QMessageBox::Cancel);
-  confirmdlg.setDefaultButton(QMessageBox::Cancel);
-
-  int confirmation = confirmdlg.exec();
-  if (confirmation != QMessageBox::Yes) {
-    // action cancelled by user
-    return;
-  }
-
-  bool r = QFile::remove(klf_plugins[k].fpath);
-
-  if ( r ) {
-    QMessageBox::information(this, tr("Remove Plugin"),
-			     tr("<p style=\"-qt-block-indent: 0; text-indent: 0px;\">Please note the following:<br />\n"
-				"<ul><li>You need to restart KLatexFormula for changes to take effect\n"
-				"<li>If this plugin was privided in an add-on, you need to remove the corresponding "
-				"add-on too or the plugin will be automatically re-installed."
-				"</p>"));
-    // remove plugin list item
-    delete selectedItem;
-  } else {
-    qWarning("Failed to remove plugin '%s'", qPrintable(klf_plugins[k].fpath));
-    QMessageBox::critical(this, tr("Error"), tr("Failed to remove Plugin."));
-  }
-
-  d->refreshAddOnList();
-  d->refreshAddOnSelected();
-}
-
-void KLFSettings::removePlugin(const QString& fname)
-{
-  int k;
-#ifdef KLF_DEBUG
-  klfDbg("removing plugin "<<fname<<" from plugins. Dumping plugin list: ");
-  for (k = 0; k < klf_plugins.size(); ++k) {
-    klfDbg("  --> plugin: fname="<<klf_plugins[k].fname) ;
-  }
-#endif
-
-  for (k = 0; k < klf_plugins.size() && klf_plugins[k].fname != fname; ++k)
-    ;
-  if (k < 0 || k >= klf_plugins.size()) {
-    k = -1;
-    klfWarning("didn't find plugin named "<<fname<<" ... perhaps it's not loaded?");
-  }
-
-  bool r = QFile::remove(klfconfig.homeConfigDirPlugins + "/" + fname);
-
-  if ( k >= 0 && r ) {
-    // find corresponding tree widget item
-    QTreeWidgetItemIterator it(u->lstPlugins);
-    while (*it) {
-      if ( (*it)->data(0, KLFSETTINGS_ROLE_PLUGINDEX).toInt() == k ) {
-	// remove plugin list item
-	delete (*it);
-	break;
-      }
-      ++it;
-    }
-  } else if (!r) {
-    klfWarning("Failed to remove plugin "<<klf_plugins[k].fpath);
-    QMessageBox::critical(this, tr("Error"), tr("Failed to remove Plugin %1.").arg(klf_plugins[k].title));
-  }
-}
 
 
 bool KLFSettingsPrivate::setDefaultFor(const QString& progname, const QString& guessedprog, bool required,
@@ -967,269 +683,16 @@ void KLFSettings::setDefaultPaths()
   d->setDefaultFor("latex", defaultsettings.latexexec, true, u->pathLatex);
   d->setDefaultFor("dvips", defaultsettings.dvipsexec, true, u->pathDvips);
   d->setDefaultFor("gs", defaultsettings.gsexec, true, u->pathGs);
-  //  bool r = setDefaultFor("epstopdf", defaultsettings.epstopdfexec, false, u->pathEpstopdf);
-  //  u->chkEpstopdf->setChecked(r);
 }
 
-
-void KLFSettingsPrivate::refreshAddOnList()
-{
-  K->u->lstAddOns->clear();
-  K->u->lstAddOns->setColumnWidth(0, 160);
-
-  // explore all addons
-  int k;
-  for (k = 0; k < klf_addons.size(); ++k) {
-    QTreeWidgetItem *item = new QTreeWidgetItem(K->u->lstAddOns);
-    item->setData(0, KLFSETTINGS_ROLE_ADDONINDEX, QVariant((int)k));
-
-    item->setText(0, klf_addons[k].title());
-    item->setText(1, klf_addons[k].description());
-
-    // set background color to indicate if status is fresh,
-    // and/or if plugin is installed locally
-    if (klf_addons[k].isfresh()) {
-      item->setBackground(0, QColor(200, 255, 200));
-      item->setBackground(1, QColor(200, 255, 200));
-    } /* // color locally installed plug-ins  [ don't, it's unaesthetic ! ]
-	 else if (klf_addons[k].islocal()) {
-	 item->setBackground(0, QColor(200, 200, 255));
-	 item->setBackground(1, QColor(200, 200, 255));
-	 } */
-  }
-}
-
-void KLFSettingsPrivate::refreshAddOnSelected()
-{
-  QList<QTreeWidgetItem*> sel = K->u->lstAddOns->selectedItems();
-  if (sel.size() != 1) {
-    K->u->lblAddOnInfo->setText("");
-    K->u->btnRemoveAddOn->setEnabled(false);
-    return;
-  }
-  int k = sel[0]->data(0, KLFSETTINGS_ROLE_ADDONINDEX).toInt();
-  if (k < 0 || k >= klf_addons.size()) {
-    K->u->lblAddOnInfo->setText("");
-    K->u->btnRemoveAddOn->setEnabled(false);
-    return;
-  }
-
-  // enable remove button only if this addon is "local", i.e. precisely removable
-  K->u->btnRemoveAddOn->setEnabled(klf_addons[k].islocal());
-
-  int textpointsize = QFontInfo(K->font()).pointSize() - 2;
-  QString textpointsize_s = QString::number(textpointsize);
-  int smallpointsize = QFontInfo(K->font()).pointSize() - 3;
-  QString smallpointsize_s = QString::number(smallpointsize);
-
-  // prepare add-on load error messages
-  QStringList elist = klf_addons[k].errors();
-  QString errorshtml;
-  for (int kkl = 0; kkl < elist.size(); ++kkl) {
-    errorshtml += "<span style=\"color: #a00000; font-style=italic; font-weight: bold\">"
-      + Qt::escape(elist[kkl]) + "</span><br />";
-  }
-  
-  QString addoninfotext =
-    "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-    "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-    "p, li { white-space: pre-wrap; }\n"
-    "</style></head>\n"
-    "<body style=\"font-size:" + textpointsize_s + "pt;\">\n"
-    "<p style=\"-qt-block-indent: 0; text-indent: 0px; margin-bottom: 0px\">\n"
-    // errors on top, so that one can easily see them
-    + errorshtml +
-    // the name
-    "<tt>" + tr("Name:", "[[settings dialog add-on info text]]") + "</tt>&nbsp;&nbsp;"
-    "<span style=\"font-weight:600;\">" + Qt::escape(klf_addons[k].title()) + "</span><br />\n"
-    // the author
-    "<tt>" + tr("Author:", "[[settings dialog add-on info text]]") + "</tt>&nbsp;&nbsp;"
-    "<span style=\"font-weight:600;\">" + Qt::escape(klf_addons[k].author()) + "</span><br />\n"
-    // the description
-    "<tt>" + tr("Description:", "[[settings dialog add-on info text]]") + "</tt></p>\n"
-    "<p style=\"font-weight: 600; margin-top: 2px; margin-left: 25px;   margin-bottom: 0px;\">"
-    + Qt::escape(klf_addons[k].description()) + "</p>\n"
-    // file name
-    "<p style=\"-qt-block-indent: 0; text-indent: 0px; margin-top: 2px;\">\n"
-    "<tt>" + tr("File Name:", "[[settings dialog add-on info text]]") + "</tt>&nbsp;&nbsp;"
-    "<span style=\"font-size: "+smallpointsize_s+"pt;\">" + klf_addons[k].fname() + "</span><br />\n"
-    // file location
-    "<tt>" + tr("File Location:", "[[settings dialog add-on info text]]") + "</tt><br />"
-    "<span style=\"font-size: "+smallpointsize_s+"pt;\">"
-    + QDir::toNativeSeparators(QFileInfo(klf_addons[k].dir()).canonicalFilePath()) + QDir::separator()
-    + "</span><br />\n"
-    // installed locally ?
-    "<tt><i>" +
-    (klf_addons[k].islocal()? tr("Add-On installed locally") : tr("Add-On installed globally on system"))
-    + "</i></tt>"
-    "</body></html>";
-
-  K->u->lblAddOnInfo->setText(addoninfotext);
-}
-
-
-void KLFSettings::importAddOn()
-{
-  QStringList efnames =
-    QFileDialog::getOpenFileNames(this, tr("Please select add-on file(s) to import"),
-				  QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation),
-				  "Qt Resource Files (*.rcc)");
-  int i;
-  for (i = 0; i < efnames.size(); ++i) {
-    importAddOn(efnames[i], false);
-  }
-  // display message to user to restart KLatexFormula, if needed
-  if (i > 0) {
-    QMessageBox::information(this, tr("Import"), tr("Please restart KLatexFormula for changes to take effect."));
-  }
-}
-
-void KLFSettings::importAddOn(const QString& fileName, bool suggestRestart)
-{
-  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
-  klfDbg("fileName="<<fileName<<", suggestRestart="<<suggestRestart) ;
-
-  QFileInfo fi(fileName);
-  if (!fi.exists() || !fi.isReadable()) {
-    QMessageBox::critical(this, tr("Error"), tr("File %1 cannot be accessed.").arg(fileName));
-    return;
-  }
-  QString destination = klfconfig.homeConfigDirRCCResources+"/";
-  QString destfpath = destination + QFileInfo(fileName).fileName();
-  if ( QFile::exists(destfpath) ) {
-    QMessageBox::critical(this, tr("Error"),
-			  tr("An Add-On with the same file name has already been imported."));
-    return;
-  }
-  bool r = QFile::copy(fileName, destfpath);
-  if ( !r ) {
-    QMessageBox::critical(this, tr("Error"), tr("Import of add-on file %1 failed.").arg(fileName));
-    return;
-  }
-
-  // import succeeded, show the add-on as fresh.
-  KLFAddOnInfo addoninfo(destfpath, true);
-  if (!addoninfo.klfminversion().isEmpty() &&
-      klfVersionCompareLessThan(KLF_VERSION_STRING, addoninfo.klfminversion())) {
-    // add-on too recent
-    QMessageBox::critical(this, tr("Error"),
-			  tr("This add-on requires a more recent version of KLatexFormula.\n"
-			     "Required version: %1\n"
-			     "This version: %2").arg(addoninfo.klfminversion(), KLF_VERSION_STRING));
-    return;
-  }
-  // if we have new translations, add them to our translation combo box, and prompt user to change to that
-  // language. (It is highly reasonable that if he installed the translation add-on, it's to use it...!)
-  int k;
-  QStringList trlist = addoninfo.translations();
-  KLFI18nFile *detectedI18nFile = NULL;
-  for (k = 0; k < trlist.size(); ++k) {
-    KLFI18nFile i18nfile(addoninfo.rccmountroot()+"/i18n/"+trlist[k]);
-    if ( u->cbxLocale->findData(i18nfile.locale) == -1 ) {
-      klfDbg("found translation: "<<i18nfile.locale) ;
-      klf_add_avail_translation(i18nfile);
-      if (detectedI18nFile == NULL)
-	detectedI18nFile = new KLFI18nFile(i18nfile);
-    }
-  }
-  if (detectedI18nFile != NULL) {
-    klfDbg("translation(s) found. first one found was: "<<detectedI18nFile->locale) ;
-    // update the translation list
-    d->populateLocaleCombo();
-    // find the translation
-    for (k = 0; k < klf_avail_translations.size(); ++k) {
-      if (klf_avail_translations[k].localename == detectedI18nFile->locale)
-	break;
-    }
-    int cbxindex = u->cbxLocale->findData(detectedI18nFile->locale);
-    if (k >= 0 && k < klf_avail_translations.size() && cbxindex >= 0) {
-      if (QMessageBox::question(this, tr("Change Language"), tr("Change application language to <b>%1</b>?")
-				.arg(klf_avail_translations[k].translatedname),
-				QMessageBox::Yes|QMessageBox::No, QMessageBox::Yes)
-	  == QMessageBox::Yes) {
-	u->cbxLocale->setCurrentIndex(cbxindex);
-	apply();
-	// a message warning the user to restart has already been displayed in the apply() above.
-	suggestRestart = false;
-      }
-    }
-    delete detectedI18nFile;
-    detectedI18nFile = NULL;
-  }
-  klf_addons.append(addoninfo);
-  d->refreshAddOnList();
-
-  if (suggestRestart) {
-    QMessageBox::information(this, tr("Import"), tr("Please restart KLatexFormula for changes to take effect."));
-  }
-}
-
-void KLFSettings::removeAddOn()
-{
-  QList<QTreeWidgetItem*> sel = u->lstAddOns->selectedItems();
-  if (sel.size() != 1) {
-    qWarning("Expected single add-on selection for removal !");
-    return;
-  }
-
-  int k = sel[0]->data(0, KLFSETTINGS_ROLE_ADDONINDEX).toInt();
-  if (k < 0 || k >= klf_addons.size()) {
-    // what's going on ???
-    return;
-  }
-
-  QMessageBox confirmdlg(this);
-  confirmdlg.setIcon(QMessageBox::Warning);
-  confirmdlg.setWindowTitle(tr("Remove Add-On?"));
-  confirmdlg.setText(tr("<qt>Are you sure you want to remove Add-On <i>%1</i>?</qt>")
-		     .arg(klf_addons[k].title()));
-  QStringList ourplugins = klf_addons[k].localPluginList();
-  QString msg;
-  if (ourplugins.size()) {
-    msg = tr("The Add-On File %1 will be removed from disk, along with plugin(s) %2.")
-      .arg(klf_addons[k].fpath(), ourplugins.join(", "));
-  } else {
-    msg = tr("The Add-On File %1 will be removed from disk.").arg(klf_addons[k].fpath());
-  }
-  confirmdlg.setDetailedText(msg);
-  confirmdlg.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
-  confirmdlg.setEscapeButton(QMessageBox::Cancel);
-  confirmdlg.setDefaultButton(QMessageBox::Cancel);
-
-  int confirmation = confirmdlg.exec();
-  if (confirmation != QMessageBox::Yes) {
-    // action cancelled by user
-    return;
-  }
-
-  bool r = QFile::remove(klf_addons[k].fpath());
-  // remove all corresponding plugins too
-  int j;
-  if ( r ) {
-    QMessageBox::information(this, tr("Remove Add-On"),
-			     tr("Please restart KLatexFormula for changes to take effect."));
-  } else {
-    qWarning("Failed to remove add-on '%s'", qPrintable(klf_addons[k].fpath()));
-    QMessageBox::critical(this, tr("Error"), tr("Failed to remove Add-On."));
-    return;
-  }
-
-  // remove all corresponding plug-ins
-  QStringList lplugins = klf_addons[k].localPluginList();
-  for (j = 0; j < lplugins.size(); ++j)
-    removePlugin(lplugins[j]);
-
-  klf_addons.removeAt(k);
-
-  d->refreshAddOnList();
-  d->refreshAddOnSelected();
-}
 
 void KLFSettingsPrivate::refreshUserScriptList()
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
 
   K->u->lstUserScripts->clear();
+
+  klfDbg("User script config is " << klfconfig.UserScripts.userScriptConfig) ;
 
   QMap<QString, QTreeWidgetItem*> dirs;
 
@@ -1240,7 +703,8 @@ void KLFSettingsPrivate::refreshUserScriptList()
 
     klfDbg("loading "<<userscript) ;
 
-    QString dd = QFileInfo(info.fileName()).canonicalPath(); // != canonicalFilePath which is _with_ file name
+    // this is != canonicalFilePath which is _with_ file name
+    QString dd = QFileInfo(info.userScriptPath()).canonicalPath();
 
     QTreeWidgetItem *diritem = dirs.value(dd, NULL);
     if (diritem == NULL) {
@@ -1250,11 +714,26 @@ void KLFSettingsPrivate::refreshUserScriptList()
     }
 
     // add the user script
-    QTreeWidgetItem *item = new QTreeWidgetItem(diritem, QStringList()<<info.scriptName());
+    QTreeWidgetItem *item = new QTreeWidgetItem(diritem, QStringList()<<info.userScriptName());
     item->setData(0, KLFSETTINGS_ROLE_USERSCRIPT, QVariant::fromValue<QString>(userscript));
 
-    if (!diritem->isExpanded())
+    if (!diritem->isExpanded()) {
       diritem->setExpanded(true);
+    }
+
+    // load user script configuration into the respective config widget
+    QString uifile = info.settingsFormUI();
+    if (!uifile.isEmpty()) {
+      klfDbg("populating settings widget for user script " << userscript) ;
+      QWidget * scriptconfigwidget = getUserScriptConfigWidget(info, info.relativeFile(uifile));
+      // load current configuration
+      klfDbg("the corresponding config is "
+             << klfconfig.UserScripts.userScriptConfig.value(info.userScriptPath())) ;
+      if (klfconfig.UserScripts.userScriptConfig.contains(info.userScriptPath())) {
+        displayUserScriptConfig(scriptconfigwidget,
+                                klfconfig.UserScripts.userScriptConfig.value(info.userScriptPath()));
+      }
+    }
   }
   
   K->u->splitUserScripts->setSizes(QList<int>() << 100 << 100);
@@ -1282,32 +761,34 @@ void KLFSettingsPrivate::refreshUserScriptSelected()
   QTreeWidgetItem * item = K->u->lstUserScripts->currentItem();
   klfDbg("item="<<item) ;
 
-  QVariant v;
-  QString s;
+  bool ok = true;
 
-  KLF_BLOCK {
-    if (item == NULL)
-      KLF_BREAK_BECAUSE(1);
-    v = item->data(0, KLFSETTINGS_ROLE_USERSCRIPT);
-    if (!v.isValid())
-      KLF_BREAK_BECAUSE(2);
-    s = v.toString();
-    if (!KLFUserScriptInfo::hasScriptInfoInCache(s)) {
-      klfDbg("s="<<s) ;
-      KLF_BREAK_BECAUSE(3);
+  QString usname;
+
+  if (item == NULL) {
+    K->u->lblUserScriptInfo->setText(tr("No user script selected.", "[[user script info label]]"));
+    K->u->lblUserScriptInfo->setText(tr("No user script selected.", "[[user script info label]]"));
+    ok = false;
+  } else {
+    QVariant v = item->data(0, KLFSETTINGS_ROLE_USERSCRIPT);
+    if (!v.isValid()) {
+      K->u->lblUserScriptInfo->setText(tr("No user script selected.",
+                                          "[[user script info label]]"));
+      ok = false;
+    } else {
+      usname = v.toString();
+      klfDbg("usname = " << usname) ;
+      if (!KLFUserScriptInfo::hasScriptInfoInCache(usname)) {
+        klfDbg("not in cache -- there's an error.") ;
+        KLFUserScriptInfo errinfo(usname);
+        K->u->lblUserScriptInfo->setText(tr("User script info error: %1",
+                                            "[[user script info label]]").arg(errinfo.scriptInfoErrorString()));
+        ok = false;
+      }
     }
   }
-  KLF_BROKEN_BECAUSE(reason) {
-    // no user script
-    K->u->lblUserScriptInfo->setText(tr("No user script selected.", "[[user script info label]]"));
+  if (!ok) {
     K->u->stkUserScriptSettings->setCurrentWidget(K->u->wStkUserScriptSettingsEmptyPage);
-    if (reason == 2) {
-      klfDbg("invalid variant") ;
-    }
-    if (reason == 3) {
-      klfDbg("variant is not string, v="<< v) ;
-    }
-
     return;
   }
 
@@ -1318,7 +799,7 @@ void KLFSettingsPrivate::refreshUserScriptSelected()
   //    s, d->mainWin->backendSettings(),
   //    klfconfig.UserScripts.userScriptConfig.value(s)
   //    );
-  KLFUserScriptInfo usinfo(s);
+  KLFUserScriptInfo usinfo(usname);
 
   int textpointsize = QFontInfo(K->u->lblUserScriptInfo->font()).pointSize() - 1;
   QString txt = usinfo.htmlInfo(QString::fromLatin1("body { font-size: %1pt }").arg(textpointsize));
@@ -1328,6 +809,7 @@ void KLFSettingsPrivate::refreshUserScriptSelected()
   // update config widget
   QString uifile = usinfo.settingsFormUI();
   if (!uifile.isEmpty()) {
+    uifile = usinfo.relativeFile(uifile);
     QWidget * scriptconfigwidget = getUserScriptConfigWidget(usinfo, uifile);
     K->u->stkUserScriptSettings->setCurrentWidget(scriptconfigwidget);
     klfDbg("Set script config UI. uifile="<<uifile) ;
@@ -1340,9 +822,9 @@ QWidget * KLFSettingsPrivate::getUserScriptConfigWidget(const KLFUserScriptInfo&
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
   klfDbg("uifile = " << uifile) ;
-  if (userScriptConfigWidgets.contains(uifile)) {
+  if (userScriptConfigWidgets.contains(usinfo.userScriptPath())) {
     klfDbg("widget from cache.") ;
-    return userScriptConfigWidgets[uifile];
+    return userScriptConfigWidgets[usinfo.userScriptPath()];
   }
 
   QFile uif(uifile);
@@ -1353,19 +835,18 @@ QWidget * KLFSettingsPrivate::getUserScriptConfigWidget(const KLFUserScriptInfo&
 		      return K->u->wStkUserScriptSettingsEmptyPage) ;
 
   K->u->stkUserScriptSettings->addWidget(scriptconfigwidget);
-  userScriptConfigWidgets[uifile] = scriptconfigwidget;
-
-  // load current configuration
-  if (klfconfig.UserScripts.userScriptConfig.contains(usinfo.fileName()))
-    displayUserScriptConfig(scriptconfigwidget, klfconfig.UserScripts.userScriptConfig.value(usinfo.fileName()));
+  userScriptConfigWidgets[usinfo.userScriptPath()] = scriptconfigwidget;
 
   return scriptconfigwidget;
 }
 
 QVariantMap KLFSettingsPrivate::getUserScriptConfig(QWidget * w)
 {
-  if (w == NULL)
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  
+  if (w == NULL) {
     return QVariantMap();
+  }
 
   QVariantMap data;
 
@@ -1395,8 +876,11 @@ QVariantMap KLFSettingsPrivate::getUserScriptConfig(QWidget * w)
 
 void KLFSettingsPrivate::displayUserScriptConfig(QWidget *w, const QVariantMap& data)
 {
-  if (w == NULL)
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+
+  if (w == NULL) {
     return;
+  }
 
   // find the input widgets
   QList<QWidget*> inwidgets = w->findChildren<QWidget*>(QRegExp("^INPUT_.*"));
@@ -1418,6 +902,7 @@ void KLFSettingsPrivate::displayUserScriptConfig(QWidget *w, const QVariantMap& 
     KLF_ASSERT_CONDITION(data.contains(n), "No value given for config widget "<<n, continue ; );
     QVariant value = data[n];
     inw->setProperty(userPropName.constData(), value);
+    klfDbg("Set config widget for " << n << " to " << value);
   }
 }
 
@@ -1426,30 +911,9 @@ void KLFSettingsPrivate::reloadUserScripts()
 {
   klf_reload_user_scripts();
 
-  // pre-cache KLFUserScriptInfo for each user script. this requires a valid KLFBackend::klfSettings object...
-  KLFBackend::klfSettings settings;
-
-  settings.tempdir = klfconfig.BackendSettings.tempDir;
-  settings.latexexec = klfconfig.BackendSettings.execLatex;
-  settings.dvipsexec = klfconfig.BackendSettings.execDvips;
-  settings.gsexec = klfconfig.BackendSettings.execGs;
-  settings.epstopdfexec = klfconfig.BackendSettings.execEpstopdf;
-  settings.execenv = klfconfig.BackendSettings.execenv;
-
-  settings.lborderoffset = klfconfig.BackendSettings.lborderoffset;
-  settings.tborderoffset = klfconfig.BackendSettings.tborderoffset;
-  settings.rborderoffset = klfconfig.BackendSettings.rborderoffset;
-  settings.bborderoffset = klfconfig.BackendSettings.bborderoffset;
-
-  settings.calcEpsBoundingBox = klfconfig.BackendSettings.calcEpsBoundingBox;
-  settings.outlineFonts = klfconfig.BackendSettings.outlineFonts;
-
   int k;
   for (k = 0; k < klf_user_scripts.size(); ++k) {
-    KLFUserScriptInfo::forceReloadScriptInfo(
-        klf_user_scripts[k], &settings,
-        klfconfig.UserScripts.userScriptConfig.value(klf_user_scripts[k])
-        );
+    KLFUserScriptInfo::forceReloadScriptInfo( klf_user_scripts[k] );
   }
 
   // refresh GUI
@@ -1494,7 +958,6 @@ void KLFSettingsPrivate::slotChangeFont(QPushButton *w, const QFont& fnt)
 
 void KLFSettings::showAdvancedConfigEditor()
 {
-#ifdef KLF_EXPERIMENTAL
   if (d->advancedConfigEditor == NULL) {
     d->advancedConfigEditor = new KLFAdvancedConfigEditor(this, &klfconfig);
     connect(d->advancedConfigEditor, SIGNAL(configModified(const QString&)),
@@ -1502,12 +965,6 @@ void KLFSettings::showAdvancedConfigEditor()
     connect(this, SIGNAL(settingsApplied()), d->advancedConfigEditor, SLOT(updateConfig()));
   }
   d->advancedConfigEditor->show();
-
-#else
-  QMessageBox::critical(this, ("Not Yet Implemented"),
-			("This feature is not yet implemented. If you're daring, try compiling "
-			   "klatexformula with the experimental features on."));
-#endif
 }
 
 // klfdebug.cpp
@@ -1566,6 +1023,9 @@ void KLFSettings::apply()
   backendsettings.outlineFonts = u->chkOutlineFonts->isChecked();
 
   klfconfig.BackendSettings.setTexInputs = u->txtSetTexInputs->text();
+
+  backendsettings.userScriptInterpreters["py"] = u->txtScriptInterpreterPython->text();
+  backendsettings.userScriptInterpreters["sh"] = u->txtScriptInterpreterShell->text();
 
   // do this *after* setting 'setTexInputs', because we refer to it when adjusting the
   // execenv setting with the required value of TEXINPUTS...
@@ -1644,10 +1104,10 @@ void KLFSettings::apply()
     klfconfig.UI.useSystemAppFont = d->pUserSetDefaultAppFont;
     klfconfig.UI.applicationFont = newAppFont;
     if (klfconfig.UI.useSystemAppFont) {
-      qApp->setFont(klfconfig.defaultStdFont);
-      qApp->setFont(QFont());
+      QApplication::setFont(klfconfig.defaultStdFont);
+      QApplication::setFont(QFont());
     } else {
-      qApp->setFont(klfconfig.UI.applicationFont);
+      QApplication::setFont(klfconfig.UI.applicationFont);
     }
     // Style sheet refresh is needed to force font (?)
     qApp->setStyleSheet(qApp->styleSheet());
@@ -1692,25 +1152,6 @@ void KLFSettings::apply()
   //  klfconfig.LibraryBrowser.groupSubCategories = u->chkLibGroupSubCategories->isChecked();
   klfconfig.LibraryBrowser.iconViewFlow =  u->cbxLibIconViewFlow->selectedValue();
 
-  // save plugin config
-  QTreeWidgetItemIterator it(u->lstPlugins);
-  while (*it) {
-    int j = (*it)->data(0, KLFSETTINGS_ROLE_PLUGINDEX).toInt();
-    QString name = (*it)->data(0, KLFSETTINGS_ROLE_PLUGNAME).toString();
-    bool loadenable = ( (*it)->checkState(0) == Qt::Checked ) ;
-    if (loadenable != klfconfig.Plugins.pluginConfig[name]["__loadenabled"])
-      warnneedrestart = true;
-    klfconfig.Plugins.pluginConfig[name]["__loadenabled"] = loadenable;
-
-    if (klf_plugins[j].instance != NULL) {
-      KLFPluginConfigAccess pconfa = klfconfig.getPluginConfigAccess(name);
-      klfDbg("About to save config for plugin "<<j<<": "<<name);
-      klf_plugins[j].instance->saveToConfig(d->pluginConfigWidgets[name], &pconfa);
-    }
-
-    ++it;
-  }
-
   // save userscript config
   klfDbg("saving userscript settings.") ;
   for (k = 0; k < klf_user_scripts.size(); ++k) {
@@ -1720,18 +1161,18 @@ void KLFSettings::apply()
     if (formui.isEmpty())
       continue;
 
-    if (!d->userScriptConfigWidgets.contains(formui))
+    if (!d->userScriptConfigWidgets.contains(usinfo.userScriptPath()))
       continue; // no config for them...
 
-    klfDbg("saving settings for "<<usinfo.scriptName()) ;
+    klfDbg("saving settings for "<<usinfo.userScriptName()) ;
 
-    QWidget * w = d->userScriptConfigWidgets[formui];
+    QWidget * w = d->userScriptConfigWidgets[usinfo.userScriptPath()];
 
     QVariantMap data = d->getUserScriptConfig(w);
 
-    klfconfig.UserScripts.userScriptConfig[usinfo.fileName()] = data;
+    klfconfig.UserScripts.userScriptConfig[usinfo.userScriptPath()] = data;
 
-    KLFUserScriptInfo::forceReloadScriptInfo(usinfo.fileName(), &backendsettings, data);
+    KLFUserScriptInfo::forceReloadScriptInfo(usinfo.userScriptPath());
   }
 
   if (warnneedrestart) {

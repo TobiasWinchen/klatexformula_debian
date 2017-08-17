@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfcolorchooser.h 866 2013-11-24 13:56:22Z phfaist $ */
+/* $Id: klfcolorchooser.h 953 2016-12-27 00:13:10Z phfaist $ */
 
 #ifndef KLFCOLORCHOOSER_H
 #define KLFCOLORCHOOSER_H
@@ -55,7 +55,7 @@ public:
   KLFColorClickSquare(QColor color = Qt::white, int size = 16, bool removable = true, QWidget *parent = 0);
   explicit KLFColorClickSquare(QWidget *parent);
 
-  virtual QSize sizeHint() { return QSize(_size, _size); }
+  virtual QSize sizeHint() const { return QSize(_size, _size); }
 
   inline QColor color() const { return _color; }
   inline int sqSize() const { return _size; }

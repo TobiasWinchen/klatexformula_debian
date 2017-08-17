@@ -19,10 +19,12 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfliblegacyengine.cpp 911 2014-08-10 22:24:01Z phfaist $ */
+/* $Id: klfliblegacyengine.cpp 953 2016-12-27 00:13:10Z phfaist $ */
 
 
 #include <QString>
+#include <QUrl>
+#include <QUrlQuery>
 #include <QObject>
 #include <QDataStream>
 #include <QDir>
@@ -396,8 +398,10 @@ KLFLibLegacyEngine * KLFLibLegacyEngine::openUrl(const QUrl& url, QObject *paren
   }
 
   QString legresname;
-  if (url.hasQueryItem("klfDefaultSubResource"))
-    legresname = url.queryItemValue("klfDefaultSubResource");
+  QUrlQuery urlq(url);
+  if (urlq.hasQueryItem("klfDefaultSubResource")) {
+    legresname = urlq.queryItemValue("klfDefaultSubResource");
+  }
 
   return new KLFLibLegacyEngine(fname, legresname, url, parent);
 }
@@ -442,7 +446,9 @@ KLFLibLegacyEngine * KLFLibLegacyEngine::createDotKLF(const QString& fname, QStr
 
   if (lrname.isEmpty())
     lrname = tr("Default Resource"); // default name...?
-  url.addQueryItem("klfDefaultSubResource", lrname);
+  QUrlQuery urlq(url);
+  urlq.addQueryItem("klfDefaultSubResource", lrname);
+  url.setQuery(urlq);
 
   klfDbgSt("fileName="<<fileName<<"; canonical file path="<<QFileInfo(fileName).canonicalFilePath()
 	   <<"; legacyResourceName="<<legacyResourceName);
@@ -521,7 +527,7 @@ bool KLFLibLegacyEngine::canModifyData(const QString& subResource, ModifyType mo
 
   KLF_ASSERT_NOT_NULL( d , "d is NULL!" , return false ) ;
 
-#ifndef Q_WS_WIN
+#ifndef KLF_WS_WIN
   // seems like windows doesn't like to test directories to be writable ...?
 
   if ( QFile::exists(d->fileName())  // depending on whether the file itself exists, check if

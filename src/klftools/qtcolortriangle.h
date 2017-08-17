@@ -54,13 +54,13 @@
 
 #ifndef QTCOLORTRIANGLE_H
 #define QTCOLORTRIANGLE_H
-#include <QtGui/QImage>
-#include <QtGui/QWidget>
+#include <QImage>
+#include <QWidget>
 
 class QPointF;
 struct Vertex;
 
-#if defined(Q_WS_WIN)
+#if defined(KLF_WS_WIN)
 #  if !defined(QT_QTCOLORTRIANGLE_EXPORT) && !defined(QT_QTCOLORTRIANGLE_IMPORT)
 #    define QT_QTCOLORTRIANGLE_EXPORT
 #  elif defined(QT_QTCOLORTRIANGLE_IMPORT)

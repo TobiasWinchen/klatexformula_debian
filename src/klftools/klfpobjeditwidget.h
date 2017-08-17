@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id$ */
+/* $Id: klfpobjeditwidget.h 978 2016-12-31 05:16:11Z phfaist $ */
 
 
 #ifndef KLFPOBJEDITWIDGET_H
@@ -31,7 +31,7 @@
 #include <QTreeView>
 
 class KLFAbstractPropertizedObject;
-class KLFPObjEditWidgetPrivate;
+struct KLFPObjEditWidgetPrivate;
 
 
 class KLF_EXPORT KLFPObjEditWidget : public QTreeView

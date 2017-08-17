@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klffilterprocess.h 866 2013-11-24 13:56:22Z phfaist $ */
+/* $Id: klffilterprocess.h 994 2017-01-10 01:09:40Z phfaist $ */
 
 
 #ifndef KLFFILTERPROCESS_H
@@ -41,7 +41,8 @@
 
 
 
-class KLFFilterProcessPrivate;
+struct KLFFilterProcessPrivate;
+class KLFFilterProcessBlockProcess;
 
 class KLF_EXPORT KLFFilterProcess
 {
@@ -80,8 +81,6 @@ public:
   /** Set a QByteArray where all stderr data will be stored */
   void collectStderrTo(QByteArray * stderrstore);
 
-
-
   /** See \ref setProcessAppEvents() */
   bool processAppEvents();
   /** specify whether or not to call regularly qApp->processEvents() while executing.
@@ -91,15 +90,14 @@ public:
 
 
   /** After run(), this is set to the exit status of the process. See QProcess::exitStatus() */
-  int exitStatus() const;
+  virtual int exitStatus() const;
   /** After run(), this is set to the exit code of the process. See QProcess::exitCode() */
-  int exitCode() const;
+  virtual int exitCode() const;
 
   /** This is one of the KLFFP_* define's, such as \ref KLFFP_NOSTART, or \ref KLFFP_NOERR if all OK. */
-  int resultStatus() const;
+  virtual int resultStatus() const;
   /** An explicit error string in case the resultStatus() indicated an error. */
-  QString resultErrorString() const;
-
+  virtual QString resultErrorString() const;
 
 
   bool run(const QString& outFileName, QByteArray *outdata)
@@ -110,17 +108,17 @@ public:
   bool run(const QByteArray& indata, const QString& outFileName, QByteArray *outdata)
   {
     QMap<QString,QByteArray*> fout; fout[outFileName] = outdata;
-    return run(indata, fout);
+    return do_run(indata, fout);
   }
 
   bool run(const QMap<QString, QByteArray*> outdata)
   {
-    return run(QByteArray(), outdata);
+    return do_run(QByteArray(), outdata);
   }
 
   bool run(const QByteArray& indata = QByteArray())
   {
-    return run(indata, QMap<QString, QByteArray*>());
+    return do_run(indata, QMap<QString, QByteArray*>());
   }
 
   /**
@@ -136,8 +134,39 @@ public:
    *
    * \returns TRUE/FALSE for success/failure, respectively.
    */
-  bool run(const QByteArray& indata, const QMap<QString, QByteArray*> outdatalist);
+  bool run(const QByteArray& indata, const QMap<QString, QByteArray*> outdatalist)
+  {
+    return do_run(indata, outdatalist);
+  }
 
+
+protected:
+
+  friend class KLFFilterProcessBlockProcess;
+  virtual QMap<QString,QString> interpreters() const;
+
+  /** \brief Actually run the process
+   *
+   * Each run() overload above internally just redirects to this function.
+   *
+   * Subclasses may reimplement if they want to do some bookkeeping, cleaning up, keeping
+   * a log, etc.
+   *
+   */
+  virtual bool do_run(const QByteArray& indata, const QMap<QString, QByteArray*> outdatalist);
+
+  /** \brief The collected stdout data of the process that just ran.
+   *
+   * Convenience method for subclasses.  Stdout data collection must have been enabled
+   * (with \a setOutputStdout() and \a collectStdoutTo()).
+   */
+  QByteArray collectedStdout() const;
+  /** \brief The collected stderr data of the process that just ran.
+   *
+   * Convenience method for subclasses.  Stderr data collection must have been enabled
+   * (with \a setOutputStderr() and \a collectStderrTo()).
+   */
+  QByteArray collectedStderr() const;
 
 private:
   KLF_DECLARE_PRIVATE(KLFFilterProcess) ;

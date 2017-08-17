@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflatexpreviewthread.h 903 2014-08-10 02:15:11Z phfaist $ */
+/* $Id: klflatexpreviewthread.h 953 2016-12-27 00:13:10Z phfaist $ */
 
 #ifndef klflatexpreviewthread_H__
 #define klflatexpreviewthread_H__
@@ -32,7 +32,7 @@
 #include <klfbackend.h>
 
 
-class KLFLatexPreviewThreadPrivate;
+struct KLFLatexPreviewThreadPrivate;
 
 class KLF_EXPORT KLFLatexPreviewHandler : public QObject
 {
@@ -201,7 +201,7 @@ private:
 */
 
 
-class KLFContLatexPreviewPrivate;
+struct KLFContLatexPreviewPrivate;
 
 /**
  * A helper that runs in a different thread that generates previews in real-time as user types text,

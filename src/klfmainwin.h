@@ -19,7 +19,8 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmainwin.h 903 2014-08-10 02:15:11Z phfaist $ */
+/* $Id: klfmainwin.h 994 2017-01-10 01:09:40Z phfaist $ */
+
 
 #ifndef KLFMAINWIN_H
 #define KLFMAINWIN_H
@@ -48,7 +49,6 @@
 #include <klflatexsymbols.h>
 
 
-
 class KLFLibBrowser;
 class KLFStyleManager;
 class KLFSettings;
@@ -56,7 +56,8 @@ class KLFLatexSyntaxHighlighter;
 class KLFLatexEdit;
 class KLFCmdIface;
 class KLFUserScriptSettings;
-
+class KLFExporter;
+class KLFMimeExportProfile;
 
 namespace Ui {
   class KLFMainWin;
@@ -65,42 +66,6 @@ namespace Ui {
 class KLFMainWin;
 
 
-
-/** A helper interface class to implement more export formats to save output (to file).
- */
-class KLFAbstractOutputSaver
-{
-public:
-  KLFAbstractOutputSaver() { }
-  virtual ~KLFAbstractOutputSaver() { }
-
-  /** Returns a list of mime-types of supported file formats for the given output, which
-   * may be NULL. In the latter case, this function reports all formats that it can in
-   * principle provide. */
-  virtual QStringList supportedMimeFormats(KLFBackend::klfOutput * klfoutput) = 0;
-
-  /** Returns the human-readable, (possibly translated,) label to display in save dialog that
-   * the user can select to save in this format.
-   *
-   * \param key is a mime-type returned by \ref supportedMimeFormats().
-   */
-  virtual QString formatTitle(const QString& key) = 0;
-
-  /** Returns the file pattern(s) that the files of this format (normally) match.
-   * syntax is simple pattern eg. \c "*.png".
-   *
-   * The patterns are joined to spaces to form a filter that is given to QFileDialog.
-   */
-  virtual QStringList formatFilePatterns(const QString& key) = 0;
-
-  /** Actually save to the file \c fileName, using the format \c key.
-   *
-   * The subclass is responsible for notifying the user of possible errors that have occurred.
-   *
-   * Overwrite confirmation has already been required (if applicable).
-   */
-  virtual bool saveToFile(const QString& key, const QString& fileName, const KLFBackend::klfOutput& output) = 0;
-};
 
 /** A helper interface class to open old PNG files, library files or abstract data, to fill in
  * the main window controls (latex and style), or possibly open a resource into library.
@@ -170,7 +135,7 @@ class KLFAboutDialog;
 class KLFWhatsNewDialog;
 class KLFMainWinPopup;
 
-class KLFMainWinPrivate;
+struct KLFMainWinPrivate;
 
 /**
  * KLatexFormula Main Window
@@ -244,8 +209,8 @@ public:
 
   void registerHelpLinkAction(const QString& path, QObject *object, const char * member, bool wantUrlParam);
 
-  void registerOutputSaver(KLFAbstractOutputSaver *outputsaver);
-  void unregisterOutputSaver(KLFAbstractOutputSaver *outputsaver);
+  void registerExporter(KLFExporter *exporter);
+  void unregisterExporter(KLFExporter *exporter);
 
   void registerDataOpener(KLFAbstractDataOpener *dataopener);
   void unregisterDataOpener(KLFAbstractDataOpener *dataopener);
@@ -254,14 +219,16 @@ public:
   bool canOpenData(const QByteArray& data);
   bool canOpenData(const QMimeData *mimeData);
 
-  QList<KLFAbstractOutputSaver*> registeredOutputSavers();
+  QList<KLFExporter*> registeredExporters();
   QList<KLFAbstractDataOpener*> registeredDataOpeners();
+
+  QList<KLFMimeExportProfile> mimeExportProfileList();
 
   //! Reimplemented from KLFDropDataHandler
   bool canOpenDropData(const QMimeData * data);
 
-  bool saveOutputToFile(const KLFBackend::klfOutput& output, const QString& fname, const QString& format,
-			KLFAbstractOutputSaver * saver = NULL);
+//  bool saveOutputToFile(const KLFBackend::klfOutput& output, const QString& fname,
+//                        const QString& exporterName);
 
 
   bool isApplicationVisible() const;
@@ -297,13 +264,13 @@ signals:
   void aboutToCopyData();
   void copiedData(const QString& profile);
   void aboutToDragData();
-  void draggedDataWasDropped(const QString& mimeType);
+//  void draggedDataWasDropped(const QString& mimeType);
   void fileOpened(const QString& fname, KLFAbstractDataOpener * usingDataOpener);
   void dataOpened(const QString& mimetype, const QByteArray& data, KLFAbstractDataOpener * usingDataOpener);
 
   void aboutToSaveAs();
-  /** \note if \c usingSaver is NULL, the built-in klfbackend saver was used */
-  void savedToFile(const QString& fileName, const QString& format, KLFAbstractOutputSaver * usingSaver);
+  /** \note if \c usingExporter is NULL, the built-in klfbackend saver was used */
+  void savedToFile(const QString& fileName, const QString& format, KLFExporter * usingExporter);
 
 public slots:
 
@@ -321,7 +288,7 @@ public slots:
   void slotSetMathMode(const QString& mathmode);
   void slotSetPreamble(const QString& preamble);
   void slotSetUserScript(const QString& userScript);
-  void slotShowLastUserScriptOutput();
+  void slotShowUserScriptLog();
   void slotReloadUserScripts();
   /** If \c line is already in the preamble, then does nothing. Otherwise appends
    * \c line to the preamble text. */
@@ -424,9 +391,7 @@ public slots:
 protected:
 
   bool event(QEvent *e);
-#ifdef Q_WS_X11
-  bool x11Event(XEvent *event);
-#endif
+  bool nativeEvent(const QByteArray & eventType, void * message, long * result);
   void childEvent(QChildEvent *e);
   void closeEvent(QCloseEvent *e);
   void hideEvent(QHideEvent *e);

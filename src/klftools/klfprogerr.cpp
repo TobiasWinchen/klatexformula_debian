@@ -19,24 +19,25 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfprogerr.cpp 903 2014-08-10 02:15:11Z phfaist $ */
+/* $Id: klfprogerr.cpp 995 2017-01-10 19:57:24Z phfaist $ */
 
 #include <QRegExp>
+#include <QSizePolicy>
 
 #include "klfprogerr.h"
 
 #include "ui_klfprogerr.h"
 
 
-KLFProgErr::KLFProgErr(QWidget *parent, QString errtext) : QDialog(parent)
+KLFProgErr::KLFProgErr(QWidget *parent, QString errtext)
+  : QDialog(parent, Qt::Sheet)
 {
   u = new Ui::KLFProgErr;
   u->setupUi(this);
   setObjectName("KLFProgErr");
 
-  setWindowFlags(Qt::Sheet);
-
   setWindowModality(Qt::WindowModal);
+  setSizePolicy(QSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred));
 
   u->txtError->setWordWrapMode(QTextOption::WrapAnywhere);
   u->txtError->setText(errtext);

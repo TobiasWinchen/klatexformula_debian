@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflatexpreviewthread_p.h 903 2014-08-10 02:15:11Z phfaist $ */
+/* $Id: klflatexpreviewthread_p.h 998 2017-01-19 23:54:56Z phfaist $ */
 
 /** \file
  * This header contains (in principle private) auxiliary classes for
@@ -88,17 +88,21 @@ private:
 
 
 
-class KLFLatexPreviewThreadPrivate : public QObject
+struct KLFLatexPreviewThreadPrivate : public QObject
 {
   Q_OBJECT
 public:
   KLF_PRIVATE_QOBJ_HEAD(KLFLatexPreviewThread, QObject)
   {
+    worker = NULL;
+
     previewSize = QSize(280, 80);
     largePreviewSize = QSize(640, 480);
 
     taskIdCounter = 1;
   }
+
+  KLFLatexPreviewThreadWorker * worker;
 
   QSize previewSize;
   QSize largePreviewSize;
@@ -174,7 +178,7 @@ QDataStream& operator>>(QDataStream& str, KLFLatexPreviewThreadPrivate::Task& ta
 
 
 
-class KLFContLatexPreviewPrivate : public KLFLatexPreviewHandler
+struct KLFContLatexPreviewPrivate : public KLFLatexPreviewHandler
 {
   Q_OBJECT
 public:

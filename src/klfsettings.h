@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfsettings.h 819 2012-08-10 21:12:14Z phfaist $ */
+/* $Id: klfsettings.h 960 2016-12-27 05:15:17Z phfaist $ */
 
 #ifndef KLFSETTINGS_H
 #define KLFSETTINGS_H
@@ -40,7 +40,7 @@ class KLFMainWin;
 
 namespace Ui { class KLFSettings; }
 
-class KLFSettingsPrivate;
+struct KLFSettingsPrivate;
 
 /** \brief A settings dialog
  *
@@ -66,9 +66,9 @@ public:
     ExportProfiles,
     LibrarySettings,
     UserScriptInfo,
-    ManageAddOns,
-    ManagePlugins,
-    PluginsConfig
+//    ManageAddOns,
+//    ManagePlugins,
+//    PluginsConfig
   };
 
   KLFSettings(KLFMainWin* parent = 0);
@@ -95,12 +95,12 @@ public slots:
   void help();
 
   void setDefaultPaths();
-  void importAddOn();
-  void importAddOn(const QString& fileName, bool uiSuggestRestart = true);
-  void removeAddOn();
-  void removePlugin();
-  /** \warning This method provides NO USER CONFIRMATION and NO AFTER-OPERATION REFRESH */
-  void removePlugin(const QString& fname);
+  // void importAddOn();
+  // void importAddOn(const QString& fileName, bool uiSuggestRestart = true);
+  // void removeAddOn();
+  // void removePlugin();
+  // /** \warning This method provides NO USER CONFIRMATION and NO AFTER-OPERATION REFRESH */
+  // void removePlugin(const QString& fname);
 
   void showAdvancedConfigEditor();
   void showSystemMessages();

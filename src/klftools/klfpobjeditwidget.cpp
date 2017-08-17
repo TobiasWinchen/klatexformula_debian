@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id$ */
+/* $Id: klfpobjeditwidget.cpp 978 2016-12-31 05:16:11Z phfaist $ */
 
 
 #include <QAbstractItemModel>
@@ -60,12 +60,15 @@ void KLFPObjModel::setPObj(KLFAbstractPropertizedObject *pobj)
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME);
   klfDbg("pobj="<<pobj) ;
 
+  beginResetModel();
+
   d->pObj = pobj;
   if (d->pObj != NULL)
     d->propertyNames = d->pObj->propertyNameList();
   else
     d->propertyNames = QStringList();
-  reset();
+
+  endResetModel();
 }
 
 KLFAbstractPropertizedObject * KLFPObjModel::pObj()

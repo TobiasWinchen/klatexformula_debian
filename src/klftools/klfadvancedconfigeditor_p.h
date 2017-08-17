@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfadvancedconfigeditor_p.h 866 2013-11-24 13:56:22Z phfaist $ */
+/* $Id: klfadvancedconfigeditor_p.h 988 2017-01-02 09:25:34Z phfaist $ */
 
 /** \file
  * This header contains (in principle private) auxiliary classes for
@@ -58,7 +58,8 @@ public:
   {
   }
 
-  virtual QWidget * createEditor(QWidget *parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
+  virtual QWidget * createEditor(QWidget *parent, const QStyleOptionViewItem& option,
+                                 const QModelIndex& index) const
   {
     KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
     if (index.column() < 2)
@@ -94,7 +95,7 @@ public:
     QLineEdit * e = qobject_cast<QLineEdit*>(editor);
     KLF_ASSERT_NOT_NULL(e, "Editor is NULL or not a QLineEdit!", return ; ) ;
     KLF_ASSERT_NOT_NULL(model, "Model is NULL!", return ; ) ;
-    QByteArray datavalue = e->text().toAscii();
+    QByteArray datavalue = e->text().toLatin1();
     QByteArray typname = model->data(index, CONFIG_VIEW_ROLE_TYPENAME).toByteArray();
     QByteArray innertypname = model->data(index, CONFIG_VIEW_ROLE_INNERTYPENAME).toByteArray();
     QVariant value = klfLoadVariantFromText(datavalue, typname, innertypname);
@@ -117,7 +118,7 @@ protected:
 // ---------------------------------------------------------------
 
 
-class KLFAdvancedConfigEditorPrivate : public QObject
+struct KLFAdvancedConfigEditorPrivate : public QObject
 {
   Q_OBJECT
 public:
@@ -235,12 +236,12 @@ public slots: // public is just for us... the class is still private :)
       QByteArray savedtype, savedinnertype;
       QByteArray datavalue = klfSaveVariantToText(val, false, &savedtype, &savedinnertype);
       klfDbg("i3: datavalue="<<datavalue) ;
-      QStandardItem *i3 = new QStandardItem(QString::fromAscii(datavalue));
+      QStandardItem *i3 = new QStandardItem(QString::fromLatin1(datavalue));
       cg = editable ? QPalette::Active : QPalette::Disabled;
       i3->setForeground(pal.brush(cg, QPalette::Text));
       i3->setBackground(pal.brush(cg, QPalette::Base));
       i3->setData(val, Qt::EditRole);
-      i3->setData(QString::fromAscii(datavalue), Qt::DisplayRole);
+      i3->setData(QString::fromLatin1(datavalue), Qt::DisplayRole);
       i3->setData(pname, CONFIG_VIEW_ROLE_PROPNAME);
       i3->setData(savedtype, CONFIG_VIEW_ROLE_TYPENAME);
       i3->setData(savedinnertype, CONFIG_VIEW_ROLE_INNERTYPENAME);

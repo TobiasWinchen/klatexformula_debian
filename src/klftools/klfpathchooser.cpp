@@ -19,14 +19,14 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfpathchooser.cpp 604 2011-02-27 23:34:37Z phfaist $ */
+/* $Id: klfpathchooser.cpp 952 2016-12-26 07:36:43Z phfaist $ */
 
 #include <QLineEdit>
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QFrame>
 #include <QFileDialog>
-#include <QDesktopServices>
+#include <QStandardPaths>
 #include <QDirModel>
 #include <QCompleter>
 
@@ -89,8 +89,14 @@ void KLFPathChooser::requestBrowse()
   QString path;
   if (!txtPath->text().isEmpty())
     path = txtPath->text();
-  else
-    path = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
+  else {
+    QStringList docpaths = QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation);
+    if (docpaths.isEmpty()) {
+      path = "";
+    } else {
+      path = docpaths[0];
+    }
+  }
 
   QString s;
   if (_mode == 1) {

@@ -19,13 +19,16 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: main.cpp 918 2014-08-28 21:13:27Z phfaist $ */
+/* $Id: main.cpp 1021 2017-02-07 06:44:42Z phfaist $ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <time.h>
+#ifdef KLF_WS_MAC
+#  include <unistd.h>
+#endif
 
 #include <signal.h>
 
@@ -34,9 +37,9 @@
 #include <QTranslator>
 #include <QFileInfo>
 #include <QDir>
-#include <QResource>
+//#include <QResource>
 #include <QProcess>
-#include <QPluginLoader>
+//#include <QPluginLoader>
 #include <QMessageBox>
 #include <QLibraryInfo>
 #include <QMetaType>
@@ -52,11 +55,14 @@
 #include "klflibdbengine.h"
 #include "klfliblegacyengine.h"
 #include "klflibview.h"
+#include "klflatexsymbols.h"
 #include "klfmain.h"
 #include "klfconfig.h"
 #include "klfmainwin.h"
+#ifdef KLF_USE_DBUS
 #include "klfdbus.h"
-#include "klfpluginiface.h"
+#endif
+//#include "klfpluginiface.h"
 #include "klfcmdiface.h"
 #include "klfapp.h"
 
@@ -75,15 +81,10 @@
  */
 
 
-// Name of the environment variable to check for paths to extra resources
-#ifndef KLF_RESOURCES_ENVNAM
-#define KLF_RESOURCES_ENVNAM "KLF_RESOURCES"
-#endif
-
 
 #define KLF_WELCOME                                             \
-  "KLatexFormula Version %s by Philippe Faist (c) 2005-2014\n"  \
-  "Licensed under the terms of the GNU Public License GPL\n\n"
+  "KLatexFormula Version %s by Philippe Faist (c) 2005-2017\n"  \
+  "Licensed under the terms of the GNU General Public License (GPLv2+)\n\n"
 
 
 // Program Exit Error Codes
@@ -114,7 +115,7 @@ bool opt_quiet = false;
 char *opt_redirect_debug = NULL;
 bool opt_daemonize = false;
 bool opt_dbus_export_mainwin = false; // undocumented debug option
-bool opt_skip_plugins = false;
+bool opt_skip_plugins = false;// keep option for backwards compatibility
 
 int opt_calcepsbbox = -1;
 int opt_outlinefonts = -1;
@@ -285,6 +286,7 @@ void signal_act(int sig)
     }
   }
   if (sig == SIGSEGV) {
+    klfDbg("SEGMENTATION FAULT!");
     fprintf(ftty, "Segmentation Fault :-(\n");
     if (ftty != stderr)  fprintf(stderr, "** Segmentation Fault :-( **\n");
 
@@ -299,16 +301,16 @@ void signal_act(int sig)
 // DEBUG, WARNING AND FATAL MESSAGES HANDLER
 
 // klfdebug.cpp
-extern  void klf_qt_msg_handle(QtMsgType type, const char *msg);
+extern  void klf_qt_msg_handle(QtMsgType type, const QMessageLogContext &context, const QString &msg);
 extern  void klf_qt_msg_set_fp(FILE * fp);
 
 
-void klf_qt_message(QtMsgType type, const char *msg)
+void klf_qt_message(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
   if (opt_quiet)
     return;
 
-  klf_qt_msg_handle(type, msg);
+  klf_qt_msg_handle(type, context, msg);
 }
 
 
@@ -326,11 +328,11 @@ void main_cleanup()
   /** \bug ................ BUG IN WINDOWS HERE? .................... ???? */
   // FIXME: under windows, we have a proliferation of qt_temp.XXXXXX files
   //   in local plugin directory, what's going on?
-  QDir pdir(klfconfig.homeConfigDirPlugins);
-  QStringList qttempfiles = pdir.entryList(QStringList() << "qt_temp.??????", QDir::Files);
-  foreach(QString s, qttempfiles) {
-    QFile::remove(pdir.absoluteFilePath(s));
-  }
+//  QDir pdir(klfconfig.homeConfigDirPlugins);
+//  QStringList qttempfiles = pdir.entryList(QStringList() << "qt_temp.??????", QDir::Files);
+//  foreach(QString s, qttempfiles) {
+//    QFile::remove(pdir.absoluteFilePath(s));
+//  }
   // free strdup()'ed strings
   while (--opt_strdup_free_list_n >= 0)
     free(opt_strdup_free_list[opt_strdup_free_list_n]);
@@ -425,315 +427,6 @@ void dumpDir(const QDir& d, int indent = 0)
 inline void dumpDir(const QDir&, int = 0) { };
 #endif
 
-void main_load_extra_resources()
-{
-  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
-
-  // this function is called with running Q[Core]Application and klfconfig all set up.
-
-  QStringList env = QProcess::systemEnvironment();
-  QRegExp rgx("^" KLF_RESOURCES_ENVNAM "=");
-  QStringList klf_resources_l = env.filter(rgx);
-  QString klf_resources = QString::null;
-  if (klf_resources_l.size() > 0) {
-    klf_resources = klf_resources_l[0].replace(rgx, "");
-  }
-
-  bool klfsettings_can_import = false;
-
-  // Find global system-wide klatexformula rccresources dir
-  QStringList defaultrccpaths;
-#ifdef KLF_SHARE_RCCRESOURCES_DIR
-  defaultrccpaths << klfPrefixedPath(KLF_SHARE_RCCRESOURCES_DIR); // prefixed by app-dir-path
-#endif
-  defaultrccpaths << klfconfig.globalShareDir+"/rccresources/";
-  defaultrccpaths << klfconfig.homeConfigDirRCCResources;
-  klfDbg("RCC search path is "<<defaultrccpaths.join(QString()+KLF_PATH_SEP)) ;
-  QString rccfilepath;
-  if ( klf_resources.isNull() ) {
-    rccfilepath = "";
-  } else {
-    rccfilepath = klf_resources;
-  }
-  //  printf("DEBUG: Rcc file list is \"%s\"\n", rccfilepath.toLocal8Bit().constData());
-  QStringList rccfiles = rccfilepath.split(KLF_PATH_SEP, QString::KeepEmptyParts);
-  int j, k;
-  for (QStringList::iterator it = rccfiles.begin(); it != rccfiles.end(); ++it) {
-    if ((*it).isEmpty()) {
-      // empty split section: meaning that we want default paths at this point
-      it = rccfiles.erase(it, it+1);
-      for (j = 0; j < defaultrccpaths.size(); ++j) {
-	it = rccfiles.insert(it, defaultrccpaths[j]) + 1;
-      }
-      // having the default paths added, it is safe for klfsettings to import add-ons to ~/.klf.../rccresources/
-      klfsettings_can_import = true;
-      --it; // we already point to the next entry, compensate the ++it in for
-    }
-  }
-  QStringList rccfilesToLoad;
-  for (j = 0; j < rccfiles.size(); ++j) {
-    QFileInfo fi(rccfiles[j]);
-    if (fi.isDir()) {
-      QDir dir(rccfiles[j]);
-      QFileInfoList files = dir.entryInfoList(QStringList()<<"*.rcc", QDir::Files);
-      for (k = 0; k < files.size(); ++k) {
-	QString f = files[k].canonicalFilePath();
-	if (!rccfilesToLoad.contains(f))
-	  rccfilesToLoad << f;
-      }
-    } else if (fi.isFile() && fi.suffix() == "rcc") {
-      QString f = fi.canonicalFilePath();
-      if (!rccfilesToLoad.contains(f))
-	rccfilesToLoad << f;
-    }
-  }
-  for (j = 0; j < rccfilesToLoad.size(); ++j) {
-    KLFAddOnInfo addoninfo(rccfilesToLoad[j]);
-    // resource registered.
-    klf_addons.append(addoninfo);
-    klfDbg("registered resource "<<addoninfo.fpath()<<".") ;
-  }
-
-  // set the global "can-import" flag
-  klf_addons_canimport = klfsettings_can_import;
-
-  klfDbg( "dump of :/ :" ) ;
-  dumpDir(QDir(":/"));
-}
-
-
-/** \internal */
-class VersionCompareWithPrefixGreaterThan {
-  int prefixLen;
-public:
-  /** only the length of prefix is important, the prefix itself is not checked. */
-  VersionCompareWithPrefixGreaterThan(const QString& prefix) : prefixLen(prefix.length()) { }
-  bool operator()(const QString& a, const QString& b) {
-    return klfVersionCompare(a.mid(prefixLen), b.mid(prefixLen)) > 0;
-  }
-};
-
-void main_load_plugins(QApplication *app, KLFMainWin *mainWin)
-{
-  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
-
-  QStringList baseplugindirs =
-    QStringList() << klfconfig.homeConfigDirPlugins << klfconfig.globalShareDir+"/plugins";
-
-  klfDbg("base plugins dirs are "<<baseplugindirs) ;
-
-  // first step: copy all resource-located plugin libraries to our local config
-  // directory because we can only load filesystem-located plugins.
-  int i, k, j;
-  for (k = 0; k < klf_addons.size(); ++k) {
-    QStringList pluginList = klf_addons[k].pluginList();
-    bool hadatleastonecompatibleplugin = false;
-    for (j = 0; j < pluginList.size(); ++j) {
-      KLFAddOnInfo::PluginSysInfo psinfo = klf_addons[k].pluginSysInfo(pluginList[j]);
-      klfDbg( "Testing plugin psinfo="<<psinfo<<"\n\tTo our system: qtver="<<qVersion()
-	      <<"; klfver="<<KLF_VERSION_STRING<<"; os="<<KLFSysInfo::osString()
-	      <<"; arch="<<KLFSysInfo::arch() ) ;
-      if ( ! psinfo.isCompatibleWithCurrentSystem() ) {
-	continue;
-      }
-      // ok to install plugin
-      hadatleastonecompatibleplugin = true;
-      QString resfn = klf_addons[k].rccmountroot() + "/plugins/" + pluginList[j];
-      QString locsubdir = klf_addons[k].pluginLocalSubDirName(pluginList[j]);
-      QString locfn = klfconfig.homeConfigDirPlugins + "/" + locsubdir + "/"
-	+ QFileInfo(pluginList[j]).fileName();
-      QDateTime installedplugin_dt = QFileInfo(locfn).lastModified();
-      QDateTime resourceplugin_dt = QFileInfo(klf_addons[k].fpath()).lastModified();
-      qDebug("Comparing resource datetime (%s) with installed plugin datetime (%s)",
-	     qPrintable(resourceplugin_dt.toString()), qPrintable(installedplugin_dt.toString()));
-      if (  ! QFile::exists( locfn ) ||
-	    installedplugin_dt.isNull() || resourceplugin_dt.isNull() ||
-	    ( resourceplugin_dt > installedplugin_dt )  ) {
-	klfDbg("locsubdir="<<locsubdir) ;
-	// create path to that plugin dir
-	if (!locsubdir.isEmpty() &&
-	    !QDir(klfconfig.homeConfigDirPlugins + "/plugins/" + locsubdir).exists()) {
-	  if (! QDir(klfconfig.homeConfigDirPlugins).mkpath(locsubdir) ) {
-	    klfWarning("Can't create local plugin directory "<<locsubdir
-		       <<" inside "<<klfconfig.homeConfigDirPlugins<<" !") ;
-	  }
-	}
-	// remove old version if exists
-	if (QFile::exists(locfn)) QFile::remove(locfn);
-	// copy plugin to local plugin dir
-	klfDbg( "\tcopy "<<resfn<<" to "<<locfn ) ;
-	bool res = QFile::copy( resfn , locfn );
-	if ( ! res ) {
-	  klf_addons[k].addError(QObject::tr("Failed to install plugin locally.", "[[plugin error message]]"));
-	  qWarning("Unable to copy plugin '%s' to local directory!", qPrintable(pluginList[j]));
-	} else {
-	  QFile::setPermissions(locfn, QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner|
-				QFile::ReadUser|QFile::WriteUser|QFile::ExeUser|
-				QFile::ReadGroup|QFile::ExeGroup|QFile::ReadOther|QFile::ExeOther);
-	  qDebug("Copied plugin %s to local directory %s.", qPrintable(resfn), qPrintable(locfn));
-	}
-      }
-      // OK, plugin locally installed.
-    } // for(j) in pluginList
-    if (!hadatleastonecompatibleplugin) {
-      klf_addons[k].addError(QObject::tr("Plugin not compatible with current system.", "[[plugin error message]]"));
-    }
-  } // for(k) in klf_addons
-
-  // explore all base plugins dir with compatible architectures, eg.
-  // /usr/share/klatexformula/plugins, and ~/.klatexformula/plugins/
-  int n;
-  for (n = 0; n < baseplugindirs.size(); ++n) {
-    // build a list of plugin directories to search.
-    QStringList pluginsdirs;
-    // For each path in pluginsdirs, in this array (at same index pos) we have the
-    // relative path from baseplugindir.
-    QStringList pluginsdirsbaserel;
-    
-    QString basebaseplugindir = baseplugindirs[n];
-    klfDbg("exploring base plugin directory "<<basebaseplugindir) ;
-    // explore all compatible architecture directores
-    QDir dbaseplugindir(basebaseplugindir);
-    QStringList arches = dbaseplugindir.entryList(QStringList()<<"sysarch_*", QDir::Dirs);
-    foreach(QString pluginarchdir, arches) {
-      QString thissysarch = pluginarchdir.mid(strlen("sysarch_"));
-      klfDbg("testing directory "<<pluginarchdir<<" of sysarch "<<thissysarch<<" for current os="
-	     <<KLFSysInfo::osString()<<"/arch="<<KLFSysInfo::arch()) ;
-      if (KLFSysInfo::isCompatibleSysArch(thissysarch)) {
-	klfDbg("...is compatible. looking for plugin to load...") ;
-	QString baseplugindir = basebaseplugindir+"/"+pluginarchdir;
-	// ok. this is compatible arch
-	// now look into klf-version directories
-	QDir pdir(baseplugindir);
-	QStringList pdirlist = pdir.entryList(QStringList()<<"klf*", QDir::Dirs);
-	klfDbg("pdirlist="<<pdirlist) ;
-	// sort plugin dirs so that for a plugin existing in multiple versions, we load the
-	// one for the most recent first, then ignore the others.
-	qSort(pdirlist.begin(), pdirlist.end(), VersionCompareWithPrefixGreaterThan("klf"));
-	for (i = 0; i < pdirlist.size(); ++i) {
-	  klfDbg( "maybe adding plugin dir"<<pdirlist[i]<<"; klfver="<<pdirlist[i].mid(3) ) ;
-	  if (klfVersionCompare(pdirlist[i].mid(3), KLF_VERSION_STRING) <= 0) { // Version OK
-	    pluginsdirs << pdir.absoluteFilePath(pdirlist[i]) ;
-	    pluginsdirsbaserel << pdirlist[i]+"/";
-	  }
-	}
-      }
-    }
-    klfDbg( "pluginsdirs="<<pluginsdirs ) ;
-    
-    for (i = 0; i < pluginsdirs.size(); ++i) {
-      if ( ! QFileInfo(pluginsdirs[i]).isDir() )
-	continue;
-
-      QDir thisplugdir(pluginsdirs[i]);
-      QStringList plugins = thisplugdir.entryList(KLF_DLL_EXT_LIST, QDir::Files);
-      KLFPluginGenericInterface * pluginInstance;
-      for (j = 0; j < plugins.size(); ++j) {
-	QString pluginfname = plugins[j];
-	QString pluginfnamebaserel = pluginsdirsbaserel[i]+plugins[j];
-	bool plugin_already_loaded = false;
-	int k;
-	for (k = 0; k < klf_plugins.size(); ++k) {
-	  if (QFileInfo(klf_plugins[k].fname).fileName() == pluginfname) {
-	    klfDbg( "Rejecting loading of plugin "<<pluginfname<<" in dir "<<pluginsdirs[i]
-		    <<"; already loaded." ) ;
-	    plugin_already_loaded = true;
-	    break;
-	  }
-	}
-	if (plugin_already_loaded)
-	  continue;
-	// find to which add-on we belong, for error messages if any
-	int kk;
-	k = -1;
-	for (kk = 0; k < 0 && kk < klf_addons.size(); ++kk) {
-	  QStringList pl = klf_addons[kk].localPluginList();
-	  foreach (QString p, pl) {
-	    klfDbg("testing "<<pluginfnamebaserel<<" with "<<p<<"...") ;
-	    if (QFileInfo(thisplugdir.absoluteFilePath(pluginfname)).canonicalFilePath().endsWith(p)) {
-	      k = kk;
-	      break;
-	    }
-	  }
-	}
-	klfDbg("we belong to add-on # k="<<k<<", "<<(k>=0?klf_addons[k].fname():QString("(out of range)"))) ;
-
-	QString pluginpath = thisplugdir.absoluteFilePath(pluginfname);
-	QPluginLoader pluginLoader(pluginpath, app);
-	bool loaded = pluginLoader.load();
-	if (!loaded) {
-	  if (k >= 0)
-	    klf_addons[k].addError(QObject::tr("Failed to load plugin.", "[[plugin error message]]"));
-	  klfDbg("QPluginLoader failed to load plugin "<<pluginpath<<". Skipping.");
-	  continue;
-	}
-	QObject *pluginInstObject = pluginLoader.instance();
-	pluginInstance = qobject_cast<KLFPluginGenericInterface *>(pluginInstObject);
-	klfDbg("pluginInstObject="<<pluginInstObject<<", pluginInst="<<pluginInstance) ;
-	if (pluginInstObject == NULL || pluginInstance == NULL) {
-	  if (k >= 0)
-	    klf_addons[k].addError(QObject::tr("Incompatible plugin failed to load.", "[[plugin error message]]"));
-	  klfDbg("QPluginLoader failed to load plugin "<<pluginpath<<" (object or instance is NULL). Skipping.");
-	  continue;
-	}
-	// plugin file successfully loaded.
-	QString nm = pluginInstance->pluginName();
-	klfDbg("Successfully loaded plugin library "<<nm<<" ("<<qPrintable(pluginInstance->pluginDescription())
-	       <<") from file "<<pluginfnamebaserel);
-
-	if ( ! klfconfig.Plugins.pluginConfig.contains(nm) ) {
-	  // create default plugin configuration if non-existant
-	  klfconfig.Plugins.pluginConfig[nm] = QMap<QString, QVariant>();
-	  // ask plugin whether it's supposed to be loaded by default
-	  klfconfig.Plugins.pluginConfig[nm]["__loadenabled"] =
-	    pluginInstance->pluginDefaultLoadEnable();
-	}
-	bool keepPlugin = true;
-
-	// make sure this plugin wasn't already loaded (eg. in a different klf-version sub-dir)
-	bool pluginRejected = false;
-	for (k = 0; k < klf_plugins.size(); ++k) {
-	  if (klf_plugins[k].name == nm) {
-	    klfDbg( "Rejecting loading of plugin "<<nm<<" in "<<pluginfname<<"; already loaded." ) ;
-	    pluginLoader.unload();
-	    pluginRejected = true;
-	    break;
-	  }
-	}
-	if (pluginRejected)
-	  continue;
-
-	KLFPluginInfo pluginInfo;
-	pluginInfo.name = nm;
-	pluginInfo.title = pluginInstance->pluginTitle();
-	pluginInfo.description = pluginInstance->pluginDescription();
-	pluginInfo.author = pluginInstance->pluginAuthor();
-	pluginInfo.fname = pluginfnamebaserel;
-	pluginInfo.fpath = pluginpath;
-	pluginInfo.instance = NULL;
-
-	// if we are configured to load this plugin, load it.
-	keepPlugin = keepPlugin && klfconfig.Plugins.pluginConfig[nm]["__loadenabled"].toBool();
-	klfDbg("got plugin info. keeping plugin? "<<keepPlugin);
-	if ( keepPlugin ) {
-	  KLFPluginConfigAccess pgca = klfconfig.getPluginConfigAccess(nm);
-	  KLFPluginConfigAccess * c = new KLFPluginConfigAccess(pgca);
-	  klfDbg("prepared a configaccess "<<c);
-	  pluginInstance->initialize(app, mainWin, c);
-	  pluginInfo.instance = pluginInstance;
-	  qDebug("\tPlugin %s loaded and initialized.", qPrintable(nm));
-	} else {
-	  // if we aren't configured to load it, then discard it, but keep info with NULL instance,
-	  // so that user can configure to load or not this plugin in the settings dialog.
-	  delete pluginInstance;
-	  pluginInfo.instance = NULL;
-	  qDebug("\tPlugin %s NOT loaded.", qPrintable(nm));
-	}
-	klf_plugins.push_back(pluginInfo);
-      }
-    }
-  }
-}
 
 
 // function to set up the Q[Core]Application correctly
@@ -749,17 +442,8 @@ void main_setup_app(QCoreApplication *a)
 #ifdef KLF_LIBKLFTOOLS_STATIC
   Q_INIT_RESOURCE(klftoolsres) ;
 #endif
-#ifdef KLF_LIBKLFAPP_STATIC
-  Q_INIT_RESOURCE(klfres) ;
-#endif
 
-  // add [share dir]/qt-plugins to library path.
-  // under windows, that is were plugins are packaged with the executable
-  extern QString klf_share_dir_abspath();
-  QCoreApplication::addLibraryPath(klf_share_dir_abspath()+"/qt-plugins");
-
-  klfDbg("Library paths are:\n"<<qPrintable(QCoreApplication::libraryPaths().join("\n")));
-
+  klfDbg("Registering metatypes ...") ;
   qRegisterMetaType< QImage >("QImage");
   qRegisterMetaType< KLFStyle >();
   qRegisterMetaType< KLFStyle::BBoxExpand >();
@@ -773,9 +457,15 @@ void main_setup_app(QCoreApplication *a)
   qRegisterMetaType< KLFEnumType >();
   qRegisterMetaTypeStreamOperators< KLFEnumType >("KLFEnumType");
 
+  // for inter-thread calls in klflatexsymbols_p.h/klflatexsymbols.cpp
+  qRegisterMetaType< KLFLatexSymbol >("KLFLatexSymbol");
+  qRegisterMetaType< QList<KLFLatexSymbol> >("QList<KLFLatexSymbol>");
+  //qRegisterMetaType< QHash<KLFLatexSymbol,QPixmap> >("QHash<KLFLatexSymbol,QPixmap>");
+
   // for delayed calls in klflibview.cpp
   qRegisterMetaType< QItemSelection >("QItemSelection");
   qRegisterMetaType< QItemSelectionModel::SelectionFlags >("QItemSelectionModel::SelectionFlags");
+  klfDbg("Registering metatype done.") ;
 }
 
 
@@ -790,11 +480,11 @@ int main(int argc, char **argv)
   int k;
   klfDbgT("$$main()$$") ;
 
-// #ifdef QT_MAC_USE_COCOA
-//   MainStartEnd klf_mainstartendinstance;
-// #endif
+  // allow smooth icons on retina displays
+  QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+  QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
 
-  qInstallMsgHandler(klf_qt_message);
+  qInstallMessageHandler(klf_qt_message);
 
   //  // DEBUG: command-line arguments
   //  for (int jjj = 0; jjj < argc; ++jjj)
@@ -849,29 +539,27 @@ int main(int argc, char **argv)
     for (k = 0; k < qt_argc && qt_argv[k] != NULL; ++k)
       qtargvlist << QString::fromLocal8Bit(qt_argv[k]);
 
-#ifdef Q_WS_MAC
-    // this is needed to avoid having default app font set right after window activation :(
-    QApplication::setDesktopSettingsAware(false);
-#endif
-
     // Create the application
     KLFGuiApplication app(qt_argc, qt_argv);
 
-#ifdef Q_WS_MAC
-    app.setFont(QFont("Lucida Grande", 13));
+    app.setWindowIcon(QIcon(":/pics/klatexformula.svg"));
 
-    extern void __klf_init_the_macpasteboardmime();
-    __klf_init_the_macpasteboardmime();
-    //    extern void qt_set_sequence_auto_mnemonic(bool b);
-    //    qt_set_sequence_auto_mnemonic(true);
-#endif
 
-    // add our default application font(s) ;-)
-    QFileInfoList appFontsInfoList = QDir(":/data/fonts/").entryInfoList(QStringList()<<"*.otf"<<"*.ttf");
-    int k;
-    for (k = 0; k < appFontsInfoList.size(); ++k) {
-      QFontDatabase::addApplicationFont(appFontsInfoList[k].absoluteFilePath());
-    }
+    // We now package plugins on Windows at the location of the klf executable, so no
+    // longer need to set the plugin path.  (I didn't manage to get it to work otherwise.)
+    // Pitfalls: QApplication needs to load the platform plugin and
+    // klf_share_dir_abspath() relies on QCoreApplication::applicationDirPath() which only
+    // seems to work after the QCoreApplication has been constructed.
+    // 
+    // // Add [share dir]/qt-plugins to library path.  Under windows, that is were plugins
+    // // are packaged with the executable
+    // //
+    // // Be sure to do this *before* instantiating QApplication, because it needs to load
+    // // the platform plugin.
+    // extern QString klf_share_dir_abspath();
+    // QCoreApplication::addLibraryPath(klf_share_dir_abspath()+"/qt-plugins");
+
+    klfDbg("Library paths are:\n"<<qPrintable(QCoreApplication::libraryPaths().join("\n")));
 
     // main_get_input relies on a Q[Core]Application
     QString latexinput = main_get_input(opt_input, opt_latexinput, opt_paste);
@@ -958,12 +646,19 @@ int main(int argc, char **argv)
 
     main_setup_app(&app);
 
-#if defined(Q_WS_MAC) && defined(QT_MAC_USE_COCOA)
+#if defined(KLF_WS_MAC)
     extern bool klf_mac_find_open_klf();
     extern bool klf_mac_dispatch_commands(const QList<QUrl>& urls);
+//QMessageBox::information(0,"STARTUP","KLF PROCESS STARTED") ;
+    if (klf_mac_find_open_klf()) {
+      // make sure it's not a process which is exiting (DIRTY FIX FOR SPARKLE UPDATE)
+      sleep(2);
+    }
     if (klf_mac_find_open_klf()) {
       // there is another instance of KLF running, dispatch commands to it.
       QList<QUrl> cmds;
+
+//QMessageBox::information(0,"STARTUP","ANOTHER KLF PROCESS IS RUNNING, DISPATCHING COMMANDS.") ;
 
       // convenience #define:
 #define CMDURL_MW(slot, argstream)					\
@@ -1096,8 +791,9 @@ int main(int argc, char **argv)
     }
 #endif
 
-    if ( ! opt_quiet )
+    if ( ! opt_quiet ) {
       fprintf(stderr, KLF_WELCOME, KLF_VERSION_STRING);
+    }
 
     klfDbgT("$$About to load config$$");
   
@@ -1106,8 +802,8 @@ int main(int argc, char **argv)
     klfconfig.readFromConfig();
     klfconfig.detectMissingSettings();
 
-    klfDbgT("$$About to main_load_extra_resources$$");
-    main_load_extra_resources();
+//    klfDbgT("$$About to main_load_extra_resources$$");
+//    main_load_extra_resources();
 
     // done in KLFMainWin constructor
     //    klf_reload_user_scripts();
@@ -1128,15 +824,38 @@ int main(int argc, char **argv)
     (void)new KLFLibLegacyEngineFactory(qApp);
     (void)new KLFLibDefaultViewFactory(qApp);
 
+
+    klfDbgT( "$$APP FONT setup$$" ) ;
+
+    // our default application font(s) ;-)
+    //
+    // from :/data/fonts ...
+    QFileInfoList appFontsInfoList = QDir(":/data/fonts/").entryInfoList(QStringList()<<"*.otf"<<"*.ttf");
+    // ... and from share-dir/fonts/
+    QString our_share_dir = klfconfig.globalShareDir;
+    if (QFileInfo(our_share_dir+"/fonts").isDir()) {
+      appFontsInfoList << QDir(our_share_dir+"/fonts/").entryInfoList(QStringList()<<"*.otf"<<"*.ttf");
+    }
+    int k;
+    for (k = 0; k < appFontsInfoList.size(); ++k) {
+      klfDbg("Adding application font " << appFontsInfoList[k].absoluteFilePath());
+      QFontDatabase::addApplicationFont(appFontsInfoList[k].absoluteFilePath());
+    }
+
+    klfDbg("klfconfig.UI.useSystemAppFont = " << klfconfig.UI.useSystemAppFont
+           << " ; klfconfig.UI.applicationFont = " << klfconfig.UI.applicationFont) ;
+    if (!klfconfig.UI.useSystemAppFont) {
+      QApplication::setFont(klfconfig.UI.applicationFont);
+    }
+
     klfDbgT( "$$START LOADING$$" ) ;
 
     KLFMainWin mainWin;
 
-    if (!klfconfig.UI.useSystemAppFont)
-      app.setFont(klfconfig.UI.applicationFont);
-
-    if (!opt_skip_plugins)
-      main_load_plugins(&app, &mainWin);
+    if (!opt_skip_plugins) {
+      klfDbg("Plugins are obsolete and won't be loaded.") ;
+//      main_load_plugins(&app, &mainWin);
+    }
 
     mainWin.show();
 
@@ -1250,7 +969,7 @@ int main(int argc, char **argv)
     klfconfig.readFromConfig();
     klfconfig.detectMissingSettings();
 
-    main_load_extra_resources();
+//    main_load_extra_resources();
 
     klf_reload_translations(&app, klfconfig.UI.locale);
 
@@ -1631,7 +1350,7 @@ void main_parse_options(int argc, char *argv[])
       opt_mathmode = arg;
       break;
     case OPT_PREAMBLE:
-#if defined(Q_WS_MAC)
+#if defined(KLF_WS_MAC)
       // NASTY WORKAROUND FOR a mysterious -psn_**** option passed to the application
       // when opened using the apple 'open' command-line utility, and thus when the
       // application is launched via an icon..

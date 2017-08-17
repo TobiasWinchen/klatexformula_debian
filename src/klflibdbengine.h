@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibdbengine.h 604 2011-02-27 23:34:37Z phfaist $ */
+/* $Id: klflibdbengine.h 953 2016-12-27 00:13:10Z phfaist $ */
 
 #ifndef KLFLIBDBENGINE_H
 #define KLFLIBDBENGINE_H
@@ -129,7 +129,7 @@ public:
 					      const QList<int>& wantedEntryProperties = QList<int>());
 
   virtual bool canCreateSubResource() const;
-  virtual bool canRenameSubResource() const { return false; }
+  virtual bool canRenameSubResource(const QString& ) const { return false; }
   virtual bool canDeleteSubResource(const QString& subResource) const;
 
   virtual QVariant subResourceProperty(const QString& subResource, int propId) const;

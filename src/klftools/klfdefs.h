@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdefs.h 828 2012-08-19 22:12:53Z phfaist $ */
+/* $Id: klfdefs.h 971 2016-12-30 04:24:56Z phfaist $ */
 
 #ifndef KLFDEFS_H_
 #define KLFDEFS_H_
@@ -74,21 +74,27 @@ KLF_EXPORT QByteArray klfFmtDouble(double num, char fmt = 'g', int precision = 6
 #define KLF_DECLARE_PRIVATE(ClassName)					\
   private:								\
   ClassName##Private *d;						\
-  friend class ClassName##Private;					\
+  friend struct ClassName##Private;					\
   inline ClassName##Private * d_func() { return d; }			\
   inline const ClassName##Private * d_func() const { return d; }
 
 #define KLF_PRIVATE_HEAD(ClassName)				\
   private: ClassName *K;					\
+  public:  ClassName * parentClass() const { return K; }        \
   public:  ClassName##Private (ClassName * ptr) : K(ptr)
+#define KLF_PRIVATE_INHERIT_HEAD(ClassName, BaseInit)                   \
+  private: ClassName *K;						\
+  public:  ClassName * parentClass() const { return K; }                  \
+  public:  ClassName##Private (ClassName * ptr) BaseInit, K(ptr)
 #define KLF_PRIVATE_QOBJ_HEAD(ClassName, QObj)				\
   private: ClassName *K;						\
+  public:  ClassName * parentClass() const { return K; }                \
   public:  ClassName##Private (ClassName * ptr) : QObj(ptr), K(ptr)
 
 #define KLF_INIT_PRIVATE(ClassName)		\
-  d = new ClassName##Private(this)
+  do { d = new ClassName##Private(this); } while (0)
 #define KLF_DELETE_PRIVATE			\
-  delete d
+  do { if (d != NULL) { delete d; } } while (0)
 
 
 #define KLF_BLOCK							\

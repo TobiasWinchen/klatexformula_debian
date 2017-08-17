@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfutil.cpp 900 2014-07-29 20:10:42Z phfaist $ */
+/* $Id: klfutil.cpp 1014 2017-02-07 03:26:28Z phfaist $ */
 
 #include <stdlib.h>
 
@@ -27,6 +27,7 @@
 #include <QDir>
 #include <QLibraryInfo>
 #include <QUrl>
+#include <QUrlQuery>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QApplication>
@@ -61,7 +62,7 @@ KLF_EXPORT bool klfEnsureDir(const QString& dir)
 static QMap<QString,QString> klf_url_query_items_map(const QUrl& url,
 						     const QStringList& interestQueryItems)
 {
-  QList<QPair<QString,QString> > qitems = url.queryItems();
+  QList<QPair<QString,QString> > qitems = QUrlQuery(url).queryItems();
   QMap<QString,QString> map;
   int k;
   for (k = 0; k < qitems.size(); ++k) {
@@ -91,8 +92,8 @@ KLF_EXPORT uint klfUrlCompare(const QUrl& url1, const QUrl& url2, uint interestF
 
   QUrl u1 = url1;
   QUrl u2 = url2;
-  u1.setQueryItems(QList<QPair<QString,QString> >());
-  u2.setQueryItems(QList<QPair<QString,QString> >());
+  u1.setQuery("");
+  u2.setQuery("");
 
   klfDbg( " after q-i-stripping: u1="<<u1<<"; u2="<<u2 ) ;
 
@@ -312,23 +313,48 @@ KLF_EXPORT QString klfSearchPath(const QString& fname, const QStringList& paths)
   return QString::null;
 }
 
-KLF_EXPORT QString klfPrefixedPath(const QString& path, const QString& reference)
+KLF_EXPORT QString klfPrefixedPath(const QString& path_, const QString& ref_)
 {
-  klfDbg("path="<<path<<"; reference="<<reference) ;
-  if (QFileInfo(path).isAbsolute())
-    return path;
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
 
-  QString ref = reference;
-  if (ref.isEmpty())
+  QString path = path_;
+  QString ref = ref_;
+
+  klfDbg("path="<<path<<"; reference="<<ref) ;
+
+  if (path == "~") {
+    return QDir::homePath();
+  }
+  if (path.startsWith("~/")) {
+    path = QDir::homePath() + "/" + path.mid(2);
+  }
+
+  QFileInfo fi(path);
+  
+  if (fi.isAbsolute()) {
+    return fi.absoluteFilePath();
+  }
+
+  if (!ref.isEmpty()) {
+    if (ref == "~") {
+      ref = QDir::homePath();
+    } else if (ref.startsWith("~/")) {
+      ref = QDir::homePath() + "/" + path.mid(2);
+    }
+    ref = QFileInfo(ref).absoluteFilePath();
+  } else {
     ref = QCoreApplication::applicationDirPath();
-
-  klfDbg("reference is "<<ref) ;
+  }
 
   // return path relative to reference
-  if (!ref.endsWith("/"))
+  if (!ref.endsWith("/")) {
     ref += "/";
+  }
+  klfDbg("reference is "<<ref) ;
 
-  return KLF_DEBUG_TEE( ref + path );
+  QString result = QFileInfo(ref + path).absoluteFilePath();
+  klfDbg("result = " << result) ;
+  return result;
 }
 
 

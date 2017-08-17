@@ -19,9 +19,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfguiutil.cpp 709 2011-08-26 14:26:33Z phfaist $ */
+/* $Id: klfguiutil.cpp 963 2016-12-27 11:28:39Z phfaist $ */
 
-#include <math.h>
+#include <cmath>
 
 #include <QApplication>
 #include <QDesktopWidget>
@@ -461,33 +461,48 @@ QRect KLFWaitAnimationOverlay::calcAnimationLabelGeometry()
 KLF_EXPORT void klfDrawGlowedImage(QPainter *p, const QImage& foreground, const QColor& glowcol,
 				   int r, bool also_draw_image)
 {
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+
   QImage fg = foreground;
   if (fg.format() != QImage::Format_ARGB32_Premultiplied &&
       fg.format() != QImage::Format_ARGB32)
     fg = fg.convertToFormat(QImage::Format_ARGB32);
 
   QRgb glow_color = glowcol.rgba();
-  int ga = qAlpha(glow_color);
+
+  qreal dpr = p->device()->devicePixelRatioF();
+  QSize userspace_size = fg.size() / dpr;
+
+  int r2 = r*dpr;
 
   QImage glow(fg.size(), QImage::Format_ARGB32_Premultiplied);
   int x, y;
+  qreal ga = qAlpha(glow_color) / qreal(255);
+  ga /= r*r; // heuristic scaling of alpha
   for (x = 0; x < fg.width(); ++x) {
     for (y = 0; y < fg.height(); ++y) {
-      int a = qAlpha(fg.pixel(x,y)) * ga / 255;
+      qreal ai = qAlpha(fg.pixel(x,y)) * ga;
+      qreal a = ai / 255;
       // glow format is argb32_premultiplied
-      glow.setPixel(x,y, qRgba(qRed(glow_color)*a/255, qGreen(glow_color)*a/255, qBlue(glow_color)*a/255, a));
+      glow.setPixel(x,y, qRgba(qRed(glow_color)*a, qGreen(glow_color)*a, qBlue(glow_color)*a, ai));
     }
   }
   // now draw that glowed image a few times moving around the interest point to do a glow effect
-  for (x = -r; x <= r; ++x) {
-    for (y = -r; y <= r; ++y) {
-      if (x*x+y*y > r*r) // don't go beyond r pixels from (0,0)
+  //  p->save();
+  //  p->setOpacity(std::log(-numoverlaps));
+  //  p->setCompositionMode(QPainter::CompositionMode_Plus);
+  int dx, dy;
+  for (dx = -r2; dx <= r2; dx += dpr) {
+    for (dy = -r2; dy <= r2; dy += dpr) {
+      if (dx*dx+dy*dy > r2*r2) // don't go beyond r2 device pixels from (0,0)
 	continue;
-      p->drawImage(QPoint(x,y), glow);
+      p->drawImage(QRectF(QPointF(dx/dpr,dy/dpr), userspace_size), glow);
     }
   }
-  if (also_draw_image)
-    p->drawImage(QPoint(0,0), fg);
+  //  p->restore();
+  if (also_draw_image) {
+    p->drawImage(QRect(QPoint(0,0), userspace_size), fg);
+  }
 }
 
 
@@ -511,7 +526,7 @@ QImage klfImageScaled(const QImage& source, const QSize& newSize)
 
 KLF_EXPORT QRect klf_get_window_geometry(QWidget *w)
 {
-#if defined(Q_WS_X11)
+#if defined(KLF_WS_X11)
   QRect g = w->frameGeometry();
 #else
   QRect g = w->geometry();

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klftools_desplugin.cpp 801 2012-07-15 13:13:44Z phfaist $ */
+/* $Id: klftools_desplugin.cpp 978 2016-12-31 05:16:11Z phfaist $ */
 
 #include <stdio.h>
 
@@ -659,44 +659,5 @@ void KLFPathChooserDesPlugin::initialize(QDesignerFormEditorInterface *core)
   pInitialized = true;
 }
 
-
-
-
-
-
-
-// -----------------------------------------------------------
-
-KLFToolsDesPlugin::KLFToolsDesPlugin(QObject* parent)
-  : QObject(parent)
-{
-  _widgetPlugins.push_back(new KLFSearchBarDesPlugin(this));
-  _widgetPlugins.push_back(new KLFColorChooseWidgetPaneDesPlugin(this));
-  _widgetPlugins.push_back(new KLFColorComponentSpinBoxDesPlugin(this));
-  _widgetPlugins.push_back(new KLFColorClickSquareDesPlugin(this));
-  _widgetPlugins.push_back(new KLFColorChooseWidgetDesPlugin(this));
-  _widgetPlugins.push_back(new KLFColorChooserDesPlugin(this));
-  _widgetPlugins.push_back(new KLFLatexEditDesPlugin(this));
-  _widgetPlugins.push_back(new KLFEnumListWidgetDesPlugin(this));
-  _widgetPlugins.push_back(new KLFSideWidgetDesPlugin(this));
-  _widgetPlugins.push_back(new KLFPathChooserDesPlugin(this));
-}
-
-KLFToolsDesPlugin::~KLFToolsDesPlugin()
-{
-  QList<QDesignerCustomWidgetInterface*>::iterator it;
-  for (it = _widgetPlugins.begin(); it != _widgetPlugins.end(); it++) {
-    delete (*it);
-  }
-  _widgetPlugins.clear();
-}
-
-
-// ----------------------------------------------------------
-
-
-
-Q_EXPORT_PLUGIN2(klftoolsdesplugin, KLFToolsDesPlugin)
-  ;
 
 

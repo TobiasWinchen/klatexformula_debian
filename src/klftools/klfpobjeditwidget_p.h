@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id$ */
+/* $Id: klfpobjeditwidget_p.h 978 2016-12-31 05:16:11Z phfaist $ */
 
 /** \file
  * This header contains (in principle private) auxiliary classes for
@@ -34,7 +34,7 @@
 #include "klfpobj.h"
 #include "klfpobjeditwidget.h"
 
-class KLFPObjModelPrivate;
+struct KLFPObjModelPrivate;
 
 class /*KLF_EXPORT*/ KLFPObjModel : public QAbstractItemModel
 {

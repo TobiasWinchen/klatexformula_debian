@@ -19,13 +19,12 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfpobj.cpp 761 2012-03-12 10:19:16Z phfaist $ */
+/* $Id: klfpobj.cpp 991 2017-01-04 09:15:43Z phfaist $ */
 
-#include <QDebug>
+#include <QtDebug>
 #include <QByteArray>
 #include <QDataStream>
 #include <QTextStream>
-#include <QTextDocument>  // Qt::escape()
 
 #include "klfpobj.h"
 
@@ -351,11 +350,11 @@ QString KLFPropertizedObject::toString(uint toStringFlags) const
   if (html) {
     if (usehtmldiv) {
       s = QString("<div class=\"klfpobj_entry\">\n<div class=\"klfpobj_name\">%2</div>\n")
-	.arg(Qt::escape(pPropNameSpace));
+	.arg(pPropNameSpace.toHtmlEscaped());
     } else {
       s = QString("<table class=\"klfpobj_tentry\">\n"
 		  "<tr colspan=\"2\" class=\"klfpobj_tname\"><th>%1</th></tr>\n")
-	.arg(Qt::escape(pPropNameSpace));
+	.arg(pPropNameSpace.toHtmlEscaped());
     }
   } else {
     s = QString("%1\n").arg(pPropNameSpace);
@@ -371,11 +370,11 @@ QString KLFPropertizedObject::toString(uint toStringFlags) const
       if (usehtmldiv)
 	s += QString("<div class=\"klfpobj_prop_%1\"><div class=\"klfpobj_propname\">%2</div>: "
 		     "<div class=\"klfpobj_propvalue\">%3</div></div>\n")
-	  .arg(pname, pname, Qt::escape(value));
+	  .arg(pname, pname, value.toHtmlEscaped());
       else
 	s += QString("  <tr class=\"klfpobj_tprop_%1\"><td class=\"klfpobj_tpropname\">%2</td>"
 		     "<td class=\"klfpobj_tpropvalue\">%3</td></tr>\n")
-	  .arg(pname, pname, Qt::escape(value));
+	  .arg(pname, pname, value.toHtmlEscaped());
     } else {
       if (quote) {
 	if (!isnull && canstring) {
@@ -552,6 +551,9 @@ int KLFPropertizedObject::internalRegisterProperty(const QString& propNameSpace,
 						   const QString& propName,
 						   int propId)
 {
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  klfDbg("propNameSpace = " << propNameSpace << ", propName = " << propName << ", propId = " << propId) ;
+  
   const QMap<QString, int> propList = pRegisteredProperties[propNameSpace];
   int propMaxId = -1;
   if (pRegisteredPropertiesMaxId.contains(propNameSpace)) {
@@ -564,13 +566,15 @@ int KLFPropertizedObject::internalRegisterProperty(const QString& propNameSpace,
     propMaxId = propId;
   } else {
     // used the fixed propId. Update propMaxId if necessary.
-    if (propId > propMaxId)
+    if (propId > propMaxId) {
       propMaxId = propId;
+    }
   }
   if ( propList.keys(propId).size() > 0 ) {
     QString oldPropName = propList.keys(propId).at(0);
-    if (propName == oldPropName)
+    if (propName == oldPropName) {
       return propId; // already registered, return that property ID
+    }
     qWarning("%s[%s]: Property ID `%d' is already registered with conflicting names!\n"
 	     "\told name is `%s', new is `%s'",
 	     KLF_FUNC_NAME, qPrintable(propNameSpace), propId, qPrintable(oldPropName),

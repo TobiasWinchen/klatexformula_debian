@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klffilterprocess.cpp 866 2013-11-24 13:56:22Z phfaist $ */
+/* $Id: klffilterprocess.cpp 998 2017-01-19 23:54:56Z phfaist $ */
 
 #include <QString>
 #include <QFile>
@@ -30,6 +30,8 @@
 #include "klfbackend.h"
 #include "klfblockprocess.h"
 #include "klffilterprocess.h"
+
+#include "klffilterprocess_p.h"
 
 // -----------------
 
@@ -72,7 +74,30 @@ static QString progErrorMsg(QString progname, int exitstatus, QString stderrstr,
 
 // ------------------
 
-class KLFFilterProcessPrivate {
+KLFFilterProcessBlockProcess::KLFFilterProcessBlockProcess(KLFFilterProcess * fproc)
+  : KLFBlockProcess(), pFproc(fproc)
+{
+}
+KLFFilterProcessBlockProcess::~KLFFilterProcessBlockProcess()
+{
+}
+QString KLFFilterProcessBlockProcess::getInterpreterPath(const QString& ext)
+{
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  klfDbg("ext = " << ext) ;
+  QMap<QString,QString> interpreters = pFproc->interpreters();
+  QMap<QString,QString>::Iterator it = interpreters.find(ext);
+  if (it != interpreters.end()) {
+    return *it;
+  }
+  return KLFBlockProcess::getInterpreterPath(ext);
+}
+
+
+// -----------------
+
+
+struct KLFFilterProcessPrivate {
   KLF_PRIVATE_HEAD(KLFFilterProcess)
   {
   }
@@ -82,6 +107,8 @@ class KLFFilterProcessPrivate {
   QStringList execEnviron;
 
   QStringList argv;
+
+  QMap<QString,QString> interpreters;
 
   bool outputStdout;
   bool outputStderr;
@@ -115,14 +142,21 @@ KLFFilterProcess::KLFFilterProcess(const QString& pTitle, const KLFBackend::klfS
   d->outputStdout = true;
   d->outputStderr = false;
 
+  d->interpreters = QMap<QString,QString>();
+
   if (rundir.size()) {
     d->programCwd = rundir;
   }
   if (settings != NULL) {
     if (!rundir.size()) {
       d->programCwd = settings->tempdir;
+      klfDbg("set programCwd to : "<<d->programCwd) ;
     }
-    d->execEnviron = settings->execenv;
+    d->execEnviron = klfMergeEnvironment(QStringList(), settings->execenv, QStringList(),
+                                         KlfEnvPathPrepend|KlfEnvMergeExpandVars);
+    klfDbg("set execution environment to : "<<d->execEnviron) ;
+    
+    d->interpreters = settings->userScriptInterpreters;
   }
 
   d->processAppEvents = true;
@@ -165,10 +199,12 @@ QStringList KLFFilterProcess::execEnviron() const
 void KLFFilterProcess::setExecEnviron(const QStringList& env)
 {
   d->execEnviron = env;
+  klfDbg("set exec environment: " << d->execEnviron);
 }
 void KLFFilterProcess::addExecEnviron(const QStringList& env)
 {
   klfMergeEnvironment(& d->execEnviron, env);
+  klfDbg("merged exec environment: " << d->execEnviron);
 }
 
 QStringList KLFFilterProcess::argv() const
@@ -245,11 +281,12 @@ QString KLFFilterProcess::resultErrorString() const
   return d->resErrorString;
 }
 
+QMap<QString,QString> KLFFilterProcess::interpreters() const
+{
+  return d->interpreters;
+}
 
-
-
-
-bool KLFFilterProcess::run(const QByteArray& indata, const QMap<QString, QByteArray*> outdatalist)
+bool KLFFilterProcess::do_run(const QByteArray& indata, const QMap<QString, QByteArray*> outdatalist)
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
 
@@ -293,10 +330,12 @@ bool KLFFilterProcess::run(const QByteArray& indata, const QMap<QString, QByteAr
     return false;
   }
 
-  if (d->collectStdout != NULL)
+  if (d->collectStdout != NULL) {
     *d->collectStdout = proc.getAllStdout();
-  if (d->collectStderr != NULL)
+  }
+  if (d->collectStderr != NULL) {
     *d->collectStderr = proc.getAllStderr();
+  }
 
   for (QMap<QString,QByteArray*>::const_iterator it = outdatalist.begin(); it != outdatalist.end(); ++it) {
     QString outFileName = it.key();
@@ -362,4 +401,20 @@ bool KLFFilterProcess::run(const QByteArray& indata, const QMap<QString, QByteAr
   d->resErrorString = QString();
 
   return true;
+}
+
+
+QByteArray KLFFilterProcess::collectedStdout() const
+{
+  if (!d->outputStdout || d->collectStdout == NULL) {
+    return QByteArray();
+  }
+  return *d->collectStdout;
+}
+QByteArray KLFFilterProcess::collectedStderr() const
+{
+  if (!d->outputStderr || d->collectStderr == NULL) {
+    return QByteArray();
+  }
+  return *d->collectStderr;
 }

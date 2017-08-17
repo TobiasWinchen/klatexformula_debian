@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfpobj.h 761 2012-03-12 10:19:16Z phfaist $ */
+/* $Id: klfpobj.h 991 2017-01-04 09:15:43Z phfaist $ */
 
 
 #ifndef KLFPOBJ_H
@@ -801,7 +801,7 @@ public:
   {
     return value<T>();
   }
-  T operator ()() const
+  const T operator ()() const
   {
     return value<T>();
   }
@@ -826,13 +826,13 @@ public:
     return pPObj->property(pPropId);
   }
 
-  T value() const
+  const T value() const
   {
     return value<T>();
   }
 
   template<class VariantType>
-  T value() const
+  const T value() const
   {
     QVariant v = pPObj->property(pPropId);
     return T(v.value<VariantType>());
@@ -884,6 +884,12 @@ private:
 
 };
 
+template<typename T>
+inline QDebug & operator<<(QDebug & str, const KLFPObjPropRef<T> & p)
+{
+  return str << p();
+}
+
 
 
 // ----
@@ -925,6 +931,7 @@ private:
 /** Put this in the .cpp for the given type.
  *
  * \todo ###: Which type? any abstractobj or just klfproperitzedobject?
+ *       ###:                 ^^^^^^^^^^^ this one it seems (see klfuserscript.h)
  */
 #define KLF_DECLARE_POBJ_TYPE(TYPE)					\
   static KLFPObjRegisteredType __klf_pobj_regtype_##TYPE = KLFPObjRegisteredType(#TYPE) ;

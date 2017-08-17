@@ -19,12 +19,10 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdbus.h 604 2011-02-27 23:34:37Z phfaist $ */
+/* $Id: klfdbus.h 965 2016-12-28 04:55:03Z phfaist $ */
 
 #ifndef KLFDBUS_H
 #define KLFDBUS_H
-
-#if defined(KLF_USE_DBUS)
 
 #include <QDBusConnection>
 #include <QDBusAbstractAdaptor>
@@ -68,7 +66,7 @@ public slots:
 };
 
 
-class KLF_EXPORT KLFDBusAppInterface: public QDBusAbstractInterface
+class KLF_EXPORT KLFDBusAppInterface : public QDBusAbstractInterface
 {
   Q_OBJECT
 public:
@@ -80,7 +78,7 @@ public:
 public:
   KLFDBusAppInterface(const QString &service, const QString &path, const QDBusConnection &connection,
 		      QObject *parent = 0);
-  ~KLFDBusAppInterface();
+  virtual ~KLFDBusAppInterface();
 
 public slots: // METHODS
 
@@ -97,7 +95,5 @@ public slots: // METHODS
 
 };
 
-
-#endif
 
 #endif

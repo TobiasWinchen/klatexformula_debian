@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflatexedit_p.h 828 2012-08-19 22:12:53Z phfaist $ */
+/* $Id: klflatexedit_p.h 953 2016-12-27 00:13:10Z phfaist $ */
 
 #include "klflatexedit.h"
 
@@ -130,7 +130,7 @@ struct LonelyParenItem : public ParenItem
 
 
 
-class KLFLatexEditPrivate : public QObject
+struct KLFLatexEditPrivate : public QObject
 {
   Q_OBJECT
 public:

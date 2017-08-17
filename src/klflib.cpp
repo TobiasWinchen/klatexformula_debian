@@ -19,10 +19,12 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflib.cpp 698 2011-08-08 08:28:12Z phfaist $ */
+/* $Id: klflib.cpp 953 2016-12-27 00:13:10Z phfaist $ */
 
 #include <QDebug>
 #include <QString>
+#include <QUrl>
+#include <QUrlQuery>
 #include <QBuffer>
 #include <QByteArray>
 #include <QDataStream>
@@ -429,17 +431,21 @@ KLFLibResourceEngine::KLFLibResourceEngine(const QUrl& url, uint featureflags,
   //  klfDbg( "KLFLibResourceEngine::KLFLibResourceEngine("<<url<<","<<pFeatureFlags<<","
   //	  <<parent<<")" ) ;
 
-  QStringList rdonly = pUrl.allQueryItemValues("klfReadOnly");
+  QUrlQuery urlq(pUrl);
+
+  QStringList rdonly = urlq.allQueryItemValues("klfReadOnly");
   if (rdonly.size() && rdonly.last() == "true") {
     if (pFeatureFlags & FeatureReadOnly)
       pReadOnly = true;
   }
-  pUrl.removeAllQueryItems("klfReadOnly");
+  urlq.removeAllQueryItems("klfReadOnly");
+  pUrl.setQuery(urlq);
 
   if (pFeatureFlags & FeatureSubResources) {
-    QStringList defaultsubresource = pUrl.allQueryItemValues("klfDefaultSubResource");
+    QStringList defaultsubresource = urlq.allQueryItemValues("klfDefaultSubResource");
     if (!defaultsubresource.isEmpty()) {
-      pUrl.removeAllQueryItems("klfDefaultSubResource");
+      urlq.removeAllQueryItems("klfDefaultSubResource");
+      pUrl.setQuery(urlq);
       pDefaultSubResource = defaultsubresource.last();
     }
   }
@@ -461,15 +467,17 @@ void KLFLibResourceEngine::initRegisteredProperties()
 
 QUrl KLFLibResourceEngine::url(uint flags) const
 {
-  QUrl url = pUrl;
+  QUrlQuery urlq(pUrl);
   if (flags & WantUrlDefaultSubResource &&
       (pFeatureFlags & FeatureSubResources) &&
       !pDefaultSubResource.isNull()) {
-    url.addQueryItem("klfDefaultSubResource", pDefaultSubResource);
+    urlq.addQueryItem("klfDefaultSubResource", pDefaultSubResource);
   }
   if (flags & WantUrlReadOnly) {
-    url.addQueryItem("klfReadOnly", pReadOnly?QString("true"):QString("false"));
+    urlq.addQueryItem("klfReadOnly", pReadOnly?QString("true"):QString("false"));
   }
+  QUrl url = pUrl;
+  url.setQuery(urlq);
   return url;
 }
 
@@ -844,7 +852,7 @@ KLF_EXPORT  QDebug& operator<<(QDebug& dbg, const KLFLib::EntryMatchCondition& c
 {
   //  KLF_DEBUG_BLOCK("operator<<(QDebug, KLFLib::EntryMatchCondition)") ;
   klfDbg("type="<<c.type()) ;
-#ifdef Q_WS_MAC
+#ifdef KLF_WS_MAC
   return dbg<<"EntryMatchCondition{...}";
 #endif
   dbg << "EntryMatchCondition{type=";
@@ -1207,7 +1215,9 @@ KLFLibResourceEngine *KLFLibEngineFactory::openURL(const QUrl& url, QObject *par
 QMap<QString,QString> KLFLibEngineFactory::listSubResourcesWithTitles(const QUrl& urlbase)
 {
   QUrl url = urlbase;
-  url.addQueryItem("klfReadOnly", "true");
+  QUrlQuery urlq(url);
+  urlq.addQueryItem("klfReadOnly", "true");
+  url.setQuery(urlq);
   KLFLibResourceEngine *resource = openURL(url, NULL); // NULL parent
   if ( resource == NULL ) {
     qWarning()<<"KLFLibEngineFactory::listSubResources("<<url<<"): Unable to open resource!";

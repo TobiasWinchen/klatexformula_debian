@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfitemviewsearchtarget.h 829 2012-08-20 22:45:18Z phfaist $ */
+/* $Id: klfitemviewsearchtarget.h 953 2016-12-27 00:13:10Z phfaist $ */
 
 
 #ifndef KLFITEMVIEWSEARCHTARGET_H
@@ -33,7 +33,7 @@
 #include <klfiteratorsearchable.h>
 
 
-class KLFItemViewSearchTargetPrivate;
+struct KLFItemViewSearchTargetPrivate;
 
 //! A search target (for KLFSearchBar) for standard item views
 /** Add search functionality to standard item views. Any item view you may have (QTreeView/QListView etc.)

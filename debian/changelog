@@ -1,3 +1,9 @@
+klatexformula (4.0.0-1) unstable; urgency=medium
+
+  * New upstream release
+
+ -- Tobias Winchen <tobias@winchen.de>  Fri, 25 Aug 2017 16:24:28 +0200
+
 klatexformula (3.3.0~beta-2) unstable; urgency=medium
 
   * Updated maintainer e-mail address and vcs-git repository
@@ -11,7 +17,7 @@ klatexformula (3.3.0~beta-1) unstable; urgency=medium
   * Minimum debian/rules file now using dh
   * Updated to standards version 3.9.6
   * Updated to debhelper 9
-  * Removed menu file 
+  * Removed menu file
   * Removed uninstall target (Closes:  #803761)
   * Use updated watch file
   * Ammended .desktop file
@@ -39,10 +45,10 @@ klatexformula (3.2.6-1) unstable; urgency=low
 
 klatexformula (3.2.5-1) unstable; urgency=low
 
-  * New upstream release 
+  * New upstream release
   * Adapted copyright to dep5, rev174
   * Changed vcs to git
-  * libklatexformula3-dev depends on libklatexformula3 
+  * libklatexformula3-dev depends on libklatexformula3
 
  -- Tobias Winchen <winchen@physik.rwth-aachen.de>  Mon, 02 Jan 2012 20:23:27 +0100
 
@@ -54,7 +60,7 @@ klatexformula (3.2.4-2) unstable; urgency=low
 
 klatexformula (3.2.4-1) unstable; urgency=low
 
-  * New upstream release 
+  * New upstream release
     - Fixes FTBFS on some architectures (Closes: #630324)
 
  -- Tobias Winchen <winchen@physik.rwth-aachen.de>  Fri, 01 Jul 2011 23:03:10 +0200

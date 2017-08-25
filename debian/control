@@ -1,8 +1,8 @@
 Source: klatexformula
 Section: tex
 Priority: extra
-Maintainer: Tobias Winchen <tobias@winchen.de> 
-Build-Depends: debhelper (>= 9), docbook-to-man, cmake, libqt4-dev, pkg-kde-tools, kdelibs5-dev, libx11-dev, chrpath, help2man
+Maintainer: Tobias Winchen <tobias@winchen.de>
+Build-Depends: debhelper (>= 9), docbook-to-man, cmake, qtbase5-dev, qtbase5-dev-tools, qttools5-dev, help2man
 Standards-Version: 3.9.6
 Vcs-git: git://github.com/TobiasWinchen/klatexformula_debian.git
 Vcs-Browser: https://github.com/TobiasWinchen/klatexformula_debian
@@ -18,11 +18,11 @@ Description: GUI to easily get an image from a LaTeX formula or equation
  presentations. Klatexformula also provides also tools for equation prototyping
  in LaTeX and a user-library of used equations.
 
-Package: libklatexformula3
+Package: libklatexformula4
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Runtime libraries for klatexformula 
+Description: Runtime libraries for klatexformula
  With Klatexformula, just enter a formula and click "Evaluate" to get an image
  of a LaTeX formula. You can drag&drop, copy or save the resulting image
  directly from the GUI, which makes klatexformula a very convenient tool for
@@ -30,15 +30,15 @@ Description: Runtime libraries for klatexformula
  in LaTeX and a user-library of used equations.
  This package provides the libraries klatexformula is based on.
 
-Package: libklatexformula3-dev
+Package: libklatexformula4-dev
 Architecture: any
 Section: libdevel
-Depends: ${shlibs:Depends}, ${misc:Depends}, libklatexformula3 (= ${binary:Version}) 
-Description: Runtime libraries for klatexformula, development files 
+Depends: ${shlibs:Depends}, ${misc:Depends}, libklatexformula4 (= ${binary:Version})
+Description: Runtime libraries for klatexformula, development files
  With Klatexformula, just enter a formula and click "Evaluate" to get an image
  of a LaTeX formula. You can drag&drop, copy or save the resulting image
  directly from the GUI, which makes klatexformula a very convenient tool for
  presentations. Klatexformula also provides also tools for equation prototyping
  in LaTeX and a user-library of used equations.
  This package contains the header files and static libraries to build the
- klatexformula libraries.  
+ klatexformula libraries.

@@ -1,5 +1,6 @@
-Index: klatexformula/src/CMakeLists.txt
-===================================================================
+Description: Add whatis entry to manpage 
+Last-Update: 2017-08-25
+
 --- klatexformula.orig/src/CMakeLists.txt	2017-08-17 22:49:23.012803843 +0200
 +++ klatexformula/src/CMakeLists.txt	2017-08-25 17:12:08.149762867 +0200
 @@ -416,7 +416,8 @@

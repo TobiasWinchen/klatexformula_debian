@@ -1,16 +1,16 @@
-Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/ 
-Upstream-Name: klatexformula 
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: klatexformula
 Upstream-Contact: Philippe Faist <philippe.faist@bluewin.ch>
-Source: http://klatexformula.sourceforge.net/ 
+Source: http://klatexformula.sourceforge.net/
 
 Files: *
 Copyright: 2005, Philippe Faist <philippe.faist@bluewin.ch>
 License: GPL-2+
 
-Files: src/klftools/qtcolortriangle.cpp src/klftools/qtcolortriangle.h 
+Files: src/klftools/qtcolortriangle.cpp src/klftools/qtcolortriangle.h
 Copyright: 2009, Nokia Corporation and/or its subsidiary(-ies) <qt-info@nokia.com>
-           2009, Philippe Faist <philippe.faist@bluewin.ch> 
-License: GPL-2.1+ 
+           2009, Philippe Faist <philippe.faist@bluewin.ch>
+License: GPL-2.1+
  On Debian systems, the full text of the GNU General Public
  License version 2 can be found in the file
  `/usr/share/common-licenses/GPL-2'.
@@ -18,7 +18,7 @@ License: GPL-2.1+
 Files: src/modeltest.h src/modeltest.cpp
 Copyright: 2007. Trolltech ASA <sales@trolltech.com>
 License: GPL-2+
- 
+
 Files: *.otf
 Copyright: 2005, Andrey V. Panov
 License: X11-License
@@ -53,13 +53,6 @@ License: X11-License
   do so. If you do not wish to do so, delete this exception statement from your
   version.
 
-Files: src/plugins/skin/stylesheets/pics/bg_galaxy.jpg 
-Copyright: Public Domain
-License: public-domain
-  The image is comming from from NASA's "image of
-  the day" at http://www.nasa.gov/images/content/190590main_GPN-2000-000895.jpg
-  Image usage guidelines:
-    http://www.nasa.gov/audience/formedia/features/MP_Photo_Guidelines.html
 
 Files: debian/*
 Copyright: 2010, Tobias Winchen <tobias.winchen@physik.rwth-aachen.de>

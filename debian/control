@@ -10,7 +10,7 @@ Homepage: http://klatexformula.sourceforge.net/
 
 Package: klatexformula
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: libqt5sql5-sqlite, ${shlibs:Depends}, ${misc:Depends}
 Description: GUI to easily get an image from a LaTeX formula or equation
  With klatexformula, just enter a formula and click "Evaluate" to get an image
  of a LaTeX formula. You can drag&drop, copy or save the resulting image

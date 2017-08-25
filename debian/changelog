@@ -1,7 +1,8 @@
 klatexformula (4.0.0-1) unstable; urgency=medium
 
   * New upstream release
-  * Updated to standards version 4.0.0 
+  * Updated to standards version 4.0.0
+  * Added dependency on libqt5sql5-sqlite (Closes: #872717)
 
  -- Tobias Winchen <tobias@winchen.de>  Fri, 25 Aug 2017 16:24:28 +0200
 

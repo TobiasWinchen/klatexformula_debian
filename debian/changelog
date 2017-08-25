@@ -1,6 +1,7 @@
 klatexformula (4.0.0-1) unstable; urgency=medium
 
   * New upstream release
+  * Updated to standards version 4.0.0 
 
  -- Tobias Winchen <tobias@winchen.de>  Fri, 25 Aug 2017 16:24:28 +0200
 

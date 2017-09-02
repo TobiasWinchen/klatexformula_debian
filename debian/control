@@ -33,6 +33,7 @@ Description: Runtime libraries for klatexformula
 Package: libklatexformula4-dev
 Architecture: any
 Section: libdevel
+Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends}, libklatexformula4 (= ${binary:Version})
 Description: Runtime libraries for klatexformula, development files
  With Klatexformula, just enter a formula and click "Evaluate" to get an image

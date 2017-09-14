@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfutil.h 875 2014-06-15 18:18:48Z phfaist $ */
+/* $Id: klfutil.h 983 2016-12-31 21:03:44Z phfaist $ */
 
 
 #ifndef KLFUTIL_H
@@ -30,7 +30,7 @@
 #include <QUrl>
 #include <QMap>
 #include <QVariant>
-#include <QProgressDialog>
+//#include <QProgressDialog>
 #include <QLabel>
 //#include <QDomElement>
 #include <QTextFormat>
@@ -206,7 +206,7 @@ template<class T>
 {
   QMap<QString, T> map;
   for (QVariantMap::const_iterator it = vmap.begin(); it != vmap.end(); ++it) {
-    map[it.key()] = qVariantValue<T>(it.value());
+    map[it.key()] = it.value().value<T>();
   }
   return map;
 }
@@ -733,8 +733,8 @@ public:
 
 
 private:
-  void operator+=(int n) { }
-  void operator-=(int n) { }
+  void operator+=(int ) { }
+  void operator-=(int ) { }
 
   /** The pointer itself */
   Pointer p;
@@ -758,6 +758,7 @@ private:
     KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
     if (p != NULL) {
       int n = p->ref();
+      Q_UNUSED(n) ;
       klfDbg(p<<": ref()! n="<<n) ;
     }
   }

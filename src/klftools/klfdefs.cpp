@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdefs.cpp 880 2014-06-15 20:26:28Z phfaist $ */
+/* $Id: klfdefs.cpp 991 2017-01-04 09:15:43Z phfaist $ */
 
 #include <stdlib.h>
 #include <stdio.h> // vsprintf(), vsnprintf
@@ -35,7 +35,6 @@
 #include <QDebug>
 #include <QDateTime>
 
-#include "klflegacymacros_p.h"
 #include "klfdefs.h"
 
 /** \file klfdefs.h
@@ -927,8 +926,9 @@ KLF_EXPORT int klfVersionRelease()
 
 // declared in klfdebug.h
 
-struct KLFDebugObjectWatcherPrivate
+class KLFDebugObjectWatcherPrivate
 {
+public:
   QMap<quintptr, QString> refInfos;
 };
 
@@ -1055,7 +1055,7 @@ KLF_EXPORT QString klfTimeOfDay(bool shortfmt)
     sprintf(temp, "%03ld.%06ld", (ulong)tv.tv_sec % 1000, (ulong)tv.tv_usec);
   else
     sprintf(temp, "%ld.%06ld", (ulong)tv.tv_sec, (ulong)tv.tv_usec);
-  return QString::fromAscii(temp);
+  return QString::fromLatin1(temp);
 }
 
 
@@ -1155,11 +1155,11 @@ static int __klf_version_compare_suffix_words(QString w1, QString w2)
   // a list of known words
   const QStringList& words = klf_version_suffixes;
   // now compare the words
-  int borderBeforeAfter = words.list_indexOf("");
+  int borderBeforeAfter = words.indexOf("");
   if (borderBeforeAfter < 0)
     qWarning("klfVersionCompare: suffix words list doesn't contain \"\"!");
-  int i1 = words.list_indexOf(w1);
-  int i2 = words.list_indexOf(w2);
+  int i1 = words.indexOf(w1);
+  int i2 = words.indexOf(w2);
   if (i1 == -1 && i2 == -1)
     return QString::compare(w1, w2);
   if (i2 == -1)

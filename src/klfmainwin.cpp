@@ -19,26 +19,28 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmainwin.cpp 921 2014-08-31 21:01:12Z phfaist $ */
+/* $Id: klfmainwin.cpp 1008 2017-02-05 23:22:01Z phfaist $ */
 
 #include <stdio.h>
 #include <math.h>
 
 #include <QtCore>
 #include <QtGui>
+#include <QtWidgets>
 #include <QUiLoader>
-
-#include <klfbackend.h>
 
 #include <ui_klfmainwin.h>
 
 #include <klfprogerr.h>
+#include <klfutil.h>
 #include <klfguiutil.h>
 #include <klfrelativefont.h>
 #include <klflatexedit.h>
 #include <klflatexpreviewthread.h>
-//#include <klfpobjeditwidget.h>
 #include <klfsysinfo.h>
+
+#include <klfuserscript.h>
+#include <klfbackend.h>
 
 #ifdef KLF_USE_SPARKLE
 #include "macosx/klfsparkleupdater.h"
@@ -56,6 +58,8 @@
 #include "klfmime.h"
 #include "klfcmdiface.h"
 #include "klfuiloader.h"
+#include "klfexporter.h"
+#include "klfexporter_p.h"
 
 #include "klfmainwin.h"
 #include "klfmainwin_p.h"
@@ -68,6 +72,8 @@
 KLFMainWin::KLFMainWin()
   : QMainWindow()
 {
+  KLF_DEBUG_TIME_BLOCK(KLF_FUNC_NAME) ;
+
   KLF_INIT_PRIVATE(KLFMainWin) ;
 
   u = new Ui::KLFMainWin;
@@ -89,9 +95,13 @@ KLFMainWin::KLFMainWin()
 
   setProperty("defaultPalette", QVariant::fromValue<QPalette>(palette()));
 
+  // try hiding the prompt label -- it takes up space and isn't useful
+  u->lblPromptMain->setVisible(false);
+
   // load styless
   loadStyles();
 
+  klfDbg("Instantiating LaTeX symbols") ;
   d->mLatexSymbols = new KLFLatexSymbols(this, d->settings);
 
   u->txtLatex->setFont(klfconfig.UI.latexEditFont);
@@ -126,6 +136,7 @@ KLFMainWin::KLFMainWin()
   u->btnDPIPresets->setMenu(DPIPresets);
 
 
+  klfDbg("Setting up LaTeX fonts") ;
   // latex fonts
   d->reloadLatexFontDefs();
   u->cbxLatexFont->addItem(tr("Computer Modern (default font)"), QVariant(QString()));
@@ -133,6 +144,10 @@ KLFMainWin::KLFMainWin()
   for (k = 0; k < d->pLatexFontDefs.size(); ++k) {
     u->cbxLatexFont->addItem(d->pLatexFontDefs[k].title, QVariant(d->pLatexFontDefs[k].identifier));
   }
+  // no idea why this seems to be needed to get text on combo box to display:
+  u->cbxLatexFont->setPalette(QPalette(Qt::white));
+  u->cbxUserScript->setPalette(QPalette(Qt::white));
+  u->cbxMarginsUnit->setPalette(QPalette(Qt::white));
 
 
   connect(u->txtLatex->syntaxHighlighter(), SIGNAL(newSymbolTyped(const QString&)),
@@ -182,7 +197,7 @@ KLFMainWin::KLFMainWin()
   connect(u->frmDetails, SIGNAL(sideWidgetShown(bool)), d, SLOT(slotDetailsSideWidgetShown(bool)));
   klfDbg("setting up relative font...") ;
   KLFRelativeFont *rf = new KLFRelativeFont(this, u->frmDetails);
-#ifdef Q_WS_MAC
+#ifdef KLF_WS_MAC
   rf->setRelPointSize(-2);
   rf->setThorough(true);
 #else
@@ -251,7 +266,7 @@ KLFMainWin::KLFMainWin()
 
   // load library
   d->mLibBrowser = new KLFLibBrowser(this);
-  //#ifdef Q_WS_MAC
+  //#ifdef KLF_WS_MAC
   //   // library browser relative font
   //   KLFRelativeFont *rf_libbrowser = new KLFRelativeFont(this, mLibBrowser);
   //   rf_libbrowser->setRelPointSize(-2);
@@ -261,6 +276,8 @@ KLFMainWin::KLFMainWin()
   d->refreshShowCorrectClearButton();
 
   // -- MAJOR SIGNAL/SLOT CONNECTIONS --
+
+  klfDbg("Setting up some major signal/slot connections") ;
 
   connect(u->aClearLatex, SIGNAL(triggered()), this, SLOT(slotClearLatex()));
   connect(u->aClearAll, SIGNAL(triggered()), this, SLOT(slotClearAll()));
@@ -287,7 +304,7 @@ KLFMainWin::KLFMainWin()
   connect(u->cbxUserScript, SIGNAL(activated(int)), d, SLOT(slotUserScriptSet(int)));
 
   connect(u->btnUserScriptReload, SIGNAL(clicked()), this, SLOT(slotReloadUserScripts()));
-  connect(u->btnShowLastUserScriptOutput, SIGNAL(clicked()), this, SLOT(slotShowLastUserScriptOutput()));
+  connect(u->btnShowUserScriptLog, SIGNAL(clicked()), this, SLOT(slotShowUserScriptLog()));
   connect(u->btnUserScriptInfo, SIGNAL(clicked()), d, SLOT(slotUserScriptShowInfo()));
 
   connect(this, SIGNAL(userInputChanged()), this, SIGNAL(userActivity()));
@@ -295,14 +312,18 @@ KLFMainWin::KLFMainWin()
   // our help/about dialog
   connect(u->btnHelp, SIGNAL(clicked()), this, SLOT(showAbout()));
 
-  // -- SMALL REAL-TIME PREVIEW GENERATOR THREAD --
 
+  // SMALL REAL-TIME PREVIEW GENERATOR THREAD
+
+  klfDbg("Setting up real-time preview generator thread") ;
   d->pLatexPreviewThread = new KLFLatexPreviewThread(this);
   d->pContLatexPreview = new KLFContLatexPreview(d->pLatexPreviewThread);
   //  klfconfig.UI.labelOutputFixedSize.connectQObjectProperty(pLatexPreviewThread, "previewSize");
   klfconfig.UI.previewTooltipMaxSize.connectQObjectProperty(d->pContLatexPreview, "largePreviewSize");
   d->pContLatexPreview->setInput(d->collectInput(false));
   d->pContLatexPreview->setSettings(currentSettings());
+
+  klfDbg("about to set up more connections ...") ;
 
   connect(u->txtLatex, SIGNAL(insertContextMenuActions(const QPoint&, QList<QAction*> *)),
 	  d, SLOT(slotEditorContextMenuInsertActions(const QPoint&, QList<QAction*> *)));
@@ -349,10 +370,84 @@ KLFMainWin::KLFMainWin()
 	  d, SLOT(showRealTimePreview(const QImage&, const QImage&)));
   connect(d->pContLatexPreview, SIGNAL(previewReset()), d, SLOT(showRealTimeReset()));
 
-  if (klfconfig.UI.enableRealTimePreview) {
-    d->pLatexPreviewThread->start();
-    d->pLatexPreviewThread->setPriority(QThread::LowestPriority);
+
+  // MIME EXPORT PROFILES
+
+  klfDbg("Loading mime export profiles") ;
+
+  // the KLFMimeExportProfileManager is also responsible for instantiating appropriate
+  // QMacPasteboardMime, QWinClipboard classes
+  d->pMimeExportProfileManager.addExportProfiles(
+      KLFMimeExportProfileManager::loadKlfExportProfileList()
+      );
+
+  // LOAD USER SCRIPTS
+
+  klfDbg("Loading user scripts") ;
+
+  slotReloadUserScripts();
+
+  // and set up the default config, if the user script can provide a default config
+  klfDbg("About to load default settings for user scripts, if necessary.  Currently user script config = "
+         << klfconfig.UserScripts.userScriptConfig) ;
+  foreach( QString us, klf_user_scripts) {
+    klfDbg("Considering user script " << us) ;
+    if (!klfconfig.UserScripts.userScriptConfig.contains(us) ||
+        klfconfig.UserScripts.userScriptConfig.value(us).isEmpty()) {
+      KLFUserScriptInfo usinfo(us);
+      if (usinfo.canProvideDefaultSettings()) {
+        // set defaults
+        klfDbg("setting default config for user script " << us) ;
+        klfconfig.UserScripts.userScriptConfig[usinfo.userScriptPath()] = usinfo.queryDefaultSettings(&d->settings);
+        klfDbg("user script config is now " << klfconfig.UserScripts.userScriptConfig[usinfo.userScriptPath()]) ;
+      }
+    }
   }
+
+
+  // REGISTER OUR EXPORTERS
+
+  d->pExporterManager = new KLFExporterManager;
+
+  klfDbg("Registering exporters") ;
+
+  registerExporter(new KLFBackendFormatsExporter(this));
+  registerExporter(new KLFTexExporter(this));
+  registerExporter(new KLFHtmlDataExporter(this));
+  registerExporter(new KLFOpenOfficeDrawExporter(this));
+  registerExporter(new KLFTempFileUriExporter(this));
+  registerExporter(new KLFTempImgRefHtmlExporter(this));
+
+  // now, create one instance of KLFUserScriptExporter per export type user script ...
+  extern QStringList klf_user_scripts;
+  for (int k = 0; k < klf_user_scripts.size(); ++k) {
+    if (KLFUserScriptInfo(klf_user_scripts[k]).category() == QLatin1String("klf-export-type")) {
+      QString usname = klf_user_scripts[k];
+      klfDbg("Loading exporter for user script " << usname) ;
+      KLFExportTypeUserScriptInfo usinfo(usname);
+      registerExporter(new KLFUserScriptExporter(usname, this));
+      // add any corresponding export profiles, as well.
+      QString profilesXmlFile = usinfo.mimeExportProfilesXmlFile();
+      klfDbg("profilesXmlFile = " << profilesXmlFile) ;
+      if (profilesXmlFile.size()) {
+        klfDbg("Loading profiles from XML file " << profilesXmlFile) ;
+        d->pMimeExportProfileManager.addExportProfiles(
+            KLFMimeExportProfile::loadProfilesFromXmlFile(usinfo.relativeFile(profilesXmlFile))
+            );
+      }
+    }
+  }
+
+
+  // REGISTER PLATFORM-SPECIFIC CLIPBOARD CONVERTERS
+
+#if defined(KLF_WS_MAC)
+  d->macFlavorsConverter = new KLFMacPasteboardMime;
+#elif defined(KLF_WS_WIN)
+  d->winFormatsConverter = new KLFWinClipboard;
+#else
+  // no special needs on X11
+#endif
 
   // CREATE SETTINGS DIALOG
 
@@ -361,33 +456,19 @@ KLFMainWin::KLFMainWin()
 
   // INSTALL SOME EVENT FILTERS... FOR show/hide EVENTS
 
+  klfDbg("Installing some event filters") ;
+
   d->mLibBrowser->installEventFilter(this);
   d->mLatexSymbols->installEventFilter(this);
   d->mStyleManager->installEventFilter(this);
   d->mSettingsDialog->installEventFilter(this);
 
 
-  // ADDITIONAL OUTPUT SAVERS
-
-  registerOutputSaver(new KLFTexOutputSaver(this));
-
-
-  // LOAD USER SCRIPTS
-
-  slotReloadUserScripts();
-
-  // now, create one instance of KLFUserScriptOutputSaver per export type user script ...
-  extern QStringList klf_user_scripts;
-  for (int k = 0; k < klf_user_scripts.size(); ++k) {
-    if (KLFUserScriptInfo(klf_user_scripts[k]).category() == QLatin1String("klf-export-type")) {
-      registerOutputSaver(new KLFUserScriptOutputSaver(klf_user_scripts[k], this));
-    }
-  }
-
-
   // ADDITIONAL SETUP
 
-#ifdef Q_WS_MAC
+#ifdef KLF_WS_MAC
+  klfDbg("Mac OS X main win features setup") ;
+
   // watch for QFileOpenEvent s on mac
   QApplication::instance()->installEventFilter(this);
 
@@ -475,14 +556,6 @@ KLFMainWin::KLFMainWin()
 		       " Don't like it? <a href=\"%1\">Choose your preferred application font</a>.")
 		    .arg("klfaction:/settings?control=AppFonts") + "</p>");
   }
-#ifdef Q_WS_MAC
-  addWhatsNewText("<p>" +
-		  tr("The user interface was revised for <b>Mac OS X</b>. KLatexFormula now has a "
-		     "<b>dark metal look</b> and a <b>drawer</b> on the side. You can change to the previous "
-		     "behavior in the <a href=\"%1\">settings dialog</a>.")
-		  .arg("klfaction:/settings?control=AppMacOSXMetalLook")
-		  + "</p>");
-#endif
 
   // and load the library
 
@@ -492,7 +565,7 @@ KLFMainWin::KLFMainWin()
   loadLibrary();
 
   registerDataOpener(new KLFBasicDataOpener(this));
-  registerDataOpener(new KLFAddOnDataOpener(this));
+//  registerDataOpener(new KLFAddOnDataOpener(this));
   registerDataOpener(new KLFTexDataOpener(this));
 
   // and present a cool window size
@@ -514,6 +587,17 @@ void KLFMainWin::retranslateUi(bool alsoBaseUi)
 KLFMainWin::~KLFMainWin()
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+
+  // flush data on all pending KLFMimeData instances
+  klfDbg("flushing any data on any KLFMimeData instances so that no more delayed retrieval is required.");
+  foreach (KLFMimeData * mimedata, KLFMimeData::activeMimeDataInstances()) {
+    klfDbg("transmitting all data on mimedata with formats="<<mimedata->formats()) ;
+    mimedata->transmitAllData();
+  }
+  klfDbg("mime datas flushed.");
+
+
+  klfDbg("about to save settings etc.");
 
   saveLibraryState();
   saveSettings();
@@ -538,10 +622,27 @@ KLFMainWin::~KLFMainWin()
   if (d->pLatexPreviewThread)
     delete d->pLatexPreviewThread;
 
-  klfDbg("deleting interface...") ;
-  delete u;
+
+// Do not delete these -- segfault??
+//
+// #if defined(KLF_WS_MAC)
+//   if (d->macFlavorsConverter) {
+//     delete d->macFlavorsConverter;
+//   }
+// #elif defined(KLF_WS_WIN)
+//   if (d->winFormatsConverter) {
+//     delete d->winFormatsConverter;
+//   }
+// #else
+//   // no special needs on X11
+// #endif
+
+  delete d->pExporterManager;
 
   KLF_DELETE_PRIVATE ;
+
+  klfDbg("deleting interface...") ;
+  delete u;
 }
 
 
@@ -549,13 +650,11 @@ void KLFMainWinPrivate::refreshExportTypesMenu()
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
 
-  KLFMimeExporter::initMimeExporterList();
-
   // Export profiles selection list
 
   pExportProfileQuickMenuActionList.clear();
   int k;
-  QList<KLFMimeExportProfile> eplist = KLFMimeExportProfile::exportProfileList();
+  QList<KLFMimeExportProfile> eplist = pMimeExportProfileManager.exportProfileList();
   QMenu *menu = new QMenu(K->u->btnSetExportProfile);
   QActionGroup *actionGroup = new QActionGroup(menu);
   actionGroup->setExclusive(true);
@@ -607,6 +706,8 @@ void KLFMainWinPrivate::refreshExportTypesMenu()
 
 void KLFMainWin::startupFinished()
 {
+  d->mLatexSymbols->load();
+
   d->refreshExportTypesMenu();
 
 #if defined(KLF_USE_SPARKLE)
@@ -626,6 +727,11 @@ void KLFMainWin::startupFinished()
 #endif
 
   /// \todo autoupdate: Add a UI item to enable/disable auto-check for updates, check now, etc.
+
+  if (klfconfig.UI.enableRealTimePreview) {
+    d->pLatexPreviewThread->start();
+    d->pLatexPreviewThread->setPriority(QThread::LowestPriority);
+  }
 }
 
 
@@ -650,6 +756,8 @@ bool KLFMainWin::loadDefaultStyle()
 
 bool KLFMainWin::loadNamedStyle(const QString& sty)
 {
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  klfDbg( "style name = " << sty ) ;
   // find style with name sty (if existant) and set it
   for (int kl = 0; kl < d->styles.size(); ++kl) {
     if (d->styles[kl].name == sty) {
@@ -684,6 +792,13 @@ void KLFMainWin::loadSettings()
   d->settings.wantPDF = klfconfig.BackendSettings.wantPDF;
   d->settings.wantSVG = klfconfig.BackendSettings.wantSVG;
 
+  klfDbg("klfconfig.BackendSettings.userScriptInterpreters="
+         << klfconfig.BackendSettings.userScriptInterpreters()) ;
+  QVariantMap userScriptInterpreters = klfconfig.BackendSettings.userScriptInterpreters;
+  for (QVariantMap::iterator it = userScriptInterpreters.begin(); it != userScriptInterpreters.end(); ++it) {
+    d->settings.userScriptInterpreters[it.key()] = it.value().toString();
+  }
+
   d->settings_altered = false;
 }
 
@@ -708,6 +823,14 @@ void KLFMainWin::saveSettings()
     klfconfig.BackendSettings.outlineFonts = d->settings.outlineFonts;
     klfconfig.BackendSettings.wantPDF = d->settings.wantPDF;
     klfconfig.BackendSettings.wantSVG = d->settings.wantSVG;
+    QVariantMap map;
+    for ( QMap<QString,QString>::iterator it = d->settings.userScriptInterpreters.begin();
+          it != d->settings.userScriptInterpreters.end(); ++it ) {
+      map[it.key()] = it.value();
+    }
+    klfconfig.BackendSettings.userScriptInterpreters = map;
+    klfDbg("klfconfig.BackendSettings.userScriptInterpreters="
+           << klfconfig.BackendSettings.userScriptInterpreters()) ;
   }
 
   klfconfig.UI.userColorList = KLFColorChooser::colorList();
@@ -789,11 +912,14 @@ void KLFMainWinPrivate::refreshStylePopupMenus()
   }
 
   mStyleMenu->addSeparator();
-  mStyleMenu->addAction(QIcon(":/pics/savestyle.png"), tr("Save Current Style"),
+  mStyleMenu->addAction(//QIcon(":/pics/savestyle.png"),
+                        tr("Save Current Style"),
 			K, SLOT(slotSaveStyle()));
-  mStyleMenu->addAction(QIcon(":/pics/savestyle.png"), tr("Save Current Style As Default"),
+  mStyleMenu->addAction(//QIcon(":/pics/savestyle.png"),
+                        tr("Save Current Style As Default"),
 			K, SLOT(slotSaveStyleAsDefault()));
-  mStyleMenu->addAction(QIcon(":/pics/managestyles.png"), tr("Manage Styles"),
+  mStyleMenu->addAction(//QIcon(":/pics/managestyles.png"),
+                        tr("Manage Styles"),
 			K, SLOT(slotStyleManager()), 0 /* accel */);
 
 }
@@ -829,6 +955,7 @@ bool KLFMainWinPrivate::try_load_style_list(const QString& styfname)
     return false;
 
   QDataStream str(&fsty);
+  // data stream version is set in klfDataStreamReadHeader()
 
   QString readHeader;
   QString readCompatKLFVersion;
@@ -907,7 +1034,7 @@ void KLFMainWin::saveStyles()
     return;
   }
   QDataStream stream(&f);
-
+  // stream version is set by klfDataStreamWriteHeader():
   klfDataStreamWriteHeader(stream, "KLATEXFORMULA_STYLE_LIST");
 
   stream << d->styles;
@@ -950,7 +1077,9 @@ void KLFMainWin::loadLibrary()
 
   QUrl localliburl = QUrl::fromLocalFile(localfname);
   localliburl.setScheme(klfconfig.Core.libraryLibScheme);
-  localliburl.addQueryItem("klfDefaultSubResource", "History");
+  QUrlQuery localliburlq(localliburl);
+  localliburlq.addQueryItem("klfDefaultSubResource", "History");
+  localliburl.setQuery(localliburlq);
 
   // If the history is already open from library browser saved state, retrieve it
   // This is possibly NULL
@@ -1023,7 +1152,9 @@ void KLFMainWin::loadLibrary()
       scheme = "klf+legacy";
     }
     importliburl.setScheme(scheme);
-    importliburl.addQueryItem("klfReadOnly", "true");
+    QUrlQuery importliburlq(importliburl);
+    importliburlq.addQueryItem("klfReadOnly", "true");
+    importliburl.setQuery(importliburlq);
     // import library from an older version library file.
     KLFLibEngineFactory *factory = KLFLibEngineFactory::findFactoryFor(importliburl.scheme());
     if (factory == NULL) {
@@ -1074,8 +1205,10 @@ void KLFMainWin::loadLibrary()
     //      continue;
     // if a URL is already open, it won't open it a second time.
     QUrl url = localliburl;
-    url.removeAllQueryItems("klfDefaultSubResource");
-    url.addQueryItem("klfDefaultSubResource", subresources[k]);
+    QUrlQuery urlq(url);
+    urlq.removeAllQueryItems("klfDefaultSubResource");
+    urlq.addQueryItem("klfDefaultSubResource", subresources[k]);
+    url.setQuery(urlq);
 
     uint flags = KLFLibBrowser::NoCloseRoleFlag|KLFLibBrowser::OpenNoRaise;
     QString sr = subresources[k].toLower();
@@ -1291,7 +1424,7 @@ void KLFMainWinPrivate::getMissingCmdsFor(const QString& symbol, QStringList * m
   if (symbol.isEmpty())
     return;
 
-  QList<KLFLatexSymbol> syms = KLFLatexSymbolsCache::theCache()->findSymbols(symbol);
+  QList<KLFLatexSymbol> syms = mLatexSymbols->cache()->findSymbols(symbol);
   if (syms.isEmpty())
     return;
 
@@ -1374,8 +1507,12 @@ void KLFMainWinPrivate::slotNewSymbolTyped(const QString& symbol)
   urlaction.setScheme("klfaction");
   urlaction.setPath("/popup");
   QUrl urlactionClose = urlaction;
-  urlaction.addQueryItem("preambleCmdStringList", QString::fromLatin1(cmdsData));
-  urlactionClose.addQueryItem("removeMessageKey", msgkey);
+  QUrlQuery urlactionq(urlaction);
+  urlactionq.addQueryItem("preambleCmdStringList", QString::fromLatin1(cmdsData));
+  urlaction.setQuery(urlactionq);
+  QUrlQuery urlactionCloseq(urlactionClose);
+  urlactionCloseq.addQueryItem("removeMessageKey", msgkey);
+  urlactionClose.setQuery(urlactionCloseq);
   mPopup->addMessage(msgkey,
 			tr("Symbol <tt>%3</tt> may require <a href=\"%1\">%2</a>.")
 			.arg(urlaction.toEncoded(), requiredtext, symbol) );
@@ -1392,9 +1529,10 @@ void KLFMainWinPrivate::slotPopupClose()
 void KLFMainWinPrivate::slotPopupAction(const QUrl& url)
 {
   klfDbg("url="<<url.toEncoded());
-  if (url.hasQueryItem("preambleCmdStringList")) {
+  QUrlQuery urlq(url);
+  if (urlq.hasQueryItem("preambleCmdStringList")) {
     // include the given package
-    QByteArray data = url.queryItemValue("preambleCmdStringList").toLatin1();
+    QByteArray data = urlq.queryItemValue("preambleCmdStringList").toLatin1();
     klfDbg("data="<<data);
     QStringList cmds = klfLoadVariantFromText(data, "QStringList").toStringList();
     klfDbg("ensuring CMDS="<<cmds);
@@ -1407,18 +1545,18 @@ void KLFMainWinPrivate::slotPopupAction(const QUrl& url)
       slotPopupClose();
     return;
   }
-  if (url.hasQueryItem("acceptAll")) {
+  if (urlq.hasQueryItem("acceptAll")) {
     slotPopupAcceptAll();
     return;
   }
-  if (url.hasQueryItem("removeMessageKey")) {
-    QString key = url.queryItemValue("removeMessageKey");
+  if (urlq.hasQueryItem("removeMessageKey")) {
+    QString key = urlq.queryItemValue("removeMessageKey");
     mPopup->removeMessage(key);
     if (!mPopup->hasMessages())
       slotPopupClose();
     return;
   }
-  if (url.hasQueryItem("configDontShow")) {
+  if (urlq.hasQueryItem("configDontShow")) {
     // don't show popups
     slotPopupClose();
     klfconfig.UI.showHintPopups = false;
@@ -1905,11 +2043,11 @@ void KLFMainWinPrivate::latexEditReplace(int pos, int len, const QString& text)
 
 
 
-void KLFMainWinPrivate::slotUserScriptDisableInputs(KLFUserScriptInfo * info)
+void KLFMainWinPrivate::slotUserScriptDisableInputs(KLFUserScriptInfo * infobase)
 {
   QStringList disableInputs = QStringList();
-  if (info != NULL) {
-    disableInputs = info->disableInputs();
+  if (infobase != NULL) {
+    disableInputs = KLFBackendEngineUserScriptInfo(infobase->userScriptPath()).disableInputs();
   }
   bool disableall = disableInputs.contains("ALL", Qt::CaseInsensitive);
   bool disableallinput = disableInputs.contains("ALL_INPUT", Qt::CaseInsensitive);
@@ -1960,7 +2098,7 @@ void KLFMainWinPrivate::slotUserScriptSet(int index)
 
   // update user script info and settings widget
   
-  KLFUserScriptInfo usinfo(K->u->cbxUserScript->itemData(index).toString(), & settings);
+  KLFBackendEngineUserScriptInfo usinfo(K->u->cbxUserScript->itemData(index).toString());
 
   if (usinfo.hasWarnings() || usinfo.hasErrors())
     K->u->btnUserScriptInfo->setIcon(QIcon(":/pics/infowarn.png"));
@@ -1980,9 +2118,10 @@ void KLFMainWinPrivate::slotUserScriptSet(int index)
 
   QString uifile = usinfo.inputFormUI();
   if (!uifile.isEmpty()) {
-    QWidget * scriptinputwidget = getUserScriptInputWidget(uifile);
+    QString uifilefull = usinfo.relativeFile(uifile);
+    QWidget * scriptinputwidget = getUserScriptInputWidget(uifilefull);
     K->u->stkScriptInput->setCurrentWidget(scriptinputwidget);
-    klfDbg("Set script input UI. uifile="<<uifile) ;
+    klfDbg("Set script input UI. uifile="<<uifilefull) ;
   } else {
     K->u->stkScriptInput->setCurrentWidget(K->u->wScriptInputEmptyPage);
   }
@@ -2043,7 +2182,7 @@ void KLFMainWinPrivate::reloadLatexFontDefs()
 
   // now read the file list
   for (k = 0; k < fxmllist.size(); ++k) {
-    KLF_DEBUG_TIME_BLOCK(KLF_FUNC_NAME+"/fxmllist["+QString("%1").arg(k)+"]");
+    KLF_DEBUG_TIME_BLOCK(KLF_FUNC_NAME+"/fxmllist["+QString::number(k)+"]");
     klfDbg("reading XML file="<<fxmllist[k]);
 
     QString fn = fxmllist[k];
@@ -2101,7 +2240,7 @@ void KLFMainWinPrivate::reloadLatexFontDefs()
             klfWarning("File "<<fn<<": Second title for font definition: already has title "<<thisfont.title) ;
           }
           thisfont.title = qApp->translate("xmltr_latexfontdefs", eefdetails.text().toUtf8().constData(),
-                                           "[[tag: <category-title>]]", QCoreApplication::UnicodeUTF8);
+                                           "[[tag: <category-title>]]");
         } else if ( eefdetails.nodeName() == "identifier" ) {
           if (!thisfont.identifier.isEmpty()) {
             klfWarning("File "<<fn<<": Second identifier for font definition: already has identifier "
@@ -2151,13 +2290,13 @@ void KLFMainWin::showSettingsHelpLinkAction(const QUrl& link)
 {
   klfDbg( ": link="<<link ) ;
   d->mSettingsDialog->show();
-  d->mSettingsDialog->showControl(link.queryItemValue("control"));
+  d->mSettingsDialog->showControl(QUrlQuery(link).queryItemValue("control"));
 }
 
 void KLFMainWin::helpLinkAction(const QUrl& link)
 {
   klfDbg( ": Link is "<<link<<"; scheme="<<link.scheme()<<"; path="<<link.path()
-	  <<"; queryItems="<<link.queryItems() ) ;
+	  <<"; queryItems="<<QUrlQuery(link).queryItems() ) ;
 
   if (link.scheme() == "http") {
     // web link
@@ -2204,16 +2343,14 @@ void KLFMainWin::registerHelpLinkAction(const QString& path, QObject *object, co
 }
 
 
-void KLFMainWin::registerOutputSaver(KLFAbstractOutputSaver *outputsaver)
+void KLFMainWin::registerExporter(KLFExporter *exporter)
 {
-  KLF_ASSERT_NOT_NULL( outputsaver, "Refusing to register NULL Output Saver object!",  return ) ;
-
-  d->pOutputSavers.append(outputsaver);
+  d->pExporterManager->registerExporter(exporter) ;
 }
 
-void KLFMainWin::unregisterOutputSaver(KLFAbstractOutputSaver *outputsaver)
+void KLFMainWin::unregisterExporter(KLFExporter *exporter)
 {
-  d->pOutputSavers.removeAll(outputsaver);
+  d->pExporterManager->registerExporter(exporter);
 }
 
 void KLFMainWin::registerDataOpener(KLFAbstractDataOpener *dataopener)
@@ -2318,7 +2455,7 @@ bool KLFMainWin::executeURLCommandsFromFile(const QString& fname)
 
 bool KLFMainWin::isApplicationVisible() const
 {
-#ifdef Q_WS_MAC
+#ifdef KLF_WS_MAC
   klfDbg("(mac version)") ;
   extern bool klf_mac_application_hidden(const KLFMainWin *);
   return KLF_DEBUG_TEE( ! klf_mac_application_hidden(this) ) ;
@@ -2330,7 +2467,7 @@ bool KLFMainWin::isApplicationVisible() const
 
 void KLFMainWin::hideApplication()
 {
-#ifdef Q_WS_MAC
+#ifdef KLF_WS_MAC
   extern void klf_mac_hide_application(const KLFMainWin *);
   klf_mac_hide_application(this);
 #else
@@ -2371,6 +2508,13 @@ bool KLFMainWin::event(QEvent *e)
   
   return QWidget::event(e);
 }
+
+bool KLFMainWin::nativeEvent(const QByteArray & , void * , long * )
+{
+  // if we need to process native X11/Mac/Win events, do it here.
+  return false;
+}
+
 
 void KLFMainWin::childEvent(QChildEvent *e)
 {
@@ -2459,11 +2603,13 @@ bool KLFMainWin::eventFilter(QObject *obj, QEvent *e)
     QString tooltipText;
     if (obj == u->btnCopy) {
       tooltipText = tr("Copy the formula to the clipboard. Current export profile: %1")
-	.arg(KLFMimeExportProfile::findExportProfile(klfconfig.ExportData.copyExportProfile).description());
+	.arg(d->pMimeExportProfileManager.findExportProfile(klfconfig.ExportData.copyExportProfile)
+             .description());
     } else if (obj == u->btnDrag) {
       tooltipText = tr("Click and keep mouse button pressed to drag your formula to another application. "
 		       "Current export profile: %1")
-	.arg(KLFMimeExportProfile::findExportProfile(klfconfig.ExportData.dragExportProfile).description());
+	.arg(d->pMimeExportProfileManager.findExportProfile(klfconfig.ExportData.dragExportProfile)
+             .description());
     }
     QToolTip::showText(((QHelpEvent*)e)->globalPos(), tooltipText, qobject_cast<QWidget*>(obj));
     return true;
@@ -2501,7 +2647,7 @@ void KLFMainWin::showEvent(QShowEvent *e)
       QMetaObject::invokeMethod(this, "showWhatsNew", Qt::QueuedConnection);
     }
 
-#ifdef Q_WS_MAC
+#ifdef KLF_WS_MAC
     // add a menu item in dock to paste from clipboard
     QMenu *adddockmenu = new QMenu;
     adddockmenu->addAction(tr("Paste Clipboard Contents", "[[Dock Menu Entry on MacOSX]]"),
@@ -2667,7 +2813,8 @@ void KLFMainWinPrivate::updatePreviewThreadInput()
 {
   // recheck battery status, in case we have the proper setting on
   // TODO: write this & the setting
-  klfDbg("laptop?: "<<KLFSysInfo::isLaptop()<<"; on battery power?: "<<KLFSysInfo::isOnBatteryPower()) ;
+  klfDbg("laptop?: "<<KLFSysInfo::isLaptop()<<"; on battery power?: "<<KLFSysInfo::isOnBatteryPower()
+         <<"; no previews on battery power?: " << klfconfig.UI.realTimePreviewExceptBattery) ;
   if (klfconfig.UI.enableRealTimePreview && klfconfig.UI.realTimePreviewExceptBattery
       && KLFSysInfo::isLaptop()) {
     // update battery status
@@ -2675,9 +2822,11 @@ void KLFMainWinPrivate::updatePreviewThreadInput()
     bool running = pLatexPreviewThread->isRunning();
     if (running && onbattery) {
       // we need to stop the preview thread
+      klfDbg("Stopping preview thread because we're on battery power") ;
       pLatexPreviewThread->stop();
     } else if (!running && !onbattery) {
       // we can restart the preview thread, as we're back on power.
+      klfDbg("Restarting preview thread because we're no longer on battery power") ;
       pLatexPreviewThread->start();
       pLatexPreviewThread->setPriority(QThread::LowestPriority);
     }
@@ -2692,10 +2841,16 @@ void KLFMainWinPrivate::updatePreviewThreadInput()
     // to invalidate evaluated contents
     return;
   }
-  bool sizechanged = pContLatexPreview->setPreviewSize(K->u->lblOutput->size());
+  bool sizechanged =
+    pContLatexPreview->setPreviewSize(calcPreviewSize());
   if (inputchanged || sizechanged) {
     evaloutput_uptodate = false;
   }
+}
+
+QSize KLFMainWinPrivate::calcPreviewSize()
+{
+  return (QSizeF(K->u->lblOutput->size()) * K->devicePixelRatioF()).toSize();
 }
 
 void KLFMainWinPrivate::updatePreviewThreadSettings()
@@ -2714,18 +2869,16 @@ void KLFMainWin::setTxtPreambleFont(const QFont& f)
   u->txtPreamble->setFont(f);
 }
 
-// --------------------------------------
-#define KLF_SET_LATEXEDIT_PALETTE(cond, w)				\
-  QMetaObject::invokeMethod((w), "setPalette", Qt::QueuedConnection,	\
-			    Q_ARG(QPalette, (cond)			\
-				  ? (w)->property("paletteMacBrushedMetalLook").value<QPalette>() \
-				  : (w)->property("paletteDefault").value<QPalette>()) );
-// --------------------------------------
 void KLFMainWin::setMacBrushedMetalLook(bool metallook)
 {
-#ifdef Q_WS_MAC
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
 
-  setAttribute(Qt::WA_MacBrushedMetal, metallook);
+#ifdef KLF_WS_MAC
+  klfDbg("On mac. metallook = " << metallook) ;
+
+  // doesn't work ... :(
+  //setUnifiedTitleAndToolBarOnMac(metallook);
+  //setAttribute(Qt::WA_MacBrushedMetal, metallook);
   const char * pn = metallook ? "paletteMacBrushedMetalLook" : "paletteDefault";
   u->txtLatex->setPalette(u->txtLatex->property(pn).value<QPalette>());
   u->txtLatex->setStyleSheet(u->txtLatex->styleSheet());
@@ -2738,11 +2891,11 @@ void KLFMainWin::setMacBrushedMetalLook(bool metallook)
     u->cbxMathMode->lineEdit()->setStyleSheet(u->cbxMathMode->lineEdit()->styleSheet());
   }
 
-  /** \bug .... this does not work properly !!... :( */
-
 #else
   Q_UNUSED(metallook);
-  qWarning()<<KLF_FUNC_NAME<<": Only implemented under Mac OS X !";
+  if (metallook) {
+    klfWarning("Mac brushed metal look is only implemented under Mac OS X !");
+  }
 #endif
 }
 
@@ -2775,7 +2928,7 @@ void KLFMainWinPrivate::showRealTimeError(const QString& errmsg, int errcode)
   if (errcode == KLFERR_PROGERR_LATEX)
     s = KLFProgErr::extractLatexError(errmsg);
   if (s.length() > 800)
-    s = tr("LaTeX error, click 'Evaluate' to see error message.", "[[real-time preview tooltip]]");
+    s = tr("LaTeX error, click 'Run LaTeX' to see error message.", "[[real-time preview tooltip]]");
   K->u->lblOutput->displayError(s, /*labelenabled:*/false);
   slotSetViewControlsEnabled(false);
   slotSetSaveControlsEnabled(false);
@@ -2824,7 +2977,7 @@ KLFBackend::klfInput KLFMainWinPrivate::collectInput(bool final)
   // remember the math mode if the user clicked on 'Evaluate' (final==true)
   if (final && K->u->cbxMathMode->findText(input.mathmode) == -1) {
     K->u->cbxMathMode->addItem(input.mathmode);
-    klfconfig.UI.customMathModes = klfconfig.UI.customMathModes() << input.mathmode;
+    klfconfig.UI.customMathModes = QStringList() << klfconfig.UI.customMathModes() << input.mathmode;
   }
 
   return input;
@@ -2904,26 +3057,26 @@ void KLFMainWin::slotEvaluate()
     // ALL OK
     d->evaloutput_uptodate = true;
 
-    QPixmap sc;
     // scale to view size (klfconfig.UI.labelOutputFixedSize)
-    QSize fsize = u->lblOutput->labelSize(); //klfconfig.UI.labelOutputFixedSize;
+    QSize fsize = d->calcPreviewSize();
     QImage scimg = d->output.result;
-    if (d->output.result.width() > fsize.width() || d->output.result.height() > fsize.height())
+    if (d->output.result.width() > fsize.width() ||
+        d->output.result.height() > fsize.height()) {
       scimg = d->output.result.scaled(fsize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-
-    sc = QPixmap::fromImage(scimg);
-
-    //QSize goodsize = d->output.result.size();
-    QImage tooltipimg = d->output.result;
-    if ( klfconfig.UI.previewTooltipMaxSize != QSize(0, 0) && // QSize(0,0) meaning no resize
-	 ( tooltipimg.width() > klfconfig.UI.previewTooltipMaxSize().width() ||
-	   tooltipimg.height() > klfconfig.UI.previewTooltipMaxSize().height() ) ) {
-      tooltipimg =
-	d->output.result.scaled(klfconfig.UI.previewTooltipMaxSize, Qt::KeepAspectRatio,
-			      Qt::SmoothTransformation);
     }
+    QImage tooltipimg = d->output.result;
+    if ( klfconfig.UI.previewTooltipMaxSize != QSize(0, 0) ) { // QSize(0,0) meaning no resize
+      QSize tooltipmaxsize = (QSizeF(klfconfig.UI.previewTooltipMaxSize) * devicePixelRatioF()).toSize();
+      if ( tooltipimg.width() > tooltipmaxsize.width() ||
+	   tooltipimg.height() > tooltipmaxsize.height() ) {
+        tooltipimg = d->output.result.scaled(tooltipmaxsize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+      }
+    }
+
     emit evaluateFinished(d->output);
+
     u->lblOutput->display(scimg, tooltipimg, true);
+
     //    u->frmOutput->setEnabled(true);
     d->slotSetViewControlsEnabled(true);
     d->slotSetSaveControlsEnabled(true);
@@ -3039,7 +3192,7 @@ void KLFMainWin::slotToggleLibrary()
 void KLFMainWin::slotLibrary(bool showlib)
 {
   klfDbg("showlib="<<showlib) ;
-  d->mLibBrowser->setShown(showlib);
+  d->mLibBrowser->setVisible(showlib);
   if (showlib) {
     // already shown, raise the window
     d->mLibBrowser->activateWindow();
@@ -3053,7 +3206,7 @@ void KLFMainWin::slotToggleSymbols()
 }
 void KLFMainWin::slotSymbols(bool showsymbs)
 {
-  d->mLatexSymbols->setShown(showsymbs);
+  d->mLatexSymbols->setVisible(showsymbs);
   d->slotSymbolsButtonRefreshState(showsymbs);
   d->mLatexSymbols->activateWindow();
   d->mLatexSymbols->raise();
@@ -3129,7 +3282,7 @@ void KLFMainWin::slotSetUserScript(const QString& userScript)
   }
   
   //   // append our new item
-  //   KLFUserScriptInfo us(userScript, & d->settings);
+  //   KLFUserScriptInfo us(userScript);
   //   if (us.scriptInfoError()) {
   //     klfWarning("Can't get info for user script "<<userScript<<": "<<us.scriptInfoErrorString()) ;
   //     return;
@@ -3141,10 +3294,9 @@ void KLFMainWin::slotSetUserScript(const QString& userScript)
   //   d->slotUserScriptSet(k);
 }
 
-void KLFMainWin::slotShowLastUserScriptOutput()
+void KLFMainWin::slotShowUserScriptLog()
 {
-  extern QString klfbackend_last_userscript_output;
-  KLFProgErr::showError(this, klfbackend_last_userscript_output);
+  KLFProgErr::showError(this, KLFUserScriptFilterProcess::getUserScriptLogHtml());
 }
 
 void KLFMainWin::slotReloadUserScripts()
@@ -3160,9 +3312,7 @@ void KLFMainWin::slotReloadUserScripts()
   u->cbxUserScript->clear();
   u->cbxUserScript->addItem(tr("<none>", "[[no user script]]"), QVariant(QString()));
   for (int kkl = 0; kkl < userscripts.size(); ++kkl) {
-    KLFUserScriptInfo scriptinfo = KLFUserScriptInfo::forceReloadScriptInfo(
-        userscripts[kkl], & d->settings, klfconfig.UserScripts.userScriptConfig.value(userscripts[kkl])
-        );
+    KLFUserScriptInfo scriptinfo = KLFUserScriptInfo::forceReloadScriptInfo( userscripts[kkl] );
     klfDbg("Considering userscript "<<userscripts[kkl]<<", category="<<scriptinfo.category()) ;
     if (scriptinfo.category() == QLatin1String("klf-backend-engine")) {
       u->cbxUserScript->addItem(scriptinfo.name(), QVariant(userscripts[kkl]));
@@ -3257,14 +3407,20 @@ void KLFMainWin::pasteLatexFromClipboard(QClipboard::Mode mode)
 
 
 
-QList<KLFAbstractOutputSaver*> KLFMainWin::registeredOutputSavers()
+QList<KLFExporter*> KLFMainWin::registeredExporters()
 {
-  return d->pOutputSavers;
+  return d->pExporterManager->exporterList();
 }
 QList<KLFAbstractDataOpener*> KLFMainWin::registeredDataOpeners()
 {
   return d->pDataOpeners;
 }
+
+QList<KLFMimeExportProfile> KLFMainWin::mimeExportProfileList()
+{
+  return d->pMimeExportProfileManager.exportProfileList();
+}
+
 
 static QString find_list_agreement(const QStringList& a, const QStringList& b)
 {
@@ -3468,7 +3624,9 @@ bool KLFMainWin::openLibFile(const QString& fname, bool showLibrary)
   int k;
   for (k = 0; k < subreslist.size(); ++k) {
     QUrl url2 = url;
-    url2.addQueryItem("klfDefaultSubResource", subreslist[k]);
+    QUrlQuery url2q(url2);
+    url2q.addQueryItem("klfDefaultSubResource", subreslist[k]);
+    url2.setQuery(url2q);
     bool thisloaded =  d->mLibBrowser->openResource(url2);
     loaded = loaded || thisloaded;
   }
@@ -3496,36 +3654,6 @@ void KLFMainWin::slotSetExportProfile(const QString& exportProfile)
   saveSettings();
 }
 
-/*
-QMimeData * KLFMainWin::resultToMimeData(const QString& exportProfileName)
-{
-  klfDbg("export profile: "<<exportProfileName);
-  if ( _output.result.isNull() )
-    return NULL;
-
-  KLFMimeExportProfile p = KLFMimeExportProfile::findExportProfile(exportProfileName);
-  QStringList mimetypes = p.mimeTypes();
-
-  QMimeData *mimedata = new QMimeData;
-  int k;
-  for (k = 0; k < mimetypes.size(); ++k) {
-    klfDbg("exporting "<<mimetypes[k]<<" ...");
-    QString mimetype = mimetypes[k];
-    KLFMimeExporter *exporter = KLFMimeExporter::mimeExporterLookup(mimetype);
-    if (exporter == NULL) {
-      qWarning()<<KLF_FUNC_NAME<<": Can't find an exporter for mime-type "<<mimetype<<".";
-      continue;
-    }
-    QByteArray data = exporter->data(mimetype, _output);
-    mimedata->setData(mimetype, data);
-    klfDbg("exporting mimetype done");
-  }
-
-  klfDbg("got mime data.");
-  return mimedata;
-}
-*/
-
 
 void KLFMainWin::slotDrag()
 {
@@ -3543,9 +3671,13 @@ void KLFMainWin::slotDrag()
   void aboutToDragData();
 
   QDrag *drag = new QDrag(this);
-  KLFMimeData *mime = new KLFMimeData(klfconfig.ExportData.dragExportProfile, d->output);
+  KLFMimeData *mime = new KLFMimeData(
+      d->pMimeExportProfileManager.findExportProfile(klfconfig.ExportData.dragExportProfile),
+      d->pExporterManager,
+      d->output
+      );
 
-  connect(mime, SIGNAL(droppedData(const QString&)), this, SIGNAL(draggedDataWasDropped(const QString&)));
+//  connect(mime, SIGNAL(droppedData(const QString&)), this, SIGNAL(draggedDataWasDropped(const QString&)));
 
   drag->setMimeData(mime);
 
@@ -3554,7 +3686,9 @@ void KLFMainWin::slotDrag()
   if (img.width() > sz.width() || img.height() > sz.height())
     img = img.scaled(sz, Qt::KeepAspectRatio, Qt::SmoothTransformation);
   // imprint the export type on the drag pixmap
-  QString exportProfileText = KLFMimeExportProfile::findExportProfile(klfconfig.ExportData.dragExportProfile).description();
+  QString exportProfileText = d->pMimeExportProfileManager.findExportProfile(
+      klfconfig.ExportData.dragExportProfile
+      ).description();
   { QPainter painter(&img);
     QFont smallfont = QFont("Helvetica", 6);
     smallfont.setPixelSize(11);
@@ -3595,42 +3729,16 @@ void KLFMainWin::slotCopy()
 
   emit aboutToCopyData();
 
-#ifdef Q_WS_WIN
-  extern void klfWinClipboardCopy(HWND h, const QStringList& wintypes,
-				  const QList<QByteArray>& datalist);
-
-  QString profilename = klfconfig.ExportData.copyExportProfile;
-  KLFMimeExportProfile p = KLFMimeExportProfile::findExportProfile(profilename);
-
-  QStringList mimetypes = p.mimeTypes();
-  QStringList wintypes;
-  QList<QByteArray> datalist;
-
-  int k;
-  for (k = 0; k < mimetypes.size(); ++k) {
-    QString mimetype = mimetypes[k];
-    QString wintype = p.respectiveWinType(k); // queries the exporter if needed
-    if (wintype.isEmpty())
-      wintype = mimetype;
-    KLFMimeExporter *exporter = KLFMimeExporter::mimeExporterLookup(mimetype);
-    if (exporter == NULL) {
-      qWarning()<<KLF_FUNC_NAME<<": Can't find exporter for type "<<mimetype
-	        <<", winformat="<<wintype<<".";
-      continue;
-    }
-    QByteArray data = exporter->data(mimetype, d->output);
-    wintypes << wintype;
-    datalist << data;
-  }
-
-  klfWinClipboardCopy(winId(), wintypes, datalist);
-
-#else
-  KLFMimeData *mimedata = new KLFMimeData(klfconfig.ExportData.copyExportProfile, d->output);
+  KLFMimeData *mimedata = new KLFMimeData(
+      d->pMimeExportProfileManager.findExportProfile(klfconfig.ExportData.copyExportProfile),
+      d->pExporterManager,
+      d->output
+      );
   QApplication::clipboard()->setMimeData(mimedata, QClipboard::Clipboard);
-#endif
 
-  KLFMimeExportProfile profile = KLFMimeExportProfile::findExportProfile(klfconfig.ExportData.copyExportProfile);
+  KLFMimeExportProfile profile = d->pMimeExportProfileManager.findExportProfile(
+      klfconfig.ExportData.copyExportProfile
+      );
   d->showExportMsgLabel(tr("Copied as <b>%1</b>").arg(profile.description()));
 
   emit copiedData(profile.profileName());
@@ -3651,72 +3759,39 @@ void KLFMainWin::slotSave(const QString& suggestfname)
   // application-long persistent selectedfilter
   static QString selectedfilter;
 
-  static QMap<QString,QString> builtInTitles;
-  if (builtInTitles.isEmpty()) {
-    builtInTitles["PNG"] = tr("Standard PNG Image");
-    builtInTitles["JPG"] = tr("Standard JPEG Image");
-    builtInTitles["PS"] = tr("PostScript Document");
-    builtInTitles["EPS"] = tr("Encapsulated PostScript");
-    builtInTitles["PDF"] = tr("PDF Portable Document Format");
-    builtInTitles["DVI"] = tr("LaTeX DVI");
-    builtInTitles["SVG"] = tr("Scalable Vector Graphics SVG");
-  }
 
-  QStringList okbaseformatlist;
+  // prepare list of filters & available formats
+
   QStringList filterformatlist;
-  QStringList topfilterformatlist;
   QMap<QString,QString> formatsByFilterName;
+  QMap<QString,KLFExporter*> exporterByFilterName;
 
-  QStringList availFormats = KLFBackend::availableSaveFormats(d->output);
+  int k, j, ll;
 
-  int k;
-  for (k = 0; k < availFormats.size(); ++k) {
-    QString f = availFormats[k].toUpper();
-    klfDbg("Reported avail format: "<<f) ;
-    QStringList *fl = &filterformatlist;
-    if (f == "JPEG" || f == "PNG" || f == "PDF" || f == "EPS" || f == "PS" || f == "SVG") {
-      // save this format into the 'top' list
-      fl = &topfilterformatlist;
+  QList<KLFExporter*> exporters = d->pExporterManager->exporterList();
+
+  for (k = 0; k < exporters.size(); ++k) {
+    KLFExporter * exporter = exporters[k];
+    if (!exporter->isSuitableForFileSave()) {
+      continue;
     }
-    QString t;
-    if (builtInTitles.contains(f)) {
-      t = builtInTitles.value(f);
-    } else {
-      t = tr("%1 Format").arg(f);
-    }
-
-    QStringList extlist = QStringList()<<f.toLower();
-    if (f == "JPEG") {
-      extlist << "jpg";
-    }
-
-    t += QString(" (%1)").arg(klfMapStringList(extlist, QString("*.%1")).join(" "));
-
-    okbaseformatlist << extlist;
-    if (f == "PNG") // _really_ on top
-      fl->push_front(t);
-    else
-      fl->append(t);
-    formatsByFilterName[t] = f.toLower();
-  }
-
-  QMap<QString,QString> externFormatsByFilterName;
-  QMap<QString,KLFAbstractOutputSaver*> externSaverByKey;
-  int j;
-  for (k = 0; k < d->pOutputSavers.size(); ++k) {
-    QStringList xoformats = d->pOutputSavers[k]->supportedMimeFormats(& d->output);
+    QStringList xoformats = exporter->supportedFormats(d->output);
     for (j = 0; j < xoformats.size(); ++j) {
-      QString f = QString("%1 (%2)").arg(d->pOutputSavers[k]->formatTitle(xoformats[j]),
-					 d->pOutputSavers[k]->formatFilePatterns(xoformats[j]).join(" "));
-      filterformatlist.push_front(f);
-      externFormatsByFilterName[f] = xoformats[j];
-      externSaverByKey[xoformats[j]] = d->pOutputSavers[k];
+      QString fmt = xoformats[j];
+      QStringList exts = exporter->fileNameExtensionsFor(fmt);
+      QString patterns;
+      for (ll = 0; ll < exts.size(); ++ll) {
+        if (ll > 0) {
+          patterns += " ";
+        }
+        patterns += "*." + exts[ll].toLower();
+      }
+      QString f = QString("%1 (%2)").arg(exporter->titleFor(fmt)).arg(patterns);
+      filterformatlist.push_back(f);
+      formatsByFilterName[f] = fmt;
+      exporterByFilterName[f] = exporter;
     }
   }
-
-  // now add the 'top' formats, well, on top :)
-  topfilterformatlist << filterformatlist;
-  filterformatlist = topfilterformatlist; // Qt's implicit sharing makes this code reasonable...
 
   // finally, join all filters together and show the file dialog.
 
@@ -3724,170 +3799,66 @@ void KLFMainWin::slotSave(const QString& suggestfname)
   QString fname, format;
 
   QString suggestion = suggestfname;
-  if (suggestion.isEmpty())
+  if (suggestion.isEmpty()) {
     suggestion = klfconfig.UI.lastSaveDir;
-  if (suggestion.isEmpty())
-    suggestion = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
+  }
+  if (suggestion.isEmpty()) {
+    QStringList docpaths = QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation);
+    if (docpaths.isEmpty()) {
+      suggestion = "";
+    } else {
+      suggestion = docpaths[0];
+    }
+  }
 
-  fname = QFileDialog::getSaveFileName(this, tr("Save Formula Image"), suggestion, filterformat,
+  fname = QFileDialog::getSaveFileName(this, tr("Save Latex Output"), suggestion, filterformat,
 				       &selectedfilter);
 
-  if (fname.isEmpty())
+  if (fname.isEmpty()) {
     return;
+  }
 
   QFileInfo fi(fname);
   // save this path as default to suggest next time
   klfconfig.UI.lastSaveDir = fi.absolutePath();
 
   // first test if it's an extern-format
-  if ( externFormatsByFilterName.contains(selectedfilter) ) {
+  if ( exporterByFilterName.contains(selectedfilter) ) {
     // use an external output-saver
-    QString key = externFormatsByFilterName[selectedfilter];
-    if ( ! externSaverByKey.contains(key) ) {
-      klfWarning("Internal error: externSaverByKey() does not contain key="<<key
-		 <<": "<<externSaverByKey);
+    QString formatname = formatsByFilterName[selectedfilter];
+    KLFExporter * exporter = exporterByFilterName[selectedfilter];
+
+    if (exporter == NULL) {
+      klfWarning("Internal error: exporter is NULL!");
       return;
     }
-    KLFAbstractOutputSaver *saver = externSaverByKey[key];
-    if (saver == NULL) {
-      klfWarning("Internal error: saver is NULL!");
+
+    QByteArray data = exporter->getData(formatname, d->output);
+    if (data.isEmpty()) {
+      QMessageBox::critical(this, tr("Error saving file"),
+                            tr("Error exporting the data: %1").arg(exporter->errorString()));
       return;
     }
-    bool result = saver->saveToFile(key, fname, d->output);
-    if (!result) {
-      klfWarning("saver failed to save format "<<key<<".");
+    {
+      QFile fout(fname);
+      bool ok = fout.open(QIODevice::WriteOnly);
+      if (!ok) {
+        QMessageBox::critical(this, tr("Error saving file"),
+                              tr("Can't write to file %1: %2").arg(fname).arg(fout.errorString()));
+        return;
+      }
+      fout.write(data);
+      fout.close();
     }
-    emit savedToFile(fname, key, saver);
+    
+    emit savedToFile(fname, formatname, exporter);
     return;
   }
 
-  QString selformat;
-  // get format and suffix from selected filter
-  if ( ! formatsByFilterName.contains(selectedfilter) ) {
-    klfWarning("Unknown format filter selected: "<<selectedfilter<<"! Assuming PNG!") ;
-    selformat = "png";
-  } else {
-    selformat = formatsByFilterName[selectedfilter];
-  }
-  if (!fi.suffix().isEmpty()) {
-    if ( ! okbaseformatlist.contains(fi.suffix().toLower()) ) {
-      // by default, if suffix is not recognized, use the selected filter after a warning.
-      QString sfU = selformat.toUpper();
-      QMessageBox msgbox(this);
-      msgbox.setIcon(QMessageBox::Warning);
-      msgbox.setWindowTitle(tr("Extension not recognized"));
-      msgbox.setText(tr("Extension <b>%1</b> not recognized.").arg(fi.suffix().toUpper()));
-      msgbox.setInformativeText(tr("You may choose to change the file name or to save to the given file "
-				   "as %1 format.").arg(sfU));
-      QPushButton *png = new QPushButton(tr("Use %1", "[[fallback file format button text]]").arg(sfU), &msgbox);
-      msgbox.addButton(png, QMessageBox::AcceptRole);
-      QPushButton *chg  = new QPushButton(tr("Change File Name ..."), &msgbox);
-      msgbox.addButton(chg, QMessageBox::ActionRole);
-      QPushButton *cancel = new QPushButton(tr("Cancel"), &msgbox);
-      msgbox.addButton(cancel, QMessageBox::RejectRole);
-      msgbox.setDefaultButton(chg);
-      msgbox.setEscapeButton(cancel);
-      msgbox.exec();
-      if (msgbox.clickedButton() == png) {
-	format = "png";
-      } else if (msgbox.clickedButton() == cancel) {
-	return;
-      } else {
-	// re-prompt for file name & save (by recursion), and return
-	slotSave(fname);
-	return;
-      }
-    } else {
-      format = fi.suffix().toLower();
-    }
-  } else {
-    // no file name suffix - use selected format filter
-    if (!formatsByFilterName.contains(selectedfilter)) {
-      // we only emitted a debug message before, this is a warning in this case!
-      klfWarning("Unknown selected format filter : "<<selectedfilter<<"; Assuming PNG!") ;
-      // selformat is already "png"
-    }
-    format = selformat;
-  }
-
-  // The Qt dialog, or us, already asked user to confirm overwriting existing files
-
-  QString error;
-  bool res = KLFBackend::saveOutputToFile(d->output, fname, format, &error);
-  if ( ! res ) {
-    QMessageBox::critical(this, tr("Error"), error);
-  }
-  emit savedToFile(fname, format, NULL);
+  klfWarning("Invalid selected filter: " << selectedfilter << "!") ;
+  QMessageBox::critical(this, tr("Error saving file"),
+                        tr("Internal error: can't determine save format"));
 }
-
-bool KLFMainWin::saveOutputToFile(const KLFBackend::klfOutput& output, const QString& fname,
-				  const QString& fmt, KLFAbstractOutputSaver * saver)
-{
-  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
-  QString format = fmt;
-  klfDbg("fname="<<fname<<", format="<<format<<", saver="<<saver) ;
-
-  if (format.isEmpty()) {
-    format = QFileInfo(fname).suffix();
-    klfDbg("format="<<format) ;
-  }
-
-  if (saver != NULL) {
-    // use this saver to save data.
-    // first find the key
-    int n;
-    QStringList keys = saver->supportedMimeFormats(const_cast<KLFBackend::klfOutput*>(&output));
-    QString key;
-    for (n = 0; n < keys.size(); ++n) {
-      if (keys[n].contains(format, Qt::CaseInsensitive)) {
-	key = keys[n];
-	break;
-      }
-    }
-    if (key.isEmpty()) {
-      klfWarning("Couldn't find key for format "<<format<<" for saver "<<saver) ;
-    }
-
-    bool result = saver->saveToFile(key, fname, d->output);
-    if (!result) {
-      klfWarning("saver failed to save format "<<key<<".");
-    }
-    return result;
-  }
-  // otherwise, see if it is a built-in format or check possible savers for a match.
-
-  // built-in format?
-  if (KLFBackend::availableSaveFormats(output).contains(format.toUpper())) {
-    // save built-in format
-    klfDbg("saving "<<fname<<" with built-in format "<<format<<".") ;
-    return KLFBackend::saveOutputToFile(output, fname, format, NULL);
-  }
-
-  // or go through the list of possible savers
-  int k, j;
-  for (k = 0; k < d->pOutputSavers.size(); ++k) {
-    klfDbg("trying klfabstractoutputsaver #"<<k<<" ...") ;
-    QStringList xoformats = d->pOutputSavers[k]->supportedMimeFormats(& d->output);
-    klfDbg("klfabstractoutputsaver #"<<k<<" supports formats "<<xoformats) ;
-    for (j = 0; j < xoformats.size(); ++j) {
-      // test this format
-      klfDbg("\t format "<<xoformats[j]<<" has patterns "<<d->pOutputSavers[k]->formatFilePatterns(xoformats[j])
-	     <<", we're looking for "<<("*."+format)<<", RESULT="
-	     <<d->pOutputSavers[k]->formatFilePatterns(xoformats[j]).contains("*."+format, Qt::CaseInsensitive)) ;
-      if (d->pOutputSavers[k]->formatFilePatterns(xoformats[j]).contains("*."+format, Qt::CaseInsensitive)) {
-	// try saving in this format
-	bool ok = d->pOutputSavers[k]->saveToFile(xoformats[j], fname, output);
-	if (ok)
-	  return true;
-	klfWarning("Output saver "<<d->pOutputSavers[k]<<" was supposed to handle type "<<format<<" but failed.") ;
-	// go on with the search
-      }
-    }
-  }
-  klfDbg("didn't find any suitable saver. fail...");
-  return false;
-}
-
 
 void KLFMainWin::slotActivateEditor()
 {
@@ -3945,6 +3916,7 @@ KLFStyle KLFMainWin::currentStyle() const
   } else {
     sty.fontname = QString();
   }
+
   sty.fg_color = u->colFg->color().rgb();
   QColor bgc = u->colBg->color();
   if (bgc.isValid())
@@ -3961,17 +3933,20 @@ KLFStyle KLFMainWin::currentStyle() const
     sty.vectorscale = u->spnVectorScale->value() / 100.0;
 
   if (u->gbxOverrideMargins->isChecked()) {
-    sty.overrideBBoxExpand().top = u->spnMarginTop->valueInRefUnit();
-    sty.overrideBBoxExpand().right = u->spnMarginRight->valueInRefUnit();
-    sty.overrideBBoxExpand().bottom = u->spnMarginBottom->valueInRefUnit();
-    sty.overrideBBoxExpand().left = u->spnMarginLeft->valueInRefUnit();
+    KLFStyle::BBoxExpand bbox(
+        u->spnMarginTop->valueInRefUnit(),
+        u->spnMarginRight->valueInRefUnit(),
+        u->spnMarginBottom->valueInRefUnit(),
+        u->spnMarginLeft->valueInRefUnit()
+        );
+    sty.overrideBBoxExpand = bbox;
   }
 
   sty.userScript = QFileInfo(u->cbxUserScript->itemData(u->cbxUserScript->currentIndex()).toString()).fileName();
   sty.userScriptInput = d->collectUserScriptInput();
 
   klfDbg("Returning style; bgcol="<<klfFmtCC("#%08lx", (ulong)sty.bg_color)<<": us="<<sty.userScript()) ;
-  klfDbg("full style="<< sty) ;
+  klfDbg("full style="<< sty << "; override bbox expand = " << sty.overrideBBoxExpand) ;
 
   return sty;
 }
@@ -4009,7 +3984,7 @@ KLFBackend::klfSettings KLFMainWin::currentSettings() const
   KLFBackend::klfInput input = currentInputState();
   // setup user script configuration
   if (!input.userScript.isEmpty()) {
-    QString usfn = KLFUserScriptInfo(input.userScript).fileName();
+    QString usfn = KLFUserScriptInfo(input.userScript).userScriptPath();
     if (klfconfig.UserScripts.userScriptConfig.contains(usfn)) {
       QVariantMap data = klfconfig.UserScripts.userScriptConfig[usfn];
       QMap<QString,QString> mdata;
@@ -4045,7 +4020,9 @@ KLFBackend::klfInput KLFMainWin::currentInputState() const
   input.userScript = u->cbxUserScript->itemData(u->cbxUserScript->currentIndex()).toString();
 
   QVariantMap userScriptInput = d->collectUserScriptInput();
-  for (QVariantMap::const_iterator usparam = userScriptInput.begin(); usparam != userScriptInput.end(); ++usparam) {
+  for (QVariantMap::const_iterator usparam = userScriptInput.begin();
+       usparam != userScriptInput.end();
+       ++usparam) {
     input.userScriptParam[usparam.key()] = usparam.value().toString();
   }
 
@@ -4060,18 +4037,20 @@ KLFBackend::klfInput KLFMainWin::currentInputState() const
   else
     input.fontsize = fsval;
   input.preamble = u->txtPreamble->latex();
-  int idx = u->cbxLatexFont->currentIndex();
-  if (idx > 0) {
-    // find corresponding font in list
-    int k;
-    for (k = 0; k < d->pLatexFontDefs.size(); ++k) {
-      if (d->pLatexFontDefs[k].identifier == u->cbxLatexFont->itemData(idx).toString()) {
-	input.preamble += d->pLatexFontDefs[k].latexdefs;
-	break;
+  if (u->cbxLatexFont->isEnabled()) {
+    int idx = u->cbxLatexFont->currentIndex();
+    if (idx > 0) {
+      // find corresponding font in list
+      int k;
+      for (k = 0; k < d->pLatexFontDefs.size(); ++k) {
+        if (d->pLatexFontDefs[k].identifier == u->cbxLatexFont->itemData(idx).toString()) {
+          input.preamble += d->pLatexFontDefs[k].latexdefs;
+          break;
+        }
       }
-    }
-    if (k == d->pLatexFontDefs.size()) {
-      klfWarning("Couldn't find font "<<u->cbxLatexFont->currentText()<<" !");
+      if (k == d->pLatexFontDefs.size()) {
+        klfWarning("Couldn't find font "<<u->cbxLatexFont->currentText()<<" !");
+      }
     }
   }
   input.fg_color = u->colFg->color().rgb();
@@ -4115,14 +4094,14 @@ void KLFMainWinPrivate::slotDetailsSideWidgetShown(bool shown)
 {
   if (K->u->frmDetails->sideWidgetManagerType() == QLatin1String("ShowHide")) {
     if (shown)
-      K->u->btnExpand->setIcon(QIcon(":/pics/switchshrinked.png"));
+      K->u->btnExpand->setIcon(QIcon(":/pics/switchshrinked.svg"));
     else
-      K->u->btnExpand->setIcon(QIcon(":/pics/switchexpanded.png"));
+      K->u->btnExpand->setIcon(QIcon(":/pics/switchexpanded.svg"));
   } else if (K->u->frmDetails->sideWidgetManagerType() == QLatin1String("Drawer")) {
     if (shown)
-      K->u->btnExpand->setIcon(QIcon(":/pics/switchshrinked_drawer.png"));
+      K->u->btnExpand->setIcon(QIcon(":/pics/switchshrinked_drawer.svg"));
     else
-      K->u->btnExpand->setIcon(QIcon(":/pics/switchexpanded_drawer.png"));
+      K->u->btnExpand->setIcon(QIcon(":/pics/switchexpanded_drawer.svg"));
   } else {
     // "Float", or any possible custom side widget type
     if (shown)

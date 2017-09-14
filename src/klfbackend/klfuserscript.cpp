@@ -19,16 +19,17 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfuserscript.cpp 888 2014-07-24 17:25:51Z phfaist $ */
+/* $Id: klfuserscript.cpp 1019 2017-02-07 06:20:02Z phfaist $ */
 
 #include <QFileInfo>
 #include <QDir>
-#include <QTextDocument> // Qt::escape()
+#include <QDateTime>
+#include <QByteArray>
 
 #include <klfdefs.h>
 #include <klfdebug.h>
-#include <klfdatautil.h>
 #include <klfpobj.h>
+#include <klfdatautil.h>
 
 #include "klfbackend.h"
 #include "klfbackend_p.h"
@@ -37,12 +38,8 @@
 
 /** \page pageUserScript User Scripts
  *
- * \todo ......... WRITE DOC................
+ * Doc here: http://klatexformula.sourceforge.net/doc/user-scripts-devel
  *
- * Format list (e.g. for 'spitsOut()' and 'skipFormats()':
- * \todo FORMAT LIST
- *
- * \bug NEEDS TESTING: user script output formats, skipped formats, parameters, etc.
  */
 
 
@@ -87,12 +84,13 @@ static int read_spec_section(const QString& str, int fromindex, const QRegExp& s
 
 struct KLFUserScriptInfo::Private : public KLFPropertizedObject
 {
-  Private() : KLFPropertizedObject("KLFUserScriptInfo")
+  Private()
+    : KLFPropertizedObject("KLFUserScriptInfo")
   {
     refcount = 0;
-    settings = NULL;
     scriptInfoError = KLFERR_NOERROR;
 
+    registerBuiltInProperty(ExeScript, QLatin1String("ExeScript"));
     registerBuiltInProperty(Category, QLatin1String("Category"));
     registerBuiltInProperty(Name, QLatin1String("Name"));
     registerBuiltInProperty(Author, QLatin1String("Author"));
@@ -101,21 +99,27 @@ struct KLFUserScriptInfo::Private : public KLFPropertizedObject
     registerBuiltInProperty(KLFMinVersion, QLatin1String("KLFMinVersion"));
     registerBuiltInProperty(KLFMaxVersion, QLatin1String("KLFMaxVersion"));
     registerBuiltInProperty(SettingsFormUI, QLatin1String("SettingsFormUI"));
-    registerBuiltInProperty(SpitsOut, QLatin1String("SpitsOut"));
-    registerBuiltInProperty(SkipFormats, QLatin1String("SkipFormats"));
-    registerBuiltInProperty(DisableInputs, QLatin1String("DisableInputs"));
-    registerBuiltInProperty(InputFormUI, QLatin1String("InputFormUI"));
+    registerBuiltInProperty(CanProvideDefaultSettings, QLatin1String("CanProvideDefaultSettings"));
+    registerBuiltInProperty(CategorySpecificXmlConfig, QLatin1String("CategorySpecificXmlConfig"));
+  }
+
+  void clear()
+  {
+    // clear all properties
+    QList<int> idlist = registeredPropertyIdList();
+    for (int k = 0; k < idlist.size(); ++k) {
+      setProperty(idlist[k], QVariant());
+    }
   }
 
   int refcount;
   inline int ref() { return ++refcount; }
   inline int deref() { return --refcount; }
 
-  const KLFBackend::klfSettings *settings;
-
-  QString fname;
+  QString uspath;
   QString normalizedfname;
   QString sname;
+  QString basename;
   int scriptInfoError;
   QString scriptInfoErrorString;
 
@@ -124,158 +128,142 @@ struct KLFUserScriptInfo::Private : public KLFPropertizedObject
   QStringList errors;
 
 
-  void query_script_info(const QVariantMap& usconfig)
+  void _set_xml_read_error(const QString& fullerrmsg)
   {
-    KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+    scriptInfoError = 999;
+    scriptInfoErrorString = fullerrmsg;
+  }
+  void _set_xml_parsing_error(const QString& xmlfname, const QString& errmsg)
+  {
+    scriptInfoError = 999;
+    scriptInfoErrorString = QString("Error parsing scriptinfo XML contents: %1: %2")
+      .arg(xmlfname).arg(errmsg);
+  }
 
-    scriptInfoError = 0;
+  void read_script_info()
+  {
+    scriptInfoError = KLFERR_NOERROR;
     scriptInfoErrorString = QString();
 
-    klfDbg("querying script information for script "<<fname) ;
-
-    QByteArray scriptinfo;
-    //    bool want_full_template = true;
-    { // Query Script Info phase
-      KLFBackendFilterProgram p(QObject::tr("User Script (ScriptInfo)"), settings, false, settings->tempdir);
-      p.resErrCodes[KLFFP_NOSTART] = KLFERR_USERSCRIPT_NORUN;
-      p.resErrCodes[KLFFP_NOEXIT] = KLFERR_USERSCRIPT_NONORMALEXIT;
-      p.resErrCodes[KLFFP_NOSUCCESSEXIT] = KLFERR_PROGERR_USERSCRIPT;
-      p.resErrCodes[KLFFP_NODATA] = KLFERR_USERSCRIPT_NOSCRIPTINFO;
-      p.resErrCodes[KLFFP_DATAREADFAIL] = KLFERR_USERSCRIPT_NOSCRIPTINFO;
-
-      QStringList usConfigEnvList = KLFUserScriptInfo::usConfigToEnvList(usconfig);
-      klfDbg("Using config: "<< usConfigEnvList.join("; ")) ;
-      p.addExecEnviron(usConfigEnvList);
-      
-      p.setArgv(QStringList() << fname << "--scriptinfo" << KLF_VERSION_STRING);
-      
-      bool ok = p.run(QString(), &scriptinfo);
-      if (!ok) {
-	scriptInfoError = p.resultStatus();
-	scriptInfoErrorString = p.resultErrorString();
-        klfWarning("Failed to query scriptinfo: "<<scriptInfoErrorString) ;
-	return;
-      }
-    }
-    scriptinfo.replace("\r\n", "\n");
-    if (scriptinfo.isEmpty()) {
-      scriptinfo = "ScriptInfo\n";
-    }
-    klfDbg("got scriptinfo="<<scriptinfo) ;
-    // parse scriptinfo
-    if (!scriptinfo.startsWith("ScriptInfo\n")) {
-      scriptInfoError = KLFERR_USERSCRIPT_INVALIDSCRIPTINFO;
-      scriptInfoErrorString = QObject::tr("User script did not provide valid --scriptinfo output.");
-      qWarning()<<KLF_FUNC_NAME<<": User script did not provide valid --scriptinfo (missing header line).";
+    QString xmlfname = QDir::toNativeSeparators(uspath + "/scriptinfo.xml");
+    QFile fxml(xmlfname);
+    if ( ! fxml.open(QIODevice::ReadOnly) ) {
+      _set_xml_read_error(QString("Can't open XML file %1: %2").arg(xmlfname).arg(fxml.errorString()));
       return;
     }
-    QList<QByteArray> lines = scriptinfo.split('\n');
-    lines.removeAt(0); // skip of course the 'ScriptInfo\n' line !
-    int k;
-    for (k = 0; k < lines.size(); ++k) {
-      QString line = QString::fromLocal8Bit(lines[k]);
-      if (line.trimmed().isEmpty())
-	continue;
-      //  Key: Value   or
-      //  Key[specifiers]: Value
-      //    Key is [-A-Za-z0-9_.]+
-      //    specifiers (optional) is [-A-Za-z0-9_.,]*, intendend to be a list of comma-separated options
-      //    value is anything until end of line. Use 'base64' specifier if you need to have newlines in the value
-      //        and encode the value as base64.
-      QRegExp rx("([-A-Za-z0-9_.]+)(?:\\[([-A-Za-z0-9_.,]*)\\])?:\\s*(.*)");
-      QRegExp boolrxtrue("(t(rue)?|y(es)?|on|1)");
-      if (!rx.exactMatch(line)) {
-	qWarning()<<KLF_FUNC_NAME<<": User script did not provide valid --scriptinfo.\nCannot parse line: "<<line;
-	scriptInfoError = KLFERR_USERSCRIPT_INVALIDSCRIPTINFO;
-	scriptInfoErrorString = QObject::tr("User script provided invalid --scriptinfo output.", "KLFBackend");
-	return;
-      }
-      QString key = rx.cap(1);
-      QString specstr = rx.cap(2);
-      QStringList specs = specstr.split(',');
-      QString val = rx.cap(3).trimmed();
-      if (val.isEmpty())
-	val = QString(); // empty value is null string
-      if (specs.contains(QLatin1String("base64"))) {
-	val = QString::fromLocal8Bit(QByteArray::fromBase64(val.toLatin1()));
-      }
-      klfDbg("key="<<key<<", value="<<val) ;
-      if (key == QLatin1String("Notice")) {
-	// emit a notice.
-	notices << val;
-	klfDbg("User script notice: "<<fname<< ": "<< val) ;
-      } else if (key == QLatin1String("Warning")) {
-	// emit a warning.
-	warnings << val;
-	klfWarning("User script warning: "<<fname<< ": "<< val) ;
-      } else if (key == QLatin1String("Error")) {
-	// emit an error.
-	errors << val;
-	klfWarning("User script error: "<<fname<< ": "<<val) ;
-      }
-      // now parse and set the property
-      if (key == QLatin1String("Category")) {
-	setProperty(Category, val);
-	klfDbg("Read category: "<<property(Category)) ;
-      } else if (key == QLatin1String("Name")) {
-	setProperty(Name, val);
-	klfDbg("Read name: "<<property(Name)) ;
-      } else if (key == QLatin1String("Author") || key == QLatin1String("Authors")) {
-	setProperty(Author, property(Author).toStringList() + (QStringList()<<val));
-	klfDbg("Read (cumulated) author: "<<property(Author)) ;
-      } else if (key == QLatin1String("Version")) {
-	setProperty(Version, val);
-	klfDbg("Read version: "<<property(Version)) ;
-      } else if (key == QLatin1String("License")) {
-	setProperty(License, val);
-      } else if (key == QLatin1String("KLFMinVersion")) {
-	setProperty(KLFMinVersion, val);
-	klfDbg("Read klfMinVersion: "<<property(KLFMinVersion)) ;
-      } else if (key == QLatin1String("KLFMaxVersion")) {
-	setProperty(KLFMaxVersion, val);
-	klfDbg("Read klfMaxVersion: "<<property(KLFMaxVersion)) ;
-      } else if (key == QLatin1String("SettingsFormUI")) {
-	if ( ! property(SettingsFormUI).toString().isEmpty() ) {
-	  klfWarning("A user script ("<<sname<<") may not specify multiple settings UI forms.") ;
-	}
-	QString uifn = val;
-	if (QFileInfo(uifn).isRelative()) {
-	  uifn = QFileInfo(normalizedfname).dir().filePath(uifn);
-	}
-	setProperty(SettingsFormUI, uifn);
-	klfDbg("Read SettingsFormUI: "<<property(SettingsFormUI)) ;
-      } else if (key == QLatin1String("SpitsOut")) {
-	setProperty(SpitsOut, property(SpitsOut).toStringList() + val.split(QRegExp("(,|\\s+)")));
-      } else if (key == QLatin1String("SkipFormats")) {
-	setProperty(SkipFormats, property(SkipFormats).toStringList() + val.split(QRegExp("(,|\\s+)")));
-      } else if (key == QLatin1String("DisableInputs")) {
-	setProperty(DisableInputs, property(DisableInputs).toStringList() + val.split(QRegExp("(,|\\s+)")));
-      } else if (key == QLatin1String("InputFormUI")) {
-	if ( ! property(InputFormUI).toString().isEmpty() ) {
-	  klfWarning("A user script ("<<sname<<") may not specify multiple input UI forms.") ;
-	}
-	QString uifn = val;
-	if (QFileInfo(uifn).isRelative()) {
-	  uifn = QFileInfo(normalizedfname).dir().filePath(uifn);
-	}
-	setProperty(InputFormUI, uifn);
-	klfDbg("Read InputFormUI: "<<property(SettingsFormUI)) ;
-      }
-      else {
-	klfDbg("Custom userscript info key: "<<key<<", value="<<val);
-	QVariant v = QVariant(val);
-	// if the key is already present, morph the stored value into the first item of a variantlist and append
-	// the new data.
-	if (hasPropertyValue(key) && property(key).type() == QVariant::List) {
-	  setProperty(key, QVariantList() << property(key).toList() << v);
-	} else if (hasPropertyValue(key)) {
-	  setProperty(key, QVariantList() << property(key) << v);
-	} else {
-	  setProperty(key, v);
-	}
-      }
+
+    QDomDocument doc("klfuserscript-info");
+    QString errMsg; int errLine, errCol;
+    bool r = doc.setContent(&fxml, false, &errMsg, &errLine, &errCol);
+    if (!r) {
+      _set_xml_read_error(QString("XML parse error: %1 (file %2 line %3 col %4)")
+                          .arg(errMsg).arg(xmlfname).arg(errLine).arg(errCol));
+      return;
     }
-  }
+    fxml.close();
+
+    QDomElement root = doc.documentElement();
+    if (root.nodeName() != "klfuserscript-info") {
+      _set_xml_parsing_error(xmlfname, QString("expected <klfuserscript-info> as root document element"));
+      return;
+    }
+    
+    // clear all properties
+    clear();
+
+    setProperty(CanProvideDefaultSettings, false);
+
+    // read XML contents
+    QDomNode n;
+    for (n = root.firstChild(); !n.isNull(); n = n.nextSibling()) {
+      // try to convert the node to an element; ignore non-elements
+      if ( n.nodeType() != QDomNode::ElementNode ) {
+        continue;
+      }
+      QDomElement e = n.toElement();
+      if ( e.isNull() ) {
+        continue;
+      }
+      // parse the elements.
+      QString val = e.text();
+      if (val.isEmpty()) {
+	val = QString(); // empty value is null string
+      }
+      if (e.nodeName() == "exe-script") {
+        if (!property(ExeScript).toString().isEmpty()) {
+          _set_xml_parsing_error(xmlfname, QString::fromLatin1("duplicate <exe-script> element"));
+          return;
+        }
+        setProperty(ExeScript, val);
+      } else if (e.nodeName() == "name") {
+        if (!property(Name).toString().isEmpty()) {
+          _set_xml_parsing_error(xmlfname, QString::fromLatin1("duplicate <name> element"));
+          return;
+        }
+        setProperty(Name, val);
+      } else if (e.nodeName() == "author") {
+        setProperty(Author, property(Author).toStringList() + (QStringList()<<val));
+      } else if (e.nodeName() == "version") {
+        if (!property(Version).toString().isEmpty()) {
+          _set_xml_parsing_error(xmlfname, QString::fromLatin1("duplicate <version> element"));
+          return;
+        }
+        setProperty(Version, val);
+      } else if (e.nodeName() == "license") {
+        if (!property(License).toString().isEmpty()) {
+          _set_xml_parsing_error(xmlfname, QString::fromLatin1("duplicate <license> element"));
+          return;
+        }
+        setProperty(License, val);
+      } else if (e.nodeName() == "klf-min-version") {
+        if (!property(KLFMinVersion).toString().isEmpty()) {
+          _set_xml_parsing_error(xmlfname, QString::fromLatin1("duplicate <klf-min-version> element"));
+          return;
+        }
+        setProperty(KLFMinVersion, val);
+      } else if (e.nodeName() == "klf-max-version") {
+        if (!property(KLFMaxVersion).toString().isEmpty()) {
+          _set_xml_parsing_error(xmlfname, QString::fromLatin1("duplicate <klf-max-version> element"));
+          return;
+        }
+        setProperty(KLFMaxVersion, val);
+      } else if (e.nodeName() == "category") {
+        if (!property(Category).toString().isEmpty()) {
+          _set_xml_parsing_error(xmlfname, QString::fromLatin1("duplicate <category> element"));
+          return;
+        }
+        setProperty(Category, val);
+      } else if (e.nodeName() == "settings-form-ui") {
+        if (!property(SettingsFormUI).toString().isEmpty()) {
+          _set_xml_parsing_error(xmlfname, QString::fromLatin1("duplicate <settings-form-ui> element"));
+          return;
+        }
+        setProperty(SettingsFormUI, val);
+      } else if (e.nodeName() == "can-provide-default-settings") {
+        setProperty(CanProvideDefaultSettings, klfLoadVariantFromText(val.toUtf8(), "bool").toBool());
+      } else {
+        const QString category = property(Category).toString();
+        if (e.nodeName() == category) {
+          if (!property(CategorySpecificXmlConfig).toByteArray().isEmpty()) {
+            _set_xml_parsing_error(xmlfname, QString::fromLatin1("duplicate <%1> element")
+                                   .arg(category));
+            return;
+          }
+          // element node matching the category -- keep category-specific config as XML
+          QByteArray xmlrepr;
+          { QTextStream tstream(&xmlrepr);
+            e.save(tstream, 2); }
+          klfDbg("Read category-specific XML: " << xmlrepr);
+          setProperty(CategorySpecificXmlConfig, xmlrepr);
+        } else {
+          _set_xml_parsing_error(xmlfname, QString::fromLatin1("Unexpected element: %1").arg(e.nodeName()));
+          return;
+        }
+      }
+    } // for all elements
+
+    klfDbg("All properties read: \n" << qPrintable(toString()));
+  } // read_script_info()
 
 
   static QMap<QString,KLFRefPtr<Private> > userScriptInfoCache;
@@ -289,17 +277,20 @@ private:
 // static
 QMap<QString,KLFRefPtr<KLFUserScriptInfo::Private> > KLFUserScriptInfo::Private::userScriptInfoCache;
 
+static QString normalizedFn(const QString& userScriptFileName)
+{
+  return QFileInfo(userScriptFileName).canonicalFilePath();
+}
+
 // static
-KLFUserScriptInfo
-KLFUserScriptInfo::forceReloadScriptInfo(const QString& scriptFileName, KLFBackend::klfSettings * settings,
-                                         const QVariantMap& usconfig)
+KLFUserScriptInfo KLFUserScriptInfo::forceReloadScriptInfo(const QString& userScriptFileName)
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
 
-  QString normalizedfn = QFileInfo(scriptFileName).canonicalFilePath();
+  QString normalizedfn = normalizedFn(userScriptFileName);
   Private::userScriptInfoCache.remove(normalizedfn);
 
-  KLFUserScriptInfo usinfo(scriptFileName, settings, usconfig) ;
+  KLFUserScriptInfo usinfo(userScriptFileName) ;
   if (usinfo.scriptInfoError() != KLFERR_NOERROR) {
     klfWarning(qPrintable(usinfo.scriptInfoErrorString()));
   }
@@ -315,40 +306,40 @@ void KLFUserScriptInfo::clearCacheAll()
 
 
 // static
-bool KLFUserScriptInfo::hasScriptInfoInCache(const QString& scriptFileName)
+bool KLFUserScriptInfo::hasScriptInfoInCache(const QString& userScriptFileName)
 {
-  QString normalizedfn = QFileInfo(scriptFileName).canonicalFilePath();
+  QString normalizedfn = normalizedFn(userScriptFileName);
+  klfDbg("userScriptFileName = " << userScriptFileName << "; normalizedfn = " << normalizedfn) ;
+  klfDbg("cache: " << Private::userScriptInfoCache) ;
   return Private::userScriptInfoCache.contains(normalizedfn);
 }
 
-KLFUserScriptInfo::KLFUserScriptInfo(const QString& scriptFileName, const KLFBackend::klfSettings * settings,
-                                     const QVariantMap& usconfig)
+KLFUserScriptInfo::KLFUserScriptInfo(const QString& userScriptFileName)
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
 
-  QString normalizedfn = QFileInfo(scriptFileName).canonicalFilePath();
+  QFileInfo fi(userScriptFileName);
+  QString normalizedfn = fi.canonicalFilePath();
   if (Private::userScriptInfoCache.contains(normalizedfn)) {
     d = Private::userScriptInfoCache[normalizedfn];
   } else {
     d = new KLFUserScriptInfo::Private;
 
-    d()->settings = settings;
-    d()->fname = scriptFileName;
+    d()->uspath = normalizedfn;//userScriptFileName;
     d()->normalizedfname = normalizedfn;
-    d()->sname = QFileInfo(scriptFileName).fileName();
+    d()->sname = fi.fileName();
+    d()->basename = fi.baseName();
 
-    //KLF_ASSERT_NOT_NULL(settings, "Given NULL settings pointer! The KLFUserScript will not be initialized!", ; ) ;
-    if (settings == NULL) {
-      klfWarning("Given NULL settings pointer! The KLFUserScript will not be initialized!");
-    } else {
-      d()->query_script_info(usconfig);
-      Private::userScriptInfoCache[normalizedfn] = d;
+    d()->read_script_info();
+
+    if (d()->scriptInfoError == KLFERR_NOERROR) {
+      Private::userScriptInfoCache[normalizedfn] = d();
     }
   }
 }
 
 KLFUserScriptInfo::KLFUserScriptInfo(const KLFUserScriptInfo& copy)
-  : KLFAbstractPropertizedObject()
+  : KLFAbstractPropertizedObject(copy)
 {
   // will increase the refcount (thanks to KLFRefPtr)
   d = copy.d;
@@ -359,13 +350,17 @@ KLFUserScriptInfo::~KLFUserScriptInfo()
   d.setNull(); // will delete the data if refcount reaches zero (see KLFRefPtr)
 }
 
-QString KLFUserScriptInfo::fileName() const
+QString KLFUserScriptInfo::userScriptPath() const
 {
-  return d()->fname;
+  return d()->uspath;
 }
-QString KLFUserScriptInfo::scriptName() const
+QString KLFUserScriptInfo::userScriptName() const
 {
   return d()->sname;
+}
+QString KLFUserScriptInfo::userScriptBaseName() const
+{
+  return d()->basename;
 }
 
 int KLFUserScriptInfo::scriptInfoError() const
@@ -377,23 +372,121 @@ QString KLFUserScriptInfo::scriptInfoErrorString() const
   return d()->scriptInfoErrorString;
 }
 
+//protected
+void KLFUserScriptInfo::setScriptInfoError(int code, const QString & msg)
+{
+  d()->scriptInfoError = code;
+  d()->scriptInfoErrorString = msg;
+}
 
-QString KLFUserScriptInfo::category() const { return info(Category).toString(); }
-QString KLFUserScriptInfo::name() const { return info(Name).toString(); }
-QString KLFUserScriptInfo::author() const { return info(Author).toStringList().join("; "); }
-QStringList KLFUserScriptInfo::authorList() const { return info(Author).toStringList(); }
-QString KLFUserScriptInfo::version() const { return info(Version).toString(); }
-QString KLFUserScriptInfo::license() const { return info(License).toString(); }
-QString KLFUserScriptInfo::klfMinVersion() const { return info(KLFMinVersion).toString(); }
-QString KLFUserScriptInfo::klfMaxVersion() const { return info(KLFMaxVersion).toString(); }
-QString KLFUserScriptInfo::settingsFormUI() const { return info(SettingsFormUI).toString(); }
-QStringList KLFUserScriptInfo::spitsOut() const { return info(SpitsOut).toStringList(); }
-QStringList KLFUserScriptInfo::skipFormats() const { return info(SkipFormats).toStringList(); }
-QStringList KLFUserScriptInfo::disableInputs() const { return info(DisableInputs).toStringList(); }
-QString KLFUserScriptInfo::inputFormUI() const { return info(InputFormUI).toString(); }
+QString KLFUserScriptInfo::relativeFile(const QString& fname) const
+{
+  return QDir::toNativeSeparators(userScriptPath()+"/"+fname);
+}
+
+QString KLFUserScriptInfo::exeScript() const { return scriptInfo(ExeScript).toString(); }
+QString KLFUserScriptInfo::exeScriptFullPath() const
+{
+  return relativeFile(exeScript());
+}
+
+QString KLFUserScriptInfo::category() const { return scriptInfo(Category).toString(); }
+QString KLFUserScriptInfo::name() const { return scriptInfo(Name).toString(); }
+QString KLFUserScriptInfo::author() const { return scriptInfo(Author).toStringList().join("; "); }
+QStringList KLFUserScriptInfo::authorList() const { return scriptInfo(Author).toStringList(); }
+QString KLFUserScriptInfo::version() const { return scriptInfo(Version).toString(); }
+QString KLFUserScriptInfo::license() const { return scriptInfo(License).toString(); }
+QString KLFUserScriptInfo::klfMinVersion() const { return scriptInfo(KLFMinVersion).toString(); }
+QString KLFUserScriptInfo::klfMaxVersion() const { return scriptInfo(KLFMaxVersion).toString(); }
+QString KLFUserScriptInfo::settingsFormUI() const { return scriptInfo(SettingsFormUI).toString(); }
+
+bool KLFUserScriptInfo::canProvideDefaultSettings() const { return scriptInfo(CanProvideDefaultSettings).toBool(); }
+
+QMap<QString,QVariant> KLFUserScriptInfo::queryDefaultSettings(const KLFBackend::klfSettings * settings) const
+{
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+
+  KLFUserScriptFilterProcess proc(userScriptPath(), settings);
+
+  // since this may be called on start-up, processing app events may lead to process
+  // hanging on mac os x (why???)
+  proc.setProcessAppEvents(false);
+
+  proc.addArgv(QStringList() << QLatin1String("--query-default-settings"));
+
+  // buffers to collect output
+  QByteArray stdoutdata;
+  QByteArray stderrdata;
+  proc.collectStdoutTo(&stdoutdata);
+  proc.collectStderrTo(&stderrdata);
+
+  bool ok = proc.run();
+  if (!ok) {
+    klfWarning("Error querying default config for user script "<<userScriptBaseName()<<": "
+               << qPrintable(proc.resultErrorString())) ;
+    return QMap<QString,QVariant>();
+  }
+
+  klfDbg("stdoutdata = " << stdoutdata) ;
+  klfDbg("stderrdata = " << stderrdata) ;
+
+  klfDbg("Ran script "<<userScriptPath()<<": stdout="<<stdoutdata<<"\n\tstderr="<<stderrdata) ;
 
 
-// KLF_DEFINE_PROPERTY_GET(KLFUserScriptInfo, QList<KLFUserScriptInfo::Param>, paramList) ;
+  // the output may be one of two formats:
+  //  - XML compatible with klf{Save|Load}VariantMap{To|From}XML()
+  //  - simple key=value pairs on separate lines
+  // If the output starts with <?xml then we go for XML, otherwise we try to parse
+  // key=value pairs.
+
+  QByteArray trimmedstdoutdata = stdoutdata.trimmed();
+  if (trimmedstdoutdata.startsWith("<?xml")) {
+    QDomDocument doc("klfuserscript-default-settings");
+    QString errMsg; int errLine, errCol;
+    bool r = doc.setContent(trimmedstdoutdata, false, &errMsg, &errLine, &errCol);
+    if (!r) {
+      klfWarning("XML parse error: "<<qPrintable(errMsg)
+                 <<" ("<<qPrintable(userScriptBaseName())<<" default-settings, line "
+                 <<errLine<<" col "<<errCol<<")") ;
+      return QVariantMap();
+    }
+
+    QDomElement root = doc.documentElement();
+    if (root.nodeName() != "klfuserscript-default-settings") {
+      klfWarning("expected <klfuserscript-default-settings> as root document element");
+      return QVariantMap();
+    }
+    
+    QVariantMap config = klfLoadVariantMapFromXML(root);
+    return config;
+  }
+
+  // otherwise, parse key=value pairs
+
+  // get variables
+  QMap<QString,QVariant> config;
+  foreach (QByteArray line, trimmedstdoutdata.split('\n')) {
+    if (!line.size()) {
+      continue;
+    }
+    int idxeq = line.indexOf('=');
+    if (idxeq == -1) {
+      klfWarning("Invalid line in reported userscript default config: " << line) ;
+      continue;
+    }
+    config[QString::fromUtf8(line.left(idxeq)).trimmed()] = line.mid(idxeq+1).trimmed();
+  }
+
+  return config;
+}
+
+
+
+QByteArray KLFUserScriptInfo::categorySpecificXmlConfig() const
+{
+  return scriptInfo(CategorySpecificXmlConfig).toByteArray();
+}
+
 
 bool KLFUserScriptInfo::hasNotices() const
 {
@@ -416,34 +509,37 @@ KLF_DEFINE_PROPERTY_GET(KLFUserScriptInfo, QStringList, errors) ;
 
 
 
-QVariant KLFUserScriptInfo::info(int propId) const
+QVariant KLFUserScriptInfo::scriptInfo(int propId) const
 {
   return d()->property(propId);
 }
 
-QVariant KLFUserScriptInfo::info(const QString& field) const
+QVariant KLFUserScriptInfo::scriptInfo(const QString& field) const
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
   QString x = field;
 
-  if (x == QLatin1String("Authors"))
+  if (x == QLatin1String("Authors")) {
     x = QLatin1String("Author");
+  }
 
   klfDbg("x="<<x) ;
   int id = d()->propertyIdForName(x);
   if (id < 0) {
-    klfDbg("userscriptinfo does not have any information about "<<field<<" ("<<x<<")");
+    klfDbg("KLFUserScriptInfo for "<<userScriptName()<<" does not have any information about "
+           <<field<<" ("<<x<<")") ;
     return QVariant();
   }
-  return info(id);
+  return scriptInfo(id);
 }
 
-QStringList KLFUserScriptInfo::infosList() const
+QStringList KLFUserScriptInfo::scriptInfosList() const
 {
   return d()->propertyNameList();
 }
 
 QString KLFUserScriptInfo::objectKind() const { return d()->objectKind(); }
+
 
 // protected. Used by eg. KLFExportTypeUserScriptInfo to normalize list property values.
 void KLFUserScriptInfo::internalSetProperty(const QString& key, const QVariant &val)
@@ -461,7 +557,7 @@ static QString escapeListIntoTags(const QStringList& list, const QString& startt
 {
   QString html;
   foreach (QString s, list) {
-    html += starttag + Qt::escape(s) + endtag;
+    html += starttag + s.toHtmlEscaped() + endtag;
   }
   return html;
 }
@@ -475,6 +571,8 @@ QString KLFUserScriptInfo::htmlInfo(const QString& extra_css) const
     "p.msgnotice { color: blue; font-weight: bold; margin: 2px 0px; }\n"
     "p.msgwarning { color: #a06000; font-weight: bold; margin: 2px 0px; }\n"
     "p.msgerror { color: #a00000; font-weight: bold; margin: 2px 0px; }\n"
+    ".scriptinfokey { }\n"
+    ".scriptinfovalue { font-weight: bold; }\n"
     + extra_css + "\n"
     "</style></head>\n"
     "<body>\n";
@@ -490,43 +588,37 @@ QString KLFUserScriptInfo::htmlInfo(const QString& extra_css) const
     txt += escapeListIntoTags(errors(), "<p class=\"msgerror\">", "</p>\n");
   }
 
-  // the name
+  // the user script name (incl ".klfuserscript")
   txt +=
     "<p style=\"-qt-block-indent: 0; text-indent: 0px; margin-top: 8px; margin-bottom: 0px\">\n"
-    "<tt>" + QObject::tr("Script Name:", "[[user script info text]]") + "</tt>&nbsp;&nbsp;"
-    "<span style=\"font-weight:600;\">" + Qt::escape(QFileInfo(fileName()).fileName()) + "</span><br />\n";
+    "<span class=\"scriptinfokey\">" + QObject::tr("Script Name:", "[[user script info text]]")
+    + "</span>&nbsp;&nbsp;"
+    "<span class=\"scriptinfovalue\">" + userScriptName().toHtmlEscaped() + "</span><br />\n";
+
+  // the category
+  txt += "<span class=\"scriptinfokey\">" + QObject::tr("Category:", "[[user script info text]]")
+    + "</span>&nbsp;&nbsp;"
+    "<span class=\"scriptinfovalue\">" + category().toHtmlEscaped() + "</span><br />\n";
 
   if (!version().isEmpty()) {
     // the version
-    txt += "<tt>" + QObject::tr("Version:", "[[user script info text]]") + "</tt>&nbsp;&nbsp;"
-      "<span style=\"font-weight:600;\">" + Qt::escape(version()) + "</span><br />\n";
+    txt += "<span class=\"scriptinfokey\">" + QObject::tr("Version:", "[[user script info text]]")
+      + "</span>&nbsp;&nbsp;"
+      "<span class=\"scriptinfovalue\">" + version().toHtmlEscaped() + "</span><br />\n";
   }
   if (!author().isEmpty()) {
     // the author
-    txt += "<tt>" + QObject::tr("Author:", "[[user script info text]]") + "</tt>&nbsp;&nbsp;"
-      "<span style=\"font-weight:600;\">" + Qt::escape(author()) + "</span><br />\n";
+    txt += "<span class=\"scriptinfokey\">" + QObject::tr("Author:", "[[user script info text]]")
+      + "</span>&nbsp;&nbsp;"
+      "<span class=\"scriptinfovalue\">" + author().toHtmlEscaped() + "</span><br />\n";
   }
-  // the category
-  txt += "<tt>" + QObject::tr("Category:", "[[user script info text]]") + "</tt>&nbsp;&nbsp;"
-    "<span style=\"font-weight:600;\">" + Qt::escape(category()) + "</span><br />\n";
 
   if (!license().isEmpty()) {
     // the license
-    txt += "<tt>" + QObject::tr("License:", "[[user script info text]]") + "</tt>&nbsp;&nbsp;"
-      "<span style=\"font-weight:600;\">" + Qt::escape(license()) + "</span><br />\n";
+    txt += "<span class=\"scriptinfokey\">" + QObject::tr("License:", "[[user script info text]]")
+      + "</span>&nbsp;&nbsp;"
+      "<span class=\"scriptinfovalue\">" + license().toHtmlEscaped() + "</span><br />\n";
   }
-  if (!spitsOut().isEmpty()) {
-    // the output formats
-    txt += "<tt>" + QObject::tr("Provides Formats:", "[[user script info text]]") + "</tt>&nbsp;&nbsp;"
-      "<span style=\"font-weight:600;\">" + Qt::escape(spitsOut().join(", ")) + "</span><br />\n";
-  }
-  if (!skipFormats().isEmpty()) {
-    // the skipped formats
-    txt += "<tt>" + QObject::tr("Skipped Formats:", "[[user script info text]]") + "</tt>&nbsp;&nbsp;"
-      "<span style=\"font-weight:600;\">" + Qt::escape(skipFormats().join(", ")) + "</span><br />\n";
-  }
-
-  /** \todo format extra non-standard properties */
 
   return txt;
 }
@@ -549,6 +641,195 @@ QStringList KLFUserScriptInfo::usConfigToEnvList(const QVariantMap& usconfig)
 }
 
 
+inline QStringList space_sep_values(const QString& val)
+{
+  return val.split(QRegExp("\\s+"), QString::SkipEmptyParts);
+}
+
+
+
+
+struct KLFBackendEngineUserScriptInfoPrivate : public KLFPropertizedObject
+{
+  KLF_PRIVATE_INHERIT_HEAD(KLFBackendEngineUserScriptInfo,
+                           : KLFPropertizedObject("KLFBackendEngineUserScriptInfo"))
+  {
+    registerBuiltInProperty(KLFBackendEngineUserScriptInfo::SpitsOut, QLatin1String("SpitsOut"));
+    registerBuiltInProperty(KLFBackendEngineUserScriptInfo::SkipFormats, QLatin1String("SkipFormats"));
+    registerBuiltInProperty(KLFBackendEngineUserScriptInfo::DisableInputs, QLatin1String("DisableInputs"));
+    registerBuiltInProperty(KLFBackendEngineUserScriptInfo::InputFormUI, QLatin1String("InputFormUI"));
+  }
+  void clear()
+  {
+    // clear all properties
+    QList<int> idlist = registeredPropertyIdList();
+    for (int k = 0; k < idlist.size(); ++k) {
+      setProperty(idlist[k], QVariant());
+    }
+  }
+
+  void _set_xml_parsing_error(const QString& errmsg)
+  {
+    K->setScriptInfoError(1001, QString("Error parsing klf-backend-engine XML config: %1: %2")
+                          .arg(K->userScriptBaseName()).arg(errmsg));
+  }
+  void parse_category_config(const QByteArray & ba)
+  {
+    QDomDocument doc("klf-backend-engine");
+    QString errMsg; int errLine, errCol;
+    bool r = doc.setContent(ba, false, &errMsg, &errLine, &errCol);
+    if (!r) {
+      K->setScriptInfoError(
+          1001,
+          QString("XML parse error: %1 (klf-backend-engine in %2, relative line %3 col %4)")
+          .arg(errMsg).arg(K->userScriptBaseName()).arg(errLine).arg(errCol));
+      return;
+    }
+
+    QDomElement root = doc.documentElement();
+    if (root.nodeName() != "klf-backend-engine") {
+      _set_xml_parsing_error(QString("expected <klf-backend-engine> element"));
+      return;
+    }
+    
+    // clear all properties
+    clear();
+
+    // read XML contents
+    QDomNode n;
+    for (n = root.firstChild(); !n.isNull(); n = n.nextSibling()) {
+      // try to convert the node to an element; ignore non-elements
+      if ( n.nodeType() != QDomNode::ElementNode ) {
+        continue;
+      }
+      QDomElement e = n.toElement();
+      if ( e.isNull() ) {
+        continue;
+      }
+      // parse the elements.
+      QString val = e.text();
+      if (val.isEmpty()) {
+	val = QString(); // empty value is null string
+      }
+      if (e.nodeName() == "spits-out") {
+        if (!property(KLFBackendEngineUserScriptInfo::SpitsOut).toStringList().isEmpty()) {
+          _set_xml_parsing_error(QString("duplicate <spits-out> element"));
+          return;
+        }
+        setProperty(KLFBackendEngineUserScriptInfo::SpitsOut, space_sep_values(val));
+      } else if (e.nodeName() == "skip-formats") {
+        if (!property(KLFBackendEngineUserScriptInfo::SkipFormats).toString().isEmpty()) {
+          _set_xml_parsing_error(QString("duplicate <skip-formats> element"));
+          return;
+        }
+        QStringList lst;
+        if (e.hasAttribute("selector")) {
+          // all-except -> ALL_EXCEPT
+          QString s = e.attribute("selector").toUpper();
+          lst << space_sep_values(s.replace('-', '_'));
+        }
+        lst << space_sep_values(val);
+        setProperty(KLFBackendEngineUserScriptInfo::SkipFormats, lst);
+      } else if (e.nodeName() == "disable-inputs") {
+        if (!property(KLFBackendEngineUserScriptInfo::DisableInputs).toStringList().isEmpty()) {
+          _set_xml_parsing_error(QString("duplicate <disable-inputs> element"));
+          return;
+        }
+        QStringList lst;
+        if (e.hasAttribute("selector")) {
+          // all-except -> ALL_EXCEPT
+          QString s = e.attribute("selector").toUpper();
+          lst << space_sep_values(s.replace('-', '_'));
+        }
+        lst << space_sep_values(val);
+        setProperty(KLFBackendEngineUserScriptInfo::DisableInputs, lst);
+      } else if (e.nodeName() == "input-form-ui") {
+        if (!property(KLFBackendEngineUserScriptInfo::InputFormUI).toStringList().isEmpty()) {
+          _set_xml_parsing_error(QString("duplicate <input-form-ui> element"));
+          return;
+        }
+        setProperty(KLFBackendEngineUserScriptInfo::InputFormUI, val);
+      } else {
+        _set_xml_parsing_error(QString("Found unexpected element: %1").arg(e.nodeName()));
+        return;
+      }
+    }
+
+    klfDbg("Read all klfbackend-engine properties:\n" << qPrintable(toString()));
+  }
+};
+
+
+
+KLFBackendEngineUserScriptInfo::KLFBackendEngineUserScriptInfo(const QString& uspath)
+  : KLFUserScriptInfo(uspath)
+{
+  KLF_INIT_PRIVATE(KLFBackendEngineUserScriptInfo) ;
+
+  if (category() != "klf-backend-engine") {
+    klfWarning("KLFBackendEngineUserScriptInfo instantiated for user script "
+               << uspath << ", which is of category " << category()) ;
+  } else {
+    d->parse_category_config(categorySpecificXmlConfig());
+  }
+}
+
+KLFBackendEngineUserScriptInfo::~KLFBackendEngineUserScriptInfo()
+{
+  KLF_DELETE_PRIVATE ;
+}
+
+
+
+QStringList KLFBackendEngineUserScriptInfo::spitsOut() const
+{
+  return klfBackendEngineInfo(SpitsOut).toStringList();
+}
+QStringList KLFBackendEngineUserScriptInfo::skipFormats() const
+{
+  return klfBackendEngineInfo(SkipFormats).toStringList();
+}
+QStringList KLFBackendEngineUserScriptInfo::disableInputs() const
+{
+  return klfBackendEngineInfo(DisableInputs).toStringList();
+}
+QString KLFBackendEngineUserScriptInfo::inputFormUI() const
+{
+  return klfBackendEngineInfo(InputFormUI).toString();
+}
+
+
+QVariant KLFBackendEngineUserScriptInfo::klfBackendEngineInfo(int propId) const
+{
+  return d->property(propId);
+}
+
+QVariant KLFBackendEngineUserScriptInfo::klfBackendEngineInfo(const QString& field) const
+{
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  QString x = field;
+
+  klfDbg("x="<<x) ;
+  int id = d->propertyIdForName(x);
+  if (id < 0) {
+    klfDbg("KLFBackendEngineUserScriptInfo for "<<userScriptName()<<" does not have any information about "
+           <<field<<" ("<<x<<")") ;
+    return QVariant();
+  }
+  return scriptInfo(id);
+}
+
+QStringList KLFBackendEngineUserScriptInfo::klfBackendEngineInfosList() const
+{
+  return d->propertyNameList();
+}
+
+
+
+
+
+
+
 
 
 
@@ -562,20 +843,28 @@ struct KLFUserScriptFilterProcessPrivate
   }
 
   KLFUserScriptInfo * usinfo;
+
+  static QStringList log;
 };
 
-KLFUserScriptFilterProcess::KLFUserScriptFilterProcess(const QString& scriptFileName,
+// static
+QStringList KLFUserScriptFilterProcessPrivate::log = QStringList();
+
+
+KLFUserScriptFilterProcess::KLFUserScriptFilterProcess(const QString& userScriptFileName,
 						       const KLFBackend::klfSettings * settings)
-  : KLFFilterProcess("User Script " + scriptFileName, settings)
+  : KLFFilterProcess("User Script " + userScriptFileName, settings)
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME);
-  klfDbg("scriptFileName= "<<scriptFileName) ;
+  klfDbg("userScriptFileName= "<<userScriptFileName) ;
 
   KLF_INIT_PRIVATE(KLFUserScriptFilterProcess) ;
 
-  d->usinfo = new KLFUserScriptInfo(scriptFileName, settings);
+  d->usinfo = new KLFUserScriptInfo(userScriptFileName);
 
-  setArgv(QStringList() << d->usinfo->fileName());
+  QString exescript = d->usinfo->exeScriptFullPath();
+  klfDbg("exescript = " << exescript) ;
+  setArgv(QStringList() << exescript);
 }
 
 
@@ -589,4 +878,71 @@ void KLFUserScriptFilterProcess::addUserScriptConfig(const QVariantMap& usconfig
 {
   QStringList envlist = KLFUserScriptInfo::usConfigToEnvList(usconfig);
   addExecEnviron(envlist);
+}
+
+
+bool KLFUserScriptFilterProcess::do_run(const QByteArray& indata, const QMap<QString, QByteArray*> outdatalist)
+{
+  bool ret = KLFFilterProcess::do_run(indata, outdatalist);
+
+  // for user script debugging
+  QString thislog = QString::fromLatin1("<h1 class=\"userscript-run\">")
+    + QObject::tr("Output from %1", "KLFUserScriptFilterProcess").arg(QLatin1String("<span class=\"userscriptname\">")
+                                                                      +d->usinfo->userScriptBaseName().toHtmlEscaped()
+                                                                      +QLatin1String("</span>")) +
+    QLatin1String("</h1>\n") +
+    QLatin1String("<p class=\"userscript-run-datetime\">") +
+    QDateTime::currentDateTime().toString(Qt::DefaultLocaleLongDate).toHtmlEscaped()
+    + QLatin1String("</p>") ;
+  
+  // error message, if any
+  QString errstr = resultErrorString();
+  if (errstr.size()) {
+    thislog += QString::fromLatin1("<div class=\"userscript-error\">%1</div>").arg(errstr); // errstr is already HTML
+  }
+
+  QString templ = QString::fromLatin1("<p><span class=\"output-type\">%1</span>\n"
+                                      "<pre class=\"output\">%2</pre></p>\n") ;
+
+  QByteArray bstdout = collectedStdout();
+  if (bstdout.size()) {
+    thislog += templ.arg("STDOUT").arg(QString::fromLocal8Bit(bstdout).toHtmlEscaped());
+  }
+  QByteArray bstderr = collectedStderr();
+  if (bstderr.size()) {
+    thislog += templ.arg("STDERR").arg(QString::fromLocal8Bit(bstderr).toHtmlEscaped());
+  }
+
+  // start discarding old logs after 255 entries
+  if (KLFUserScriptFilterProcessPrivate::log.size() > 255) {
+    KLFUserScriptFilterProcessPrivate::log.erase(KLFUserScriptFilterProcessPrivate::log.begin());
+  }
+
+  KLFUserScriptFilterProcessPrivate::log << thislog;
+
+  return ret;
+}
+
+
+QString KLFUserScriptFilterProcess::getUserScriptLogHtml(bool include_head)
+{
+  QString loghtml;
+  QStringList::const_iterator it = KLFUserScriptFilterProcessPrivate::log.cend();
+  while (it != KLFUserScriptFilterProcessPrivate::log.cbegin()) {
+    --it;
+    loghtml += *it;
+  }
+  if (!include_head) {
+    return loghtml;
+  }
+  return QLatin1String("<html><head>"
+                       "<meta charset=\"utf-8\">"
+                       "<title>User Script Log</title>"
+                       "<style type=\"text/css\">"
+                       ".userscript-run { font-weight: bold; font-size: 2em; } "
+                       ".userscriptname { font: monospace; } "
+                       ".output-type { font-weight: bold; } "
+                       "</style>"
+                       "</head>"
+                       "<body>") + loghtml + QLatin1String("</body></html>") ;
 }

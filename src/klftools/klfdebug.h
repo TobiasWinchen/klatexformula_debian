@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdebug.h 875 2014-06-15 18:18:48Z phfaist $ */
+/* $Id: klfdebug.h 963 2016-12-27 11:28:39Z phfaist $ */
 
 #ifndef KLFDEBUG_H
 #define KLFDEBUG_H
@@ -211,14 +211,6 @@ KLF_EXPORT  QDebug
   KLF_ASSERT_CONDITION((ptr) != NULL, msg, failaction)
 
 
-
-#if defined(QT_NO_DEBUG_OUTPUT)
-// Qt fix: this line is needed in non-debug output mode (?)
-class QVariant;
-inline QDebug& operator<<(QDebug& str, const QVariant& ) { return str; }
-class QModelIndex;
-inline QDebug& operator<<(QDebug& str, const QModelIndex& ) { return str; }
-#endif
 
 
 #endif

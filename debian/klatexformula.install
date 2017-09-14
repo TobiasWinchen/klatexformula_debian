@@ -1,8 +1,7 @@
 usr/bin/klatexformula
 usr/bin/klatexformula_cmdl
 usr/share/applications/*
-usr/share/icons/*
-usr/share/kde4/*
 usr/share/mime/*
+usr/share/man/*
 usr/share/pixmaps/*
 

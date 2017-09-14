@@ -5,18 +5,19 @@
 #
 # Usage: i18nupdate.pl <filename_XX.ts>
 #
-# $Id: i18nupdate.pl 889 2014-07-24 17:31:47Z phfaist $
+# $Id: i18nupdate.pl 952 2016-12-26 07:36:43Z phfaist $
 
 use Getopt::Long qw /:config bundling /;
 
 # If 1, obsolete texts are kept to be translated.
-$use_obsolete = 1;
+$use_obsolete = 0;
 
 sub print_usage {
-  print STDERR "Usage: $0 [--(no)obsolete] file.ts\n";
+  print STDERR "Usage: $0 file.ts\n";
 };
 
-GetOptions('obsolete!' => \$use_obsolete, 'help' => sub { print_usage; exit(0); } );
+GetOptions(#'obsolete!' => \$use_obsolete,
+           'help' => sub { print_usage; exit(0); } );
 
 $tsfile = $ARGV[0] if $#ARGV >= 0;
 if ($#ARGV < 0 || $tsfile eq "") {

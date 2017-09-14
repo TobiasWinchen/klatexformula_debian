@@ -19,11 +19,13 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibdbengine.cpp 698 2011-08-08 08:28:12Z phfaist $ */
+/* $Id: klflibdbengine.cpp 991 2017-01-04 09:15:43Z phfaist $ */
 
 #include <QDebug>
 #include <QApplication>  // qApp
 #include <QString>
+#include <QUrl>
+#include <QUrlQuery>
 #include <QBuffer>
 #include <QFile>
 #include <QByteArray>
@@ -88,10 +90,12 @@
 static QByteArray image_data(const QImage& img, const char *format)
 {
   QByteArray data;
-  QBuffer buf(&data);
-  buf.open(QIODevice::WriteOnly);
-  img.save(&buf, format);
-  buf.close();
+  {
+    QBuffer buf(&data);
+    buf.open(QIODevice::WriteOnly);
+    img.save(&buf, format);
+    buf.close();
+  }
   return data;
 }
 
@@ -101,6 +105,7 @@ static QByteArray metatype_to_data(const T& object)
   QByteArray data;
   {
     QDataStream stream(&data, QIODevice::WriteOnly);
+    stream.setVersion(QDataStream::Qt_4_4) ;
     stream << object;
     // force close of buffer in destroying stream
   }
@@ -112,6 +117,7 @@ static T metatype_from_data(const QByteArray& data)
 {
   T object;
   QDataStream stream(data);
+  stream.setVersion(QDataStream::Qt_4_4) ;
   stream >> object;
   return object;
 }
@@ -145,19 +151,22 @@ KLFLibDBEngine * KLFLibDBEngine::openUrl(const QUrl& givenurl, QObject *parent)
   bool accessshared = false;
 
   QUrl url = givenurl;
+  QUrlQuery urlq(url);
 
-  if (url.hasQueryItem("klfDefaultSubResource")) {
-    QString defaultsubres = url.queryItemValue("klfDefaultSubResource");
+  if (urlq.hasQueryItem("klfDefaultSubResource")) {
+    QString defaultsubres = urlq.queryItemValue("klfDefaultSubResource");
     // force lower-case default sub-resource
-    url.removeAllQueryItems("klfDefaultSubResource");
-    url.addQueryItem("klfDefaultSubResource", defaultsubres.toLower());
+    urlq.removeAllQueryItems("klfDefaultSubResource");
+    urlq.addQueryItem("klfDefaultSubResource", defaultsubres.toLower());
   }
+  url.setQuery(urlq);
 
   QSqlDatabase db;
   if (url.scheme() == "klf+sqlite") {
     QUrl dburl = url;
-    dburl.removeAllQueryItems("klfDefaultSubResource");
-    dburl.removeAllQueryItems("klfReadOnly");
+    urlq.removeAllQueryItems("klfDefaultSubResource");
+    urlq.removeAllQueryItems("klfReadOnly");
+    dburl.setQuery(urlq);
     accessshared = false;
     QString dburlstr = dburl.toString();
     QString path = klfUrlLocalFilePath(dburl);
@@ -232,7 +241,10 @@ KLFLibDBEngine * KLFLibDBEngine::createSqlite(const QString& fileName, const QSt
   if (subrestitle.isEmpty())
     subrestitle = subresname;
 
-  url.addQueryItem("klfDefaultSubResource", subresname);
+  QUrlQuery urlq(url);
+  urlq.addQueryItem("klfDefaultSubResource", subresname);
+  url.setQuery(urlq);
+
   if (subresname.contains("\"")) {
     // SQLite table name cannot contain double-quote char (itself is used to escape the table name!)
     qWarning()<<KLF_FUNC_NAME<<"`\"' character is not allowed in SQLITE database tables (<-> library sub-resources).";

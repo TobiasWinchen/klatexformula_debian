@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfstyle.h 911 2014-08-10 22:24:01Z phfaist $ */
+/* $Id: klfstyle.h 991 2017-01-04 09:15:43Z phfaist $ */
 
 #ifndef KLFSTYLE_H
 #define KLFSTYLE_H
@@ -149,6 +149,15 @@ KLF_EXPORT QDataStream& operator<<(QDataStream& stream, const KLFStyle& style);
 KLF_EXPORT QDataStream& operator>>(QDataStream& stream, KLFStyle& style);
 // exact matches
 KLF_EXPORT bool operator==(const KLFStyle& a, const KLFStyle& b);
+
+// for debugging
+#ifdef KLF_DEBUG
+KLF_EXPORT QDebug& operator<<(QDebug& stream, const KLFStyle& style);
+KLF_EXPORT QDebug& operator<<(QDebug& stream, const KLFStyle::BBoxExpand& bbox);
+#else
+inline QDebug& operator<<(QDebug& stream, const KLFStyle & ) { return stream; }
+inline QDebug& operator<<(QDebug& stream, const KLFStyle::BBoxExpand & ) { return stream; }
+#endif
 
 
 // legacy style

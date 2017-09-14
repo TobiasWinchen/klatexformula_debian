@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflatexedit.h 866 2013-11-24 13:56:22Z phfaist $ */
+/* $Id: klflatexedit.h 953 2016-12-27 00:13:10Z phfaist $ */
 
 #ifndef KLFLATEXEDIT_H
 #define KLFLATEXEDIT_H
@@ -42,7 +42,7 @@ class KLFDropDataHandler;
 // ------------------------------------------------
 
 
-class KLFLatexEditPrivate;
+struct KLFLatexEditPrivate;
 
 /** \brief A text edit field that edits latex code.
  *
@@ -124,7 +124,7 @@ private:
 };
 
 
-class KLFLatexParenSpecsPrivate;
+struct KLFLatexParenSpecsPrivate;
 
 class KLF_EXPORT KLFLatexParenSpecs
 {

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfadvancedconfigeditor.h 792 2012-06-09 20:42:41Z phfaist $ */
+/* $Id: klfadvancedconfigeditor.h 988 2017-01-02 09:25:34Z phfaist $ */
 
 #ifndef KLFADVANCEDCONFIGEDITOR_H
 #define KLFADVANCEDCONFIGEDITOR_H
@@ -30,11 +30,11 @@
 #include <klfcolorchooser.h>
 #include <klfconfigbase.h>
 
-class KLFAdvancedConfigEditorPrivate;
+struct KLFAdvancedConfigEditorPrivate;
 
 namespace Ui { class KLFAdvancedConfigEditor; };
 
-class KLFAdvancedConfigEditor : public QDialog
+class KLF_EXPORT KLFAdvancedConfigEditor : public QDialog
 {
   Q_OBJECT
 public:

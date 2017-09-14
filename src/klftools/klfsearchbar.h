@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfsearchbar.h 880 2014-06-15 20:26:28Z phfaist $ */
+/* $Id: klfsearchbar.h 962 2016-12-27 10:25:56Z phfaist $ */
 
 
 #ifndef KLFSEARCHBAR_H
@@ -429,7 +429,7 @@ protected:
 
 
 
-class KLFSearchBarPrivate;
+struct KLFSearchBarPrivate;
 
 //! An Search Bar for Incremental Search
 /** This widget provides a set of controls an incremental search. This includes a line edit to input

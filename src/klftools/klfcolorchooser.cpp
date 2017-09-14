@@ -19,18 +19,18 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfcolorchooser.cpp 866 2013-11-24 13:56:22Z phfaist $ */
+/* $Id: klfcolorchooser.cpp 987 2017-01-01 09:36:28Z phfaist $ */
 
 #include <stdio.h>
 
 #include <QAction>
 #include <QMenu>
 #include <QDebug>
-#include <QStylePainter>
 #include <QColorDialog>
 #include <QPaintEvent>
 #include <QStyle>
-#include <QPlastiqueStyle>
+#include <QStylePainter>
+#include <QStyleFactory>
 #include <QStyleOptionButton>
 #include <QRegExp>
 
@@ -244,13 +244,15 @@ void KLFColorChooseWidgetPane::paintEvent(QPaintEvent */*e*/)
   if ( _colorcomponent != "fix" ) {
     p.setPen(QPen(hairscol, 1.f, Qt::DotLine));
     x = (int)(valueA()/xfac);
-    if (x < 0) x = 0; if (x >= width()) x = width()-1;
+    if (x < 0) { x = 0; }
+    if (x >= width()) { x = width()-1; }
     p.drawLine(x, 0, x, height());
   }
   if ( _colorcomponent_b != "fix" ) {
     p.setPen(QPen(hairscol, 1.f, Qt::DotLine));
     y = (int)(valueB()/yfac);
-    if (y < 0) y = 0; if (y >= height()) y = height()-1;
+    if (y < 0) { y = 0; }
+    if (y >= height()) { y = height()-1; }
     p.drawLine(0, height()-y-1, width(), height()-y-1);
   }
   // draw a focus rectangle if we have focus
@@ -276,8 +278,9 @@ void KLFColorChooseWidgetPane::mouseMoveEvent(QMouseEvent *e)
   double yfac = (double)valueBMax() / (_img.height()-1);
   int x = e->pos().x();
   int y = height() - e->pos().y() - 1;
-  if (x < 0) x = 0; if (x >= width()) x = width()-1;
-  if (y < 0) y = 0; if (y >= height()) y = height()-1;
+  if (x < 0) { x = 0; }
+  if (x >= width()) { x = width()-1; }
+  if (y < 0) { y = 0; } if (y >= height()) { y = height()-1; }
 
   setColor(colorFromValues(_color, (int)(x*xfac), (int)(y*yfac)));
 }
@@ -789,11 +792,11 @@ void KLFColorChooseWidget::setColor(const QColor& color)
 void KLFColorChooseWidget::setAlphaEnabled(bool enabled)
 {
   _alphaenabled = enabled;
-  u->spnAlpha->setShown(enabled);
-  u->lblAlpha->setShown(enabled);
-  u->mAlphaPane->setShown(enabled);
-  u->lblsAlpha->setShown(enabled);
-  u->mAlphaSlider->setShown(enabled);
+  u->spnAlpha->setVisible(enabled);
+  u->lblAlpha->setVisible(enabled);
+  u->mAlphaPane->setVisible(enabled);
+  u->lblsAlpha->setVisible(enabled);
+  u->mAlphaSlider->setVisible(enabled);
   if (!enabled) {
     _color.setAlpha(255);
     setColor(_color);
@@ -934,9 +937,10 @@ KLFColorChooser::KLFColorChooser(QWidget *parent)
   _makemenu();
   _setpix();
 
-#ifdef Q_WS_MAC
-  if ( mReplaceButtonStyle == NULL )
-    mReplaceButtonStyle = new QPlastiqueStyle;
+#ifdef KLF_WS_MAC
+  if ( mReplaceButtonStyle == NULL ) {
+    mReplaceButtonStyle = QStyleFactory::create("fusion");//new QPlastiqueStyle; // deprecated in Qt5
+  }
   setStyle(mReplaceButtonStyle);
 #endif
 }
@@ -1135,6 +1139,7 @@ void KLFColorChooser::_setpix()
 QPixmap KLFColorChooser::colorPixmap(const QColor& color, const QSize& size)
 {
   QPixmap pix = QPixmap(size);
+  pix.fill(Qt::transparent);
   if (color.isValid()) {
     pix.fill(Qt::black);
     QPainter p(&pix);
@@ -1154,15 +1159,15 @@ QPixmap KLFColorChooser::colorPixmap(const QColor& color, const QSize& size)
     // draw "default"/"transparent" pixmap
     QPainter p(&pix);
     p.setRenderHint(QPainter::Antialiasing);
-    QLinearGradient pgrad(0, 0, 0, 1);
-    pgrad.setColorAt(0, QColor(160,160,185));
-    pgrad.setColorAt(1, QColor(220,220,230));
-    pgrad.setCoordinateMode(QGradient::StretchToDeviceMode);
-    p.fillRect(0, 0, pix.width(), pix.height(), pgrad);
+    //    QLinearGradient pgrad(0, 0, 0, 1);
+    //    pgrad.setColorAt(0, QColor(160,160,185));
+    //    pgrad.setColorAt(1, QColor(220,220,230));
+    //    pgrad.setCoordinateMode(QGradient::StretchToDeviceMode);
+    //    p.fillRect(0, 0, pix.width(), pix.height(), pgrad);
 
-    QPen pen(QColor(127,0,0), 0.5f, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+    QPen pen(QColor(127,0,0), 2.f, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
     p.setPen(pen);
-    p.drawLine(QPointF(0,0), QPointF(pix.width(), pix.height()));
+    //    p.drawLine(QPointF(0,0), QPointF(pix.width(), pix.height()));
     p.drawLine(QPointF(0,pix.height()), QPointF(pix.width(), 0));
 
     /*

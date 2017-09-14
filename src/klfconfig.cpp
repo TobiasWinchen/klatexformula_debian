@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfconfig.cpp 901 2014-07-29 22:35:04Z phfaist $ */
+/* $Id: klfconfig.cpp 1014 2017-02-07 03:26:28Z phfaist $ */
 
 #include <iostream>
 
@@ -34,13 +34,16 @@
 #include <QString>
 #include <QListView> // icon view flow
 #include <QLocale>
-#include <QDesktopServices> // "My Documents" or "Documents" directory
+#include <QStandardPaths> // "My Documents" or "Documents" directory
 #include <QDesktopWidget>
 #include <QDomDocument>
 #include <QDomElement>
 
 #include <klfconfigbase.h>
 #include <klfutil.h>
+#include <klfuserscript.h>
+#include <klfbackend.h>
+#include <klfblockprocess.h>
 #include "klfmain.h"
 #include "klfmainwin.h"
 #include "klfconfig.h"
@@ -48,8 +51,10 @@
 
 
 
-static const char * __klf_fallback_share_dir =
-#if defined(Q_OS_WIN32) || defined(Q_OS_WIN64)  // windows
+static const char * klf_compiletime_share_dir =
+#if defined(KLF_SHARE_DIR)  // defined by the CMake build system
+        KLF_SHARE_DIR;
+#elif defined(Q_OS_WIN32) || defined(Q_OS_WIN64)  // windows
 	"..";   // note: program is in a bin/ directory by default (this is for nsis-installer)
 #elif defined(Q_OS_MAC) || defined(Q_OS_DARWIN) // Mac OS X
 	"../Resources";
@@ -58,33 +63,57 @@ static const char * __klf_fallback_share_dir =
 #endif
 
 
-static const char * __klf_share_dir =
-#ifdef KLF_SHARE_DIR  // defined by the build system
-	KLF_SHARE_DIR;
+// in the future this variable may be set by main.cpp by a cmd line option?
+QString klf_override_share_dir = QString();
+
+
+static QString klf_share_dir_abspath()
+{
+  // Note: klfPrefixedPath() expands ~/ into the user's home directory, and considers
+  // relative paths as relative with respec to the application executable location.
+
+  klfDbg("klf_override_share_dir="<<klf_override_share_dir<<"; "
+         <<"klf_compiletime_share_dir="<<QString::fromUtf8(klf_compiletime_share_dir)) ;
+
+  if (klf_override_share_dir.size()) {
+    return klfPrefixedPath(klf_override_share_dir);
+  }
+  QByteArray val = qgetenv("KLF_SHARE_DIR");
+  if (!val.isEmpty()) {
+    return klfPrefixedPath(QString::fromLocal8Bit(val));
+  }
+  return klfPrefixedPath(QString::fromLocal8Bit(klf_compiletime_share_dir));
+}
+
+
+static const char * klf_compiletime_home_config_dir =
+#if defined(KLF_HOME_CONFIG_DIR) // maybe a CMake option in the future -- FIXME -- use CMAKE_CXX_FLAGS for now
+           KLF_HOME_CONFIG_DIR ;
 #else
-        NULL;
+           "~/.klatexformula" ;
 #endif
 
-static QString __klf_share_dir_cached;
+// in the future this variable may be set by main.cpp by a cmd line option?
+QString klf_override_home_config_dir = QString();
 
-KLF_EXPORT QString klf_share_dir_abspath()
+static QString klf_home_config_dir_abspath()
 {
-  if (!__klf_share_dir_cached.isEmpty())
-    return __klf_share_dir_cached;
+  // Note: klfPrefixedPath() expands ~/ into the user's home directory, and considers
+  // relative paths as relative with respec to the application executable location.
 
-  klfDbg(klfFmtCC("cmake-share-dir=%s; fallback-share-dir=%s\n", __klf_share_dir,
-		  __klf_fallback_share_dir)) ;
+  klfDbg("klf_override_home_config_dir="<<klf_override_home_config_dir) ;
+  if (klf_override_home_config_dir.size()) {
+    return klfPrefixedPath(klf_override_home_config_dir);
+  }
+  QByteArray val = qgetenv("KLF_HOME_CONFIG_DIR");
+  if (!val.isEmpty()) {
+    return klfPrefixedPath(QString::fromLocal8Bit(val));
+  }
 
-  QString sharedir;
-  if (__klf_share_dir != NULL)
-    sharedir = QLatin1String(__klf_share_dir);
-  else
-    sharedir = QLatin1String(__klf_fallback_share_dir);
-
-  __klf_share_dir_cached = klfPrefixedPath(sharedir); // prefixed by app-dir-path
-  klfDbg("share dir is "<<__klf_share_dir_cached) ;
-  return __klf_share_dir_cached;
+  return klfPrefixedPath(QString::fromLocal8Bit(klf_compiletime_home_config_dir));
 }
+
+
 
 
 
@@ -143,24 +172,24 @@ static QList<T> settings_read_list(QSettings& s, const QString& basename, const 
     found_fcode = true;							\
   }
 
-
 void KLFConfig::loadDefaults()
 {
   KLF_DEBUG_TIME_BLOCK(KLF_FUNC_NAME) ;
 
   KLFCONFIGPROP_INIT_CONFIG(this) ;
 
-  homeConfigDir = QDir::homePath() + "/.klatexformula";
+  homeConfigDir = klf_home_config_dir_abspath();
+  klfDbg("Home config dir = " << homeConfigDir) ;
+
   globalShareDir = klf_share_dir_abspath();
+  klfDbg("Global share dir = " << globalShareDir) ;
+  //DEBUG:
+  //QMessageBox::information(0, "", QString("global share dir=")+globalShareDir);
+
   homeConfigSettingsFile = homeConfigDir + "/klatexformula.conf";
-  homeConfigSettingsFileIni = homeConfigDir + "/config";
-  homeConfigDirRCCResources = homeConfigDir + "/rccresources";
-  homeConfigDirPlugins = homeConfigDir + "/plugins";
-  homeConfigDirPluginData = homeConfigDir + "/plugindata";
+  homeConfigSettingsFileIni = homeConfigDir + "/config";// config from a really old version of klf .... 
   homeConfigDirI18n = homeConfigDir + "/i18n";
   homeConfigDirUserScripts = homeConfigDir + "/userscripts";
-
-  //debug: QMessageBox::information(0, "", QString("global share dir=")+globalShareDir);
 
   QFont cmuappfont = QFont();
   QFont fcodeMain = QFont();
@@ -170,43 +199,43 @@ void KLFConfig::loadDefaults()
 
     QFontDatabase fdb;
     QFont f = QApplication::font();
-#if defined(Q_WS_X11)
+#if defined(KLF_WS_X11)
     int fps = QFontInfo(f).pointSize();
-    double cmuffactor = 1.4;
-    double codeffactor = 1.4;
+    double cmuffactor = 1.15;
+    double codeffactor = 1.2;
     int cmufpsfinal = (int)(fps*cmuffactor+0.5);
     int codefpsfinal = (int)(fps*codeffactor+0.5);
-#elif defined(Q_WS_WIN)
+    QString cmufamily = QString::fromUtf8("CMU Sans Serif");
+#elif defined(KLF_WS_WIN)
     int fps = QFontInfo(f).pointSize();
     double cmuffactor = 1.3;
     double codeffactor = 1.3;
     int cmufpsfinal = (int)(fps*cmuffactor+0.5);
     int codefpsfinal = (int)(fps*codeffactor+0.5);
+    QString cmufamily = QString::fromUtf8("CMU Sans Serif");
 #else // mac OS X
     //int fps = QFontInfo(f).pointSize();
     //double cmuffactor = 1.1;
     //double codeffactor = 1.3;
     int cmufpsfinal = 14;//(int)(fps*cmuffactor+0.5);
-    int codefpsfinal = 14;//(int)(fps*codeffactor+0.5);
+    int codefpsfinal = 13;//(int)(fps*codeffactor+0.5);
+    QString cmufamily = QString::fromUtf8("CMU Bright");
 #endif
 
     defaultStdFont = f;
 
     cmuappfont = f;
-#ifdef Q_WS_MAC
-    if (fdb.families().contains("CMU Bright")) {
-      cmuappfont = QFont("CMU Bright", cmufpsfinal);
+    //    klfDbg("fdb.families() = " << fdb.families()) ;
+    if (fdb.families().filter(cmufamily, Qt::CaseInsensitive).size()) {
+      klfDbg("Found CMU Font with name = " << cmufamily) ;
+      cmuappfont = QFont(cmufamily, cmufpsfinal);
     }
-#else
-    if (fdb.families().contains("CMU Sans Serif")) {
-      // CMU Sans Serif is available ;-)
-      cmuappfont = QFont("CMU Sans Serif", cmufpsfinal);
-    }
-#endif
 
     QFont fcode;
     bool found_fcode = false;
     int ps = codefpsfinal;
+    KLFCONFIG_TEST_FIXED_FONT(found_fcode, fdb, fcode, "Menlo", ps);
+    KLFCONFIG_TEST_FIXED_FONT(found_fcode, fdb, fcode, "Monaco", ps);
     KLFCONFIG_TEST_FIXED_FONT(found_fcode, fdb, fcode, "Courier 10 Pitch", ps);
     KLFCONFIG_TEST_FIXED_FONT(found_fcode, fdb, fcode, "ETL Fixed", ps);
     KLFCONFIG_TEST_FIXED_FONT(found_fcode, fdb, fcode, "Courier New", ps);
@@ -215,8 +244,9 @@ void KLFConfig::loadDefaults()
     KLFCONFIG_TEST_FIXED_FONT(found_fcode, fdb, fcode, "Courier", ps);
     KLFCONFIG_TEST_FIXED_FONT(found_fcode, fdb, fcode, "Misc Fixed", ps);
     KLFCONFIG_TEST_FIXED_FONT(found_fcode, fdb, fcode, "Monospace", ps);
-    if ( ! found_fcode )
+    if ( ! found_fcode ) {
       fcode = f;
+    }
 
     fcodeMain = fcode;
     fcodeMain.setPointSize(ps+1);
@@ -257,7 +287,7 @@ void KLFConfig::loadDefaults()
   KLFCONFIGPROP_INIT(UI.smallPreviewSize, QSize(280, 80));
   //  KLFCONFIGPROP_INIT(UI.savedWindowSize, QSize());
   QString swtype;
-#ifdef Q_WS_MAC
+#ifdef KLF_WS_MAC
   swtype = QLatin1String("Drawer");
 #else
   swtype = QLatin1String("ShowHide");
@@ -288,7 +318,7 @@ void KLFConfig::loadDefaults()
   KLFCONFIGPROP_INIT(UI.showHintPopups, true) ;
   KLFCONFIGPROP_INIT(UI.clearLatexOnly, false) ;
   KLFCONFIGPROP_INIT(UI.glowEffect, false) ;
-#ifdef Q_WS_MAC
+#ifdef KLF_WS_MAC
   QColor glowcolor = QColor(155, 207, 255, 62);
 #else
   QColor glowcolor = QColor(128, 255, 128, 12);
@@ -328,8 +358,8 @@ void KLFConfig::loadDefaults()
   f_keyword.setForeground(QColor(0, 0, 128));
   f_comment.setForeground(QColor(180, 0, 0));
   f_comment.setFontItalic(true);
-  f_parenmatch.setBackground(QColor(180, 238, 180));
-  f_parenmismatch.setBackground(QColor(255, 20, 147));
+  f_parenmatch.setBackground(QColor(180, 238, 180, 128));
+  f_parenmismatch.setBackground(QColor(255, 20, 147, 128));
   f_lonelyparen.setForeground(QColor(255, 0, 255));
   f_lonelyparen.setFontWeight(QFont::Bold);
   KLFCONFIGPROP_INIT(SyntaxHighlighter.fmtKeyword, f_keyword) ;
@@ -357,6 +387,7 @@ void KLFConfig::loadDefaults()
   KLFCONFIGPROP_INIT_DEFNOTDEF(BackendSettings.wantPDF, true) ;
   KLFCONFIGPROP_INIT_DEFNOTDEF(BackendSettings.wantSVG, true) ;
   KLFCONFIGPROP_INIT(BackendSettings.userScriptAddPath, QStringList() );
+  KLFCONFIGPROP_INIT(BackendSettings.userScriptInterpreters, QVariantMap());
 
   KLFCONFIGPROP_INIT(LibraryBrowser.colorFound, QColor(128, 255, 128)) ;
   KLFCONFIGPROP_INIT(LibraryBrowser.colorNotFound, QColor(255, 128, 128)) ;
@@ -365,15 +396,43 @@ void KLFConfig::loadDefaults()
   KLFCONFIGPROP_INIT(LibraryBrowser.groupSubCategories, true) ;
   KLFCONFIGPROP_INIT(LibraryBrowser.iconViewFlow, QListView::TopToBottom) ;
   KLFCONFIGPROP_INIT(LibraryBrowser.historyTagCopyToArchive, true) ;
-  KLFCONFIGPROP_INIT(LibraryBrowser.lastFileDialogPath,
-		     QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation)) ; // "My Documents"
+  // "My Documents"
+  QStringList docpaths = QStandardPaths::standardLocations(QStandardPaths::DocumentsLocation);
+  QString docpath;
+  if (docpaths.isEmpty()) {
+    docpath = "";
+  } else {
+    docpath = docpaths[0];
+  }
+  KLFCONFIGPROP_INIT(LibraryBrowser.lastFileDialogPath, docpath) ;
   KLFCONFIGPROP_INIT(LibraryBrowser.treePreviewSizePercent, 75) ;
   KLFCONFIGPROP_INIT(LibraryBrowser.listPreviewSizePercent, 75) ;
   KLFCONFIGPROP_INIT(LibraryBrowser.iconPreviewSizePercent, 100) ;
 
-  Plugins.pluginConfig = QMap< QString, QMap<QString,QVariant> >() ;
+  // User Scripts
   UserScripts.userScriptConfig = QMap< QString, QMap<QString,QVariant> >() ;
+  // can't query user script config here yet, because this function is called before user
+  // scripts are loaded
 }
+
+
+static inline void ensure_interp_exe(KLFConfigProp<QVariantMap> & userScriptInterpreters,
+                                     const QString& ext,
+                                     const QString& program)
+{
+  const QString & curval = userScriptInterpreters().value(ext, QString()).toString();
+  if (curval.isEmpty() || curval == ".") {
+    QVariantMap map = userScriptInterpreters;
+    map[ext] = KLFBlockProcess::detectInterpreterPath(program);
+    userScriptInterpreters = map; // can't use "userScriptInterpreters[ext] = .." because of KLFConfigProp<> API
+  } else if (!QFile::exists(curval)) {
+    klfWarning("Path "<<curval<<" (for executing "<<("."+ext)<<" script files) does not exist") ;
+  }
+  if (userScriptInterpreters()[ext].toString().isEmpty()) {
+    klfWarning("Could not detect a suitable interpreter for executing "<<("."+ext)<<" script files") ;
+  }
+}
+
 
 void KLFConfig::detectMissingSettings()
 {
@@ -401,13 +460,15 @@ void KLFConfig::detectMissingSettings()
     if (neededsettings & (1<<4))
       BackendSettings.execEpstopdf.setDefaultValue(defaultsettings.epstopdfexec);
     if (neededsettings & (1<<5))
-      BackendSettings.execenv.setDefaultValue(BackendSettings.execenv() << defaultsettings.execenv);
+      BackendSettings.execenv.setDefaultValue(QStringList() << BackendSettings.execenv() << defaultsettings.execenv);
     if (neededsettings & (1<<6))
       BackendSettings.wantPDF.setDefaultValue(defaultsettings.wantPDF);
     if (neededsettings & (1<<7))
       BackendSettings.wantSVG.setDefaultValue(defaultsettings.wantSVG);
   }
 
+  ensure_interp_exe(BackendSettings.userScriptInterpreters, "py", "python");
+  ensure_interp_exe(BackendSettings.userScriptInterpreters, "sh", "bash");
 }
 
 
@@ -415,12 +476,6 @@ void KLFConfig::detectMissingSettings()
 int KLFConfig::ensureHomeConfigDir()
 {
   if ( !klfEnsureDir(homeConfigDir) )
-    return -1;
-  if ( !klfEnsureDir(homeConfigDirRCCResources) )
-    return -1;
-  if ( !klfEnsureDir(homeConfigDirPlugins) )
-    return -1;
-  if ( !klfEnsureDir(homeConfigDirPluginData) )
     return -1;
   if ( !klfEnsureDir(homeConfigDirI18n) )
     return -1;
@@ -583,6 +638,7 @@ int KLFConfig::readFromConfig_v2(const QString& fname)
   klf_config_read(s, "wantpdf", &BackendSettings.wantPDF);
   klf_config_read(s, "wantsvg", &BackendSettings.wantSVG);
   klf_config_read(s, "userscriptaddpath", &BackendSettings.userScriptAddPath);
+  klf_config_read(s, "userscriptinterpreters", &BackendSettings.userScriptInterpreters);
   s.endGroup();
 
   s.beginGroup("LibraryBrowser");
@@ -599,35 +655,11 @@ int KLFConfig::readFromConfig_v2(const QString& fname)
   klf_config_read(s, "iconpreviewsizepercent", &LibraryBrowser.iconPreviewSizePercent);
   s.endGroup();
 
-  // Special treatment for Plugins.pluginConfig
-  // for reading, we cannot rely on klf_plugins since we are called before plugins are loaded!
-  int k, j;
-  QDir plugindatadir = QDir(homeConfigDirPluginData);
-  QStringList plugindirs = plugindatadir.entryList(QDir::Dirs);
-  for (k = 0; k < plugindirs.size(); ++k) {
-    if (plugindirs[k] == "." || plugindirs[k] == "..")
-      continue;
-    qDebug("Reading config for plugin %s", qPrintable(plugindirs[k]));
-    QString fn = plugindatadir.absoluteFilePath(plugindirs[k])+"/"+plugindirs[k]+".conf";
-    if ( ! QFile::exists(fn) ) {
-      qDebug("\tskipping plugin %s since the file %s does not exist.",
-	     qPrintable(plugindirs[k]), qPrintable(fn));
-      continue;
-    }
-    QSettings psettings(fn, QSettings::IniFormat);
-    QVariantMap pconfmap;
-    QStringList keys = psettings.allKeys();
-    for (j = 0; j < keys.size(); ++j) {
-      pconfmap[keys[j]] = psettings.value(keys[j]);
-    }
-    Plugins.pluginConfig[plugindirs[k]] = pconfmap;
-  }
-
   // Special treatment for UserScripts.userScriptConfig
   // save into a dedicated XML file
   KLF_BLOCK {
     QDomDocument xmldoc;
-    QFile usfile(homeConfigDir+"/userscripts.xml");
+    QFile usfile(homeConfigDir+"/userscriptconfig.xml");
     if (!usfile.exists()) {
       // don't attempt to load user script settings if file does not exist
       break;
@@ -768,6 +800,7 @@ int KLFConfig::writeToConfig()
   klf_config_write(s, "wantpdf", &BackendSettings.wantPDF);
   klf_config_write(s, "wantsvg", &BackendSettings.wantSVG);
   klf_config_write(s, "userscriptaddpath", &BackendSettings.userScriptAddPath);
+  klf_config_write(s, "userscriptinterpreters", &BackendSettings.userScriptInterpreters);
   s.endGroup();
 
   s.beginGroup("LibraryBrowser");
@@ -784,18 +817,18 @@ int KLFConfig::writeToConfig()
   klf_config_write(s, "iconpreviewsizepercent", &LibraryBrowser.iconPreviewSizePercent);
   s.endGroup();
 
-  // Special treatment for Plugins.pluginConfig
-  int k;
-  for (k = 0; k < klf_plugins.size(); ++k) {
-    QString fn = homeConfigDirPluginData+"/"+klf_plugins[k].name+"/"+klf_plugins[k].name+".conf";
-    QSettings psettings(fn, QSettings::IniFormat);
-    QVariantMap pconfmap = Plugins.pluginConfig[klf_plugins[k].name];
-    QVariantMap::const_iterator it;
-    for (it = pconfmap.begin(); it != pconfmap.end(); ++it) {
-      psettings.setValue(it.key(), it.value());
-    }
-    psettings.sync();
-  }
+  // // Special treatment for Plugins.pluginConfig
+  // int k;
+  // for (k = 0; k < klf_plugins.size(); ++k) {
+  //   QString fn = homeConfigDirPluginData+"/"+klf_plugins[k].name+"/"+klf_plugins[k].name+".conf";
+  //   QSettings psettings(fn, QSettings::IniFormat);
+  //   QVariantMap pconfmap = Plugins.pluginConfig[klf_plugins[k].name];
+  //   QVariantMap::const_iterator it;
+  //   for (it = pconfmap.begin(); it != pconfmap.end(); ++it) {
+  //     psettings.setValue(it.key(), it.value());
+  //   }
+  //   psettings.sync();
+  // }
 
   // Special treatment for UserScripts.userScriptConfig
   // save into a dedicated XML file
@@ -804,7 +837,7 @@ int KLFConfig::writeToConfig()
     QDomElement root = xmldoc.createElement("userscript-config");
     xmldoc.appendChild(root);
     for (QMap<QString, QMap<QString, QVariant> >::const_iterator it = UserScripts.userScriptConfig.begin();
-	 it != UserScripts.userScriptConfig.end(); ++it) {
+         it != UserScripts.userScriptConfig.end(); ++it) {
       QString usname = it.key();
       QVariantMap usconfig = it.value();
 
@@ -818,9 +851,9 @@ int KLFConfig::writeToConfig()
     }
     // now, save the document
     QByteArray userscriptconfdata = xmldoc.toByteArray(4);
-    QFile usfile(homeConfigDir+"/userscripts.xml");
+    QFile usfile(homeConfigDir+"/userscriptconfig.xml");
     KLF_ASSERT_CONDITION( usfile.open(QIODevice::WriteOnly) ,
-			  "Can't open file "<<usfile.fileName()<<" for write access!", break; );
+        		  "Can't open file "<<usfile.fileName()<<" for write access!", break; );
     usfile.write(userscriptconfdata);
     usfile.close();
   } while (0);
@@ -833,11 +866,11 @@ int KLFConfig::writeToConfig()
 
 
 
-KLFPluginConfigAccess KLFConfig::getPluginConfigAccess(const QString& name)
-{
-  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ; klfDbg("... for plugin: "<<name) ;
-  return KLFPluginConfigAccess(this, name);
-}
+// KLFPluginConfigAccess KLFConfig::getPluginConfigAccess(const QString& name)
+// {
+//   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ; klfDbg("... for plugin: "<<name) ;
+//   return KLFPluginConfigAccess(this, name);
+// }
 
 
 // --------------------------------------
@@ -845,118 +878,118 @@ KLFPluginConfigAccess KLFConfig::getPluginConfigAccess(const QString& name)
 
 
 
-KLFPluginConfigAccess::KLFPluginConfigAccess()
-{
-  _config = NULL;
-  _pluginname = QString::null;
-}
-KLFPluginConfigAccess::KLFPluginConfigAccess(const KLFPluginConfigAccess& other)
-  : _config(other._config), _pluginname(other._pluginname)
-{
-  klfDbg("made copy. _config="<<_config<<"; _pluginname="<<_pluginname) ;
-  if (_config != NULL) {
-    klfDbg("_config->homeConfigDir: "<<_config->homeConfigDir) ;
-  }
-}
-KLFPluginConfigAccess::~KLFPluginConfigAccess()
-{
-}
+// KLFPluginConfigAccess::KLFPluginConfigAccess()
+// {
+//   _config = NULL;
+//   _pluginname = QString::null;
+// }
+// KLFPluginConfigAccess::KLFPluginConfigAccess(const KLFPluginConfigAccess& other)
+//   : _config(other._config), _pluginname(other._pluginname)
+// {
+//   klfDbg("made copy. _config="<<_config<<"; _pluginname="<<_pluginname) ;
+//   if (_config != NULL) {
+//     klfDbg("_config->homeConfigDir: "<<_config->homeConfigDir) ;
+//   }
+// }
+// KLFPluginConfigAccess::~KLFPluginConfigAccess()
+// {
+// }
 
-KLFPluginConfigAccess::KLFPluginConfigAccess(KLFConfig *configObject, const QString& pluginName)
-{
-  _config = configObject;
-  _pluginname = pluginName;
+// KLFPluginConfigAccess::KLFPluginConfigAccess(KLFConfig *configObject, const QString& pluginName)
+// {
+//   _config = configObject;
+//   _pluginname = pluginName;
 
-  klfDbg("_config="<<_config<<", _pluginname="<<_pluginname) ;
-  if (_config != NULL) {
-    klfDbg("_config->homeConfigDir: "<<_config->homeConfigDir) ;
-  }
-}
+//   klfDbg("_config="<<_config<<", _pluginname="<<_pluginname) ;
+//   if (_config != NULL) {
+//     klfDbg("_config->homeConfigDir: "<<_config->homeConfigDir) ;
+//   }
+// }
 
 
 
-QString KLFPluginConfigAccess::homeConfigDir() const
-{
-  if ( _config == NULL ) {
-    qWarning("KLFPluginConfigAccess::homeConfigDir: Invalid Config Pointer!\n");
-    return QString();
-  }
-  klfDbg("_config->homeConfigDir="<<_config->homeConfigDir) ;
-  return _config->homeConfigDir;
-}
+// QString KLFPluginConfigAccess::homeConfigDir() const
+// {
+//   if ( _config == NULL ) {
+//     qWarning("KLFPluginConfigAccess::homeConfigDir: Invalid Config Pointer!\n");
+//     return QString();
+//   }
+//   klfDbg("_config->homeConfigDir="<<_config->homeConfigDir) ;
+//   return _config->homeConfigDir;
+// }
 
-QString KLFPluginConfigAccess::globalShareDir() const
-{
-  if ( _config == NULL ) {
-    qWarning("KLFPluginConfigAccess::homeConfigDir: Invalid Config Pointer!\n");
-    return QString();
-  }
+// QString KLFPluginConfigAccess::globalShareDir() const
+// {
+//   if ( _config == NULL ) {
+//     qWarning("KLFPluginConfigAccess::homeConfigDir: Invalid Config Pointer!\n");
+//     return QString();
+//   }
 
-  return _config->globalShareDir;
-}
+//   return _config->globalShareDir;
+// }
 
-QString KLFPluginConfigAccess::tempDir() const
-{
-  if ( _config == NULL ) {
-    qWarning("KLFPluginConfigAccess::tempDir: Invalid Config Pointer!\n");
-    return QString();
-  }
+// QString KLFPluginConfigAccess::tempDir() const
+// {
+//   if ( _config == NULL ) {
+//     qWarning("KLFPluginConfigAccess::tempDir: Invalid Config Pointer!\n");
+//     return QString();
+//   }
 
-  return _config->BackendSettings.tempDir;
-}
+//   return _config->BackendSettings.tempDir;
+// }
 
-QString KLFPluginConfigAccess::homeConfigPluginDataDir(bool createIfNeeded) const
-{
-  if ( _config == NULL ) {
-    qWarning("KLFPluginConfigAccess::homeConfigPluginDataDir: Invalid Config Pointer!\n");
-    return QString();
-  }
-  klfDbg("_config->homeConfigDirPluginData is "<<_config->homeConfigDirPluginData) ;
+// QString KLFPluginConfigAccess::homeConfigPluginDataDir(bool createIfNeeded) const
+// {
+//   if ( _config == NULL ) {
+//     qWarning("KLFPluginConfigAccess::homeConfigPluginDataDir: Invalid Config Pointer!\n");
+//     return QString();
+//   }
+//   klfDbg("_config->homeConfigDirPluginData is "<<_config->homeConfigDirPluginData) ;
 
-  QString d = _config->homeConfigDirPluginData + "/" + _pluginname;
-  if ( createIfNeeded && ! klfEnsureDir(d) ) {
-    qWarning("KLFPluginConfigAccess::homeConfigPluginDataDir: Can't create directory: `%s'",
-	     qPrintable(d));
-    return QString();
-  }
-  return d;
-}
+//   QString d = _config->homeConfigDirPluginData + "/" + _pluginname;
+//   if ( createIfNeeded && ! klfEnsureDir(d) ) {
+//     qWarning("KLFPluginConfigAccess::homeConfigPluginDataDir: Can't create directory: `%s'",
+// 	     qPrintable(d));
+//     return QString();
+//   }
+//   return d;
+// }
 
-QVariant KLFPluginConfigAccess::readValue(const QString& key) const
-{
-  if ( _config == NULL ) {
-    qWarning("KLFPluginConfigAccess::readValue: Invalid Config Pointer!\n");
-    return QVariant();
-  }
+// QVariant KLFPluginConfigAccess::readValue(const QString& key) const
+// {
+//   if ( _config == NULL ) {
+//     qWarning("KLFPluginConfigAccess::readValue: Invalid Config Pointer!\n");
+//     return QVariant();
+//   }
 
-  if ( ! _config->Plugins.pluginConfig[_pluginname].contains(key) )
-    return QVariant();
+//   if ( ! _config->Plugins.pluginConfig[_pluginname].contains(key) )
+//     return QVariant();
 
-  return _config->Plugins.pluginConfig[_pluginname][key];
-}
+//   return _config->Plugins.pluginConfig[_pluginname][key];
+// }
 
-QVariant KLFPluginConfigAccess::makeDefaultValue(const QString& key, const QVariant& defaultValue)
-{
-  if ( _config == NULL ) {
-    qWarning("KLFPluginConfigAccess::makeDefaultValue: Invalid Config Pointer!\n");
-    return QVariant();
-  }
+// QVariant KLFPluginConfigAccess::makeDefaultValue(const QString& key, const QVariant& defaultValue)
+// {
+//   if ( _config == NULL ) {
+//     qWarning("KLFPluginConfigAccess::makeDefaultValue: Invalid Config Pointer!\n");
+//     return QVariant();
+//   }
 
-  if (_config->Plugins.pluginConfig[_pluginname].contains(key))
-    return _config->Plugins.pluginConfig[_pluginname][key];
+//   if (_config->Plugins.pluginConfig[_pluginname].contains(key))
+//     return _config->Plugins.pluginConfig[_pluginname][key];
 
-  // assign the value into the plugin config, and return it
-  return ( _config->Plugins.pluginConfig[_pluginname][key] = defaultValue );
-}
-void KLFPluginConfigAccess::writeValue(const QString& key, const QVariant& value)
-{
-  if ( _config == NULL ) {
-    qWarning("KLFPluginConfigAccess::writeValue: Invalid Config Pointer!\n");
-    return;
-  }
+//   // assign the value into the plugin config, and return it
+//   return ( _config->Plugins.pluginConfig[_pluginname][key] = defaultValue );
+// }
+// void KLFPluginConfigAccess::writeValue(const QString& key, const QVariant& value)
+// {
+//   if ( _config == NULL ) {
+//     qWarning("KLFPluginConfigAccess::writeValue: Invalid Config Pointer!\n");
+//     return;
+//   }
 
-  _config->Plugins.pluginConfig[_pluginname][key] = value;
-}
+//   _config->Plugins.pluginConfig[_pluginname][key] = value;
+// }
 
 
 
@@ -1032,23 +1065,23 @@ int KLFConfig::readFromConfig_v1()
   LibraryBrowser.colorNotFound = s.value("colornotfound", LibraryBrowser.colorNotFound.toVariant()).value<QColor>();
   s.endGroup();
 
-  // Special treatment for Plugins.pluginConfig
-  s.beginGroup("Plugins/Config");
-  QStringList pluginList = s.childGroups();
-  s.endGroup();
-  int j;
-  for (j = 0; j < pluginList.size(); ++j) {
-    QString name = pluginList[j];
-    s.beginGroup( QString("Plugins/Config/%1").arg(name) );
-    QMap<QString,QVariant> thispluginconfig;
-    QStringList plconfkeys = s.childKeys();
-    int k;
-    for (k = 0; k < plconfkeys.size(); ++k) {
-      thispluginconfig[plconfkeys[k]] = s.value(plconfkeys[k]);
-    }
-    klfconfig.Plugins.pluginConfig[name] = thispluginconfig;
-    s.endGroup();
-  }
+  // // Special treatment for Plugins.pluginConfig
+  // s.beginGroup("Plugins/Config");
+  // QStringList pluginList = s.childGroups();
+  // s.endGroup();
+  // int j;
+  // for (j = 0; j < pluginList.size(); ++j) {
+  //   QString name = pluginList[j];
+  //   s.beginGroup( QString("Plugins/Config/%1").arg(name) );
+  //   QMap<QString,QVariant> thispluginconfig;
+  //   QStringList plconfkeys = s.childKeys();
+  //   int k;
+  //   for (k = 0; k < plconfkeys.size(); ++k) {
+  //     thispluginconfig[plconfkeys[k]] = s.value(plconfkeys[k]);
+  //   }
+  //   klfconfig.Plugins.pluginConfig[name] = thispluginconfig;
+  //   s.endGroup();
+  // }
 
   return 0;
 }

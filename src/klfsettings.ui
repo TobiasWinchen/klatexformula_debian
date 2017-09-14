@@ -84,7 +84,6 @@
        <addaction name="actionTabEditor"/>
        <addaction name="actionTabLibrary"/>
        <addaction name="actionTabUserScripts"/>
-       <addaction name="actionTabAddOnsPlugins"/>
        <addaction name="actionTabAdvanced"/>
       </widget>
      </item>
@@ -165,7 +164,16 @@
              <property name="spacing">
               <number>5</number>
              </property>
-             <property name="margin">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
               <number>0</number>
              </property>
              <item>
@@ -320,16 +328,16 @@
           </item>
           <item row="0" column="1">
            <widget class="KLFPathChooser" name="pathTempDir">
-            <property name="mode">
+            <property name="mode" stdset="0">
              <number>2</number>
             </property>
-            <property name="caption">
+            <property name="caption" stdset="0">
              <string>Choose temporary directory</string>
             </property>
-            <property name="filter">
+            <property name="filter" stdset="0">
              <string/>
             </property>
-            <property name="path">
+            <property name="path" stdset="0">
              <string notr="true">/tmp/</string>
             </property>
            </widget>
@@ -349,16 +357,16 @@
           </item>
           <item row="1" column="1">
            <widget class="KLFPathChooser" name="pathLatex">
-            <property name="mode">
+            <property name="mode" stdset="0">
              <number>0</number>
             </property>
-            <property name="caption">
+            <property name="caption" stdset="0">
              <string>Choose latex executable</string>
             </property>
-            <property name="filter">
+            <property name="filter" stdset="0">
              <string/>
             </property>
-            <property name="path">
+            <property name="path" stdset="0">
              <string notr="true">latex</string>
             </property>
            </widget>
@@ -378,16 +386,16 @@
           </item>
           <item row="2" column="1">
            <widget class="KLFPathChooser" name="pathDvips">
-            <property name="mode">
+            <property name="mode" stdset="0">
              <number>0</number>
             </property>
-            <property name="caption">
+            <property name="caption" stdset="0">
              <string>Choose dvips executable</string>
             </property>
-            <property name="filter">
+            <property name="filter" stdset="0">
              <string/>
             </property>
-            <property name="path">
+            <property name="path" stdset="0">
              <string notr="true">dvips</string>
             </property>
            </widget>
@@ -407,16 +415,16 @@
           </item>
           <item row="3" column="1">
            <widget class="KLFPathChooser" name="pathGs">
-            <property name="mode">
+            <property name="mode" stdset="0">
              <number>0</number>
             </property>
-            <property name="caption">
+            <property name="caption" stdset="0">
              <string>Choose ghostscript executable</string>
             </property>
-            <property name="filter">
+            <property name="filter" stdset="0">
              <string/>
             </property>
-            <property name="path">
+            <property name="path" stdset="0">
              <string notr="true">gs</string>
             </property>
            </widget>
@@ -806,7 +814,7 @@
                  <x>0</x>
                  <y>0</y>
                  <width>366</width>
-                 <height>74</height>
+                 <height>79</height>
                 </rect>
                </property>
                <layout class="QGridLayout" name="lyt_wUserScriptInfo">
@@ -821,6 +829,9 @@
                   <property name="text">
                    <string notr="true">XYZ</string>
                   </property>
+                  <property name="wordWrap">
+                   <bool>true</bool>
+                  </property>
                  </widget>
                 </item>
                </layout>
@@ -831,7 +842,7 @@
           </widget>
           <widget class="QWidget" name="tabUserScriptSettings">
            <attribute name="title">
-            <string>Settings</string>
+            <string>Script Settings</string>
            </attribute>
            <layout class="QGridLayout" name="gridLayout_2">
             <item row="0" column="0">
@@ -860,11 +871,20 @@
                  <x>0</x>
                  <y>0</y>
                  <width>366</width>
-                 <height>74</height>
+                 <height>79</height>
                 </rect>
                </property>
                <layout class="QGridLayout" name="lyt_wUserScriptSettings">
-                <property name="margin">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
                  <number>0</number>
                 </property>
                 <item row="0" column="1">
@@ -897,6 +917,46 @@
             </item>
            </layout>
           </widget>
+          <widget class="QWidget" name="tab">
+           <attribute name="title">
+            <string>Interpreters</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_4">
+            <item row="0" column="0">
+             <widget class="QLabel" name="lblScriptInterpreterPython">
+              <property name="text">
+               <string>Python:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="txtScriptInterpreterPython"/>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="lblScriptInterpreterShell">
+              <property name="text">
+               <string>Shell:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="txtScriptInterpreterShell"/>
+            </item>
+            <item row="2" column="1">
+             <spacer name="vspc_scriptinterpreters">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>14</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
          </widget>
         </widget>
        </item>
@@ -904,7 +964,16 @@
      </widget>
      <widget class="QWidget" name="tabAddOnsPlugins">
       <layout class="QGridLayout" name="lyt_tabAddOnsPlugins">
-       <property name="margin">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
         <number>0</number>
        </property>
        <item row="0" column="0">
@@ -970,7 +1039,16 @@
                <property name="sizeConstraint">
                 <enum>QLayout::SetMinimumSize</enum>
                </property>
-               <property name="margin">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
                 <number>0</number>
                </property>
                <item>
@@ -998,8 +1076,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>252</width>
-                    <height>80</height>
+                    <width>253</width>
+                    <height>81</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="lyt_scrAddOnInfoContents">
@@ -1137,7 +1215,16 @@
                   <property name="sizeConstraint">
                    <enum>QLayout::SetMinimumSize</enum>
                   </property>
-                  <property name="margin">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
                    <number>0</number>
                   </property>
                   <item>
@@ -1165,7 +1252,7 @@
                       <rect>
                        <x>0</x>
                        <y>0</y>
-                       <width>232</width>
+                       <width>233</width>
                        <height>93</height>
                       </rect>
                      </property>
@@ -1230,8 +1317,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>396</width>
-                <height>316</height>
+                <width>60</width>
+                <height>16</height>
                </rect>
               </property>
               <attribute name="label">
@@ -1248,7 +1335,16 @@
      </widget>
      <widget class="QWidget" name="tabAdvanced">
       <layout class="QGridLayout" name="lyt_tabAdvanced">
-       <property name="margin">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
         <number>0</number>
        </property>
        <item row="0" column="0">
@@ -1409,7 +1505,7 @@
               </item>
               <item>
                <widget class="KLFColorChooser" name="colGlowEffectColor">
-                <property name="showSize">
+                <property name="showSize" stdset="0">
                  <size>
                   <width>60</width>
                   <height>20</height>
@@ -1731,26 +1827,26 @@
               </item>
               <item row="1" column="1">
                <widget class="KLFColorChooser" name="colSHKeyword">
-                <property name="showSize">
+                <property name="showSize" stdset="0">
                  <size>
                   <width>50</width>
                   <height>16</height>
                  </size>
                 </property>
-                <property name="allowDefaultState">
+                <property name="allowDefaultState" stdset="0">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="1" column="2">
                <widget class="KLFColorChooser" name="colSHKeywordBg">
-                <property name="showSize">
+                <property name="showSize" stdset="0">
                  <size>
                   <width>50</width>
                   <height>16</height>
                  </size>
                 </property>
-                <property name="allowDefaultState">
+                <property name="allowDefaultState" stdset="0">
                  <bool>true</bool>
                 </property>
                </widget>
@@ -1813,26 +1909,26 @@
               </item>
               <item row="2" column="1">
                <widget class="KLFColorChooser" name="colSHComment">
-                <property name="showSize">
+                <property name="showSize" stdset="0">
                  <size>
                   <width>50</width>
                   <height>16</height>
                  </size>
                 </property>
-                <property name="allowDefaultState">
+                <property name="allowDefaultState" stdset="0">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="2" column="2">
                <widget class="KLFColorChooser" name="colSHCommentBg">
-                <property name="showSize">
+                <property name="showSize" stdset="0">
                  <size>
                   <width>50</width>
                   <height>16</height>
                  </size>
                 </property>
-                <property name="allowDefaultState">
+                <property name="allowDefaultState" stdset="0">
                  <bool>true</bool>
                 </property>
                </widget>
@@ -1895,26 +1991,26 @@
               </item>
               <item row="4" column="1">
                <widget class="KLFColorChooser" name="colSHParenMatch">
-                <property name="showSize">
+                <property name="showSize" stdset="0">
                  <size>
                   <width>50</width>
                   <height>16</height>
                  </size>
                 </property>
-                <property name="allowDefaultState">
+                <property name="allowDefaultState" stdset="0">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="4" column="2">
                <widget class="KLFColorChooser" name="colSHParenMatchBg">
-                <property name="showSize">
+                <property name="showSize" stdset="0">
                  <size>
                   <width>50</width>
                   <height>16</height>
                  </size>
                 </property>
-                <property name="allowDefaultState">
+                <property name="allowDefaultState" stdset="0">
                  <bool>true</bool>
                 </property>
                </widget>
@@ -1977,26 +2073,26 @@
               </item>
               <item row="5" column="1">
                <widget class="KLFColorChooser" name="colSHParenMismatch">
-                <property name="showSize">
+                <property name="showSize" stdset="0">
                  <size>
                   <width>50</width>
                   <height>16</height>
                  </size>
                 </property>
-                <property name="allowDefaultState">
+                <property name="allowDefaultState" stdset="0">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="5" column="2">
                <widget class="KLFColorChooser" name="colSHParenMismatchBg">
-                <property name="showSize">
+                <property name="showSize" stdset="0">
                  <size>
                   <width>50</width>
                   <height>16</height>
                  </size>
                 </property>
-                <property name="allowDefaultState">
+                <property name="allowDefaultState" stdset="0">
                  <bool>true</bool>
                 </property>
                </widget>
@@ -2059,26 +2155,26 @@
               </item>
               <item row="7" column="1">
                <widget class="KLFColorChooser" name="colSHLonelyParen">
-                <property name="showSize">
+                <property name="showSize" stdset="0">
                  <size>
                   <width>50</width>
                   <height>16</height>
                  </size>
                 </property>
-                <property name="allowDefaultState">
+                <property name="allowDefaultState" stdset="0">
                  <bool>true</bool>
                 </property>
                </widget>
               </item>
               <item row="7" column="2">
                <widget class="KLFColorChooser" name="colSHLonelyParenBg">
-                <property name="showSize">
+                <property name="showSize" stdset="0">
                  <size>
                   <width>50</width>
                   <height>16</height>
                  </size>
                 </property>
-                <property name="allowDefaultState">
+                <property name="allowDefaultState" stdset="0">
                  <bool>true</bool>
                 </property>
                </widget>
@@ -2506,21 +2602,6 @@
    </property>
    <property name="toolTip">
     <string>User script settings</string>
-   </property>
-  </action>
-  <action name="actionTabAddOnsPlugins">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="klfres.qrc">
-     <normaloff>:/pics/tab-addons.png</normaloff>:/pics/tab-addons.png</iconset>
-   </property>
-   <property name="text">
-    <string>Add-Ons</string>
-   </property>
-   <property name="toolTip">
-    <string>Add-Ons &amp; Plugins settings</string>
    </property>
   </action>
  </widget>

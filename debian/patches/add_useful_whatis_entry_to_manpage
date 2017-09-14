@@ -1,14 +1,15 @@
-Description: Add useful whatis entry to manpage
-Last-Update: 2016-02-07
+Description: Add whatis entry to manpage 
+Last-Update: 2017-08-25
 
---- a/src/CMakeLists.txt
-+++ b/src/CMakeLists.txt
-@@ -496,7 +496,7 @@
-   set(LDPATHDEFS "export LD_LIBRARY_PATH='${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/klfbackend:${CMAKE_CURRENT_BINARY_DIR}/klftools':\"$LD_LIBRARY_PATH\" ")
-   add_custom_command(OUTPUT "klatexformula.1"
-     COMMAND
--      "sh" "-c" "${LDPATHDEFS}; ${HELP2MAN} -h --help='\"&1\"' -v --version='\"&1:klatexformula %k\"' --no-info ${klatexformula_binary} -o '${CMAKE_CURRENT_BINARY_DIR}/klatexformula.1'"
-+      "sh" "-c" "${LDPATHDEFS}; ${HELP2MAN} -h --help='\"&1\"' -v --version='\"&1:klatexformula %k\"' -n 'GUI to generate pictures from latex formulas' --no-info ${klatexformula_binary} -o '${CMAKE_CURRENT_BINARY_DIR}/klatexformula.1'"
-     COMMENT "Generating man page for klatexformula"
-     DEPENDS "${klatexformula_binary}"
-     VERBATIM
+--- klatexformula.orig/src/CMakeLists.txt	2017-08-17 22:49:23.012803843 +0200
++++ klatexformula/src/CMakeLists.txt	2017-08-25 17:12:08.149762867 +0200
+@@ -416,7 +416,8 @@
+     set(LDPATHDEFS "export LD_LIBRARY_PATH='${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/klfbackend:${CMAKE_CURRENT_BINARY_DIR}/klftools':\"$LD_LIBRARY_PATH\" ")
+     add_custom_command(OUTPUT "klatexformula.1"
+       COMMAND
+-      "sh" "-c" "${LDPATHDEFS}; ${HELP2MAN} -h --help='\"&1\"' -v --version='\"&1:klatexformula %k\"' --no-info $<TARGET_FILE:klatexformula> -o '${CMAKE_CURRENT_BINARY_DIR}/klatexformula.1'"
++
++      "sh" "-c" "${LDPATHDEFS}; ${HELP2MAN} --no-discard-stderr -h --help='\"&1\"' -v --version='\"&1:klatexformula %k\"' -n 'GUI to generate pictures from latex formulas' --no-info $<TARGET_FILE:klatexformula> -o '${CMAKE_CURRENT_BINARY_DIR}/klatexformula.1'"
+       COMMENT "Generating man page for klatexformula"
+       DEPENDS "${klatexformula}"
+       VERBATIM

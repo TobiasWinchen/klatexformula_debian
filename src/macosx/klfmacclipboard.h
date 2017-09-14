@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmacclipboard.h 604 2011-02-27 23:34:37Z phfaist $ */
+/* $Id: klfmacclipboard.h 971 2016-12-30 04:24:56Z phfaist $ */
 
 
 #ifndef KLFMACCLIPBOARD_H
@@ -36,7 +36,9 @@ public:
   KLFMacPasteboardMime();
   virtual ~KLFMacPasteboardMime();
 
-  QString convertorName() { return QLatin1String("KLFMacPasteboardMime"); }
+  QString convertorName() {
+    return QLatin1String("KLFMacPasteboardMime");
+  }
 
   bool canConvert(const QString& mime, QString flav);
   QList<QByteArray> convertFromMime(const QString& mime, QVariant data, QString flav);
@@ -44,28 +46,7 @@ public:
   QString flavorFor(const QString& mime);
   QString mimeFor(QString flav);
 
-
-  struct TranslateRule
-  {
-    TranslateRule(QString mime, QString flav) : mimetype(mime), macflavor(flav) { }
-    QString mimetype;
-    QString macflavor;
-  };
-
-
-  static void addTranslateTypeRule(const TranslateRule& rule);
-
-private:
-  static QList<TranslateRule> staticTranslateTypeRules;
-
 };
-
-
-
-void __klf_init_the_macpasteboardmime();
-
-
-void __klf_add_macosx_type_rules(const QString& xmlfname, const QDomElement& element);
 
 
 #endif

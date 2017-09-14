@@ -8,27 +8,13 @@ CXXFLAGS+=$(CPPFLAGS)
 	dh $@ --parallel
 
 override_dh_auto_configure:
-	cmake . -DKLF_INSTALL_DESKTOP=TRUE -DKLF_INSTALL_KLFAPP_STATIC_LIBS=FALSE -DKLF_LIBKLFAPP_STATIC=FALSE -DKLF_LIBKLFBACKEND_STATIC=FALSE -DKLF_LIBKLFTOOLS_STATIC=FALSE -DKLF_INSTALL_APIDOC_DIR=share/doc/libklatexformula3-doc -DKLF_INSTALL_RCCRESOURCES_DIR=lib/klatexformula/rccresources -DKLF_INSTALL_LIB_DIR=lib -DKLF_INSTALL_DESPLUGIN_DIR=lib/klatexformula/qt4/plugins/designer 
+	cmake . -DKLF_INSTALL_DESKTOP=TRUE -DKLF_INSTALL_KLFAPP_STATIC_LIBS=FALSE -DKLF_LIBKLFAPP_STATIC=FALSE -DKLF_LIBKLFBACKEND_STATIC=FALSE -DKLF_LIBKLFTOOLS_STATIC=FALSE -DKLF_INSTALL_APIDOC_DIR=share/doc/libklatexformula3-doc -DKLF_INSTALL_RCCRESOURCES_DIR=lib/klatexformula/rccresources -DKLF_INSTALL_LIB_DIR=lib -DKLF_INSTALL_DESPLUGIN_DIR=lib/klatexformula/qt5/plugins/designer -DCMAKE_INSTALL_PREFIX=/usr
 	#-DKLF_INSTALL_RUN_POST_INSTALL=FALSE 
 	#-DKLF_BUILD_BACKEND_AUTO=FALSE
 
 override_dh_install:
 	 chrpath -d $(CURDIR)/debian/tmp/usr/bin/klatexformula
-	 chrpath -d $(CURDIR)/debian/tmp/usr/lib/libklfapp.so
-	 chrpath -d $(CURDIR)/debian/tmp/usr/lib/libklfbackend.so
-	 chrpath -d $(CURDIR)/debian/tmp/usr/lib/libklftools.so
+	 chrpath -d $(CURDIR)/debian/tmp/usr/lib/*.so
+	 chrpath -d $(CURDIR)/debian/tmp/usr/lib/klatexformula/qt5/plugins/designer/libklftoolsdesplugin.so
 	 dh_install
 
-override_dh_clean:
-	dh_clean
-	rm -rf CMakeTmp/
-	rm -rf src/CMakeFiles/
-	rm -rf src/klfbackend/CMakeFiles/
-	rm -rf src/klfbackend/__/
-	rm -rf src/klfkateplugin/CMakeFiles/
-	rm -rf src/klftools/CMakeFiles/
-	rm -rf src/klftools/__/
-	rm -rf src/plugins/CMakeFiles/
-	rm -rf src/plugins/buffers/CMakeFiles/
-	rm -rf src/plugins/skin/CMakeFiles/
-	rm -rf src/plugins/systrayicon/CMakeFiles/

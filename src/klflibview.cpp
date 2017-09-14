@@ -19,13 +19,15 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibview.cpp 911 2014-08-10 22:24:01Z phfaist $ */
+/* $Id: klflibview.cpp 1004 2017-02-02 20:07:10Z phfaist $ */
 
 
 #include <QApplication>
 #include <QDebug>
 #include <QImage>
 #include <QString>
+#include <QUrl>
+#include <QUrlQuery>
 #include <QDataStream>
 #include <QMessageBox>
 #include <QAbstractItemModel>
@@ -428,7 +430,7 @@ void KLFLibModelCache::rebuildCache()
   int k;
 
   // report progress
-#ifndef Q_WS_MAC
+#ifndef KLF_WS_MAC
   KLFProgressReporter progressReporter(0, 100, NULL);
   QString msg = QObject::tr("Updating View...", "[[KLFLibModelCache, progress text]]");
   emit pModel->operationStartReportingProgress(&progressReporter, msg);
@@ -439,6 +441,8 @@ void KLFLibModelCache::rebuildCache()
   QModelIndexList persistentIndexes = pModel->persistentIndexList();
   QList<KLFLibModel::PersistentId> persistentIndexIds = pModel->persistentIdList(persistentIndexes);
   klfDbgT("... done saving persistent indexes.");
+
+  pModel->beginResetModel();
 
   // clear cache first
   pEntryCache.clear();
@@ -488,7 +492,7 @@ void KLFLibModelCache::rebuildCache()
     e.entry = ewid.entry;
     treeInsertEntry(e, true); // rebuildingCache=TRUE
 
-#ifndef Q_WS_MAC
+#ifndef KLF_WS_MAC
     if (k % 10 == 0)
       progressReporter.doReportProgress((++k) * 100 / everything.size());
 #endif
@@ -534,7 +538,7 @@ void KLFLibModelCache::rebuildCache()
 
   fullDump(); // DEBUG
 
-  pModel->reset();
+  pModel->endResetModel();
 
   klfDbg("restoring persistent indexes ...");
   QModelIndexList newPersistentIndexes = pModel->newPersistentIndexList(persistentIndexIds);
@@ -872,7 +876,7 @@ void KLFLibModelCache::updateData(const QList<KLFLib::entryId>& entryIdList, int
     return;
   }
 
-#ifndef Q_WS_MAC
+#ifndef KLF_WS_MAC
   // progress reporting [here, not above, because rebuildCache() has its own progress reporting]
   KLFProgressReporter progressReporter(0, entryIdList.size(), NULL);
   emit pModel->operationStartReportingProgress(&progressReporter,
@@ -894,7 +898,7 @@ void KLFLibModelCache::updateData(const QList<KLFLib::entryId>& entryIdList, int
 	 * contiguous inserts to be notified once .... */
 	treeInsertEntry(en);
 	qDebug("%s: entry ID %d inserted", KLF_FUNC_NAME, entryIdList[k]);
-#ifndef Q_WS_MAC
+#ifndef KLF_WS_MAC
 	if (k % 20 == 0)
 	  progressReporter.doReportProgress(k+1);
 #endif
@@ -936,7 +940,7 @@ void KLFLibModelCache::updateData(const QList<KLFLib::entryId>& entryIdList, int
 	  QModelIndex idx = createIndexFromId(n, -1, 0);
 	  emit pModel->dataChanged(idx, idx);
 	}
-#ifndef Q_WS_MAC
+#ifndef KLF_WS_MAC
 	if (k % 20 == 0)
 	  progressReporter.doReportProgress(k+1);
 #endif
@@ -955,7 +959,7 @@ void KLFLibModelCache::updateData(const QList<KLFLib::entryId>& entryIdList, int
 	  continue;
 	}
 	(void) treeTakeEntry(n);
-#ifndef Q_WS_MAC
+#ifndef KLF_WS_MAC
 	if (k % 20 == 0)
 	  progressReporter.doReportProgress(k+1);
 #endif
@@ -1480,6 +1484,8 @@ void KLFLibModelCache::fullDump()
 
 void KLFLibModelCache::dumpNodeTree(NodeId node, int indent)
 {
+  Q_UNUSED( node ) ;
+  Q_UNUSED( indent ) ;
 #ifdef KLF_DEBUG
 
   if (indent == 0) {
@@ -1985,6 +1991,7 @@ bool KLFLibModel::dropCanInternal(const QMimeData *mimedata)
 bool KLFLibModel::dropMimeData(const QMimeData *mimedata, Qt::DropAction action, int row,
 			       int column, const QModelIndex& parent)
 {
+  Q_UNUSED( row ) ;
   KLF_DEBUG_TIME_BLOCK(KLF_FUNC_NAME) ;
   klfDbg(  "Drop data: action="<<action<<" row="<<row<<" col="<<column
 	   << " parent="<<parent ) ;
@@ -2548,7 +2555,7 @@ void KLFLibViewDelegate::paint(QPainter *painter, const QStyleOptionViewItem& op
   pp.innerRectImage = QRect(option.rect.topLeft()+QPoint(2,2), option.rect.size()-QSize(4,4));
   pp.innerRectText = QRect(option.rect.topLeft()+QPoint(4,2), option.rect.size()-QSize(8,3));
 
-#ifdef Q_WS_MAC
+#ifdef KLF_WS_MAC
   // block progress reporting on MAC to avoid repaint recursions
   KLFLibResourceEngine *rres = NULL;
   KLFLibModel *rmodel = qobject_cast<KLFLibModel*>(const_cast<QAbstractItemModel*>(index.model()));
@@ -2591,9 +2598,7 @@ void KLFLibViewDelegate::paint(QPainter *painter, const QStyleOptionViewItem& op
                               ? QPalette::Normal : QPalette::Disabled;
     o.backgroundColor = option.palette.color(cg, (option.state & QStyle::State_Selected)
                                              ? QPalette::Highlight : QPalette::Window);
-    const QWidget *w = 0;
-    if (const QStyleOptionViewItemV3 *v3 = qstyleoption_cast<const QStyleOptionViewItemV3 *>(&option))
-      w = v3->widget;
+    const QWidget *w = option.widget;
     QStyle *style = w ? w->style() : QApplication::style();
     style->drawPrimitive(QStyle::PE_FrameFocusRect, &o, painter, w);
   }
@@ -2617,12 +2622,17 @@ void KLFLibViewDelegate::paintEntry(PaintPrivate *p, const QModelIndex& index) c
   case KLFLibEntry::Preview:
     // paint Latex Equation
     {
+      // ### PhF: we must be careful to make a difference between device pixels and user
+      // ### space pixels (for retina displays for example).
+      qreal dpr = p->p->device()->devicePixelRatioF();
       QImage img = index.data(KLFLibModel::entryItemRole(KLFLibEntry::Preview)).value<QImage>();
-      QImage img2 = img.scaled(p->innerRectImage.size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-      if (p->isselected)
+      // now these are actual device pixels...
+      QImage img2 = img.scaled(p->innerRectImage.size()*dpr, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+      if (p->isselected) {
 	img2 = transparentify_image(img2, 0.85);
+      }
       QPoint pos = p->innerRectImage.topLeft()
-	+ QPoint(0, (p->innerRectImage.height()-img2.height()) / 2);
+	+ QPoint(0, (p->innerRectImage.height()-img2.height()/dpr) / 2);
       if (pAutoBackgroundItems) {
 	// draw image on different background if it can't be "distinguished" from default background
 	// (eg. a transparent white formula)
@@ -2658,14 +2668,15 @@ void KLFLibViewDelegate::paintEntry(PaintPrivate *p, const QModelIndex& index) c
 	}
 	// if the background color is not the default one, fill the background with that color
 	if (k > 0 && k < bglist.size())
-	  p->p->fillRect(QRect(pos, img2.size()), QBrush(bglist[k]));
+	  p->p->fillRect(QRect(pos, img2.size()/dpr), QBrush(bglist[k]));
       }
       // and draw the equation
       p->p->save();
       p->p->translate(pos);
-      if (klfconfig.UI.glowEffect)
+      if (klfconfig.UI.glowEffect) {
 	klfDrawGlowedImage(p->p, img2, klfconfig.UI.glowEffectColor, klfconfig.UI.glowEffectRadius, false);
-      p->p->drawImage(QPoint(0,0), img2);
+      }
+      p->p->drawImage(QRect(QPoint(0,0), img2.size()/dpr), img2);
       p->p->restore();
       break;
     }
@@ -2681,8 +2692,8 @@ void KLFLibViewDelegate::paintEntry(PaintPrivate *p, const QModelIndex& index) c
   case KLFLibEntry::DateTime:
     // paint DateTime String
     { QLocale loc; // use the default locale, which was set to the value of klfconfig.UI.locale in main app.
-      paintText(p, loc.toString(index.data(KLFLibModel::entryItemRole(KLFLibEntry::DateTime))
-				.toDateTime(), QLocale::LongFormat), fl);
+      paintText(p, loc.toString(index.data(KLFLibModel::entryItemRole(KLFLibEntry::DateTime)).toDateTime(),
+                                QLocale::ShortFormat), fl);
       break;
     }
   default:
@@ -2902,8 +2913,8 @@ QSize KLFLibViewDelegate::sizeHint(const QStyleOptionViewItem& option, const QMo
     case KLFLibEntry::DateTime:
       { QLocale loc; // use default locale, which was set to the value of klfconfig.UI.locale;
 	return QFontMetrics(option.font)
-	  .size(0, loc.toString(index.data(KLFLibModel::entryItemRole(KLFLibEntry::DateTime))
-				.toDateTime(), QLocale::LongFormat) )+QSize(4,2);
+	  .size(0, loc.toString(index.data(KLFLibModel::entryItemRole(KLFLibEntry::DateTime)).toDateTime(),
+                                QLocale::ShortFormat) )+QSize(4,2);
       }
     case KLFLibEntry::Preview:
       {
@@ -3103,6 +3114,8 @@ uint KLFLibDefaultView::compareUrlTo(const QUrl& other, uint interestFlags) cons
   bool baseequal = false;
   uint resultFlags = 0x0;
 
+  QUrlQuery otherq(other);
+
   // see if base resources are equal
   baseequal = resourceEngine()->compareUrlTo(other, KlfUrlCompareBaseEqual);
   if (baseequal)
@@ -3118,8 +3131,8 @@ uint KLFLibDefaultView::compareUrlTo(const QUrl& other, uint interestFlags) cons
       // --> they must support sub-resources if we do, and display one
       if ( ! (resourceEngine()->supportedFeatureFlags() & KLFLibResourceEngine::FeatureSubResources) ) {
 	resultFlags |= KlfUrlCompareLessSpecific;
-      } else if (other.hasQueryItem("klfDefaultSubResource")) {
-	if (resourceEngine()->compareDefaultSubResourceEquals(other.queryItemValue("klfDefaultSubResource")))
+      } else if (otherq.hasQueryItem("klfDefaultSubResource")) {
+	if (resourceEngine()->compareDefaultSubResourceEquals(otherq.queryItemValue("klfDefaultSubResource")))
 	  resultFlags |= KlfUrlCompareLessSpecific;
       }
     }
@@ -3132,23 +3145,23 @@ uint KLFLibDefaultView::compareUrlTo(const QUrl& other, uint interestFlags) cons
       // more spec.
       // -> if other doesn't have sub-resource, we're fine
       // -> if does, if (we not) { fail; } else { compare equality }
-      if (!other.hasQueryItem("klfDefaultSubResource")) {
+      if (!otherq.hasQueryItem("klfDefaultSubResource")) {
 	resultFlags |= KlfUrlCompareMoreSpecific;
       } else if (! (resourceEngine()->supportedFeatureFlags() & KLFLibResourceEngine::FeatureSubResources)) {
 	// fail
       } else {
 	// both support sub-resources, compare equality
-	if (resourceEngine()->compareDefaultSubResourceEquals(other.queryItemValue("klfDefaultSubResource")))
+	if (resourceEngine()->compareDefaultSubResourceEquals(otherq.queryItemValue("klfDefaultSubResource")))
 	  resultFlags |= KlfUrlCompareMoreSpecific;
       }
     } 
   }
   if (interestFlags & KlfUrlCompareEqual) {
     bool wesupportsubres = (resourceEngine()->supportedFeatureFlags() & KLFLibResourceEngine::FeatureSubResources);
-    bool hesupportssubres = other.hasQueryItem("klfDefaultSubResource");
+    bool hesupportssubres = otherq.hasQueryItem("klfDefaultSubResource");
     if ( wesupportsubres && hesupportssubres ) {
       // both have sub-resources
-      if (baseequal && resourceEngine()->compareDefaultSubResourceEquals(other.queryItemValue("klfDefaultSubResource")))
+      if (baseequal && resourceEngine()->compareDefaultSubResourceEquals(otherq.queryItemValue("klfDefaultSubResource")))
 	resultFlags |= KlfUrlCompareEqual;
     } else if ( !wesupportsubres && ! hesupportssubres ) {
       // both don't have sub-resources, so we're "equal"
@@ -3491,6 +3504,7 @@ void KLFLibDefaultView::updateResourceOwnData(const QList<KLFLib::entryId>& /*en
 }
 void KLFLibDefaultView::updateResourceProp(int propId)
 {
+  Q_UNUSED( propId ) ;
   klfDbg( "propId="<<propId ) ;
 
   KLF_ASSERT_NOT_NULL( resourceEngine() , "Resource Engine is NULL, skipping !" , return ) ;
@@ -3746,7 +3760,7 @@ void KLFLibDefaultView::updateDisplay()
 void KLFLibDefaultView::slotViewSelectionChanged(const QItemSelection& /*selected*/,
 						 const QItemSelection& /*deselected*/)
 {
-#ifndef Q_WS_WIN
+#ifndef KLF_WS_WIN
   // This line generates QPaint* warnings on Win32
   // This is needed to update the parent items selection indicator
   updateDisplay();
@@ -4010,11 +4024,13 @@ QUrl KLFLibOpenResourceDlg::url() const
     // empty url means cancel open
     return QUrl();
   }
+  QUrlQuery urlq(url);
   if (pUi->chkReadOnly->isChecked())
-    url.addQueryItem("klfReadOnly", "true");
+    urlq.addQueryItem("klfReadOnly", "true");
   if (pUi->cbxSubResource->count())
-    url.addQueryItem("klfDefaultSubResource",
-		     pUi->cbxSubResource->itemData(pUi->cbxSubResource->currentIndex()).toString());
+    urlq.addQueryItem("klfDefaultSubResource",
+                      pUi->cbxSubResource->itemData(pUi->cbxSubResource->currentIndex()).toString());
+  url.setQuery(urlq);
   klfDbg( "Got URL: "<<url ) ;
   return url;
 }
@@ -4264,7 +4280,7 @@ KLFLibResPropEditor::KLFLibResPropEditor(KLFLibResourceEngine *res, QWidget *par
   connect(pSubResPropModel, SIGNAL(itemChanged(QStandardItem *)),
 	  this, SLOT(advSubResPropEdited(QStandardItem *)));
 
-  U->frmAdvanced->setShown(U->btnAdvanced->isChecked());
+  U->frmAdvanced->setVisible(U->btnAdvanced->isChecked());
 
   // perform full refresh (resource properties)
   updateResourceProperties();
@@ -4379,7 +4395,7 @@ bool KLFLibResPropEditor::apply()
 void KLFLibResPropEditor::on_btnAdvanced_toggled(bool on)
 {
   // show/hide advanced controls
-  U->frmAdvanced->setShown(on);
+  U->frmAdvanced->setVisible(on);
   if (U->frmAdvanced->isVisible()) {
     // adjust size of columns
     int w = width() / 3;

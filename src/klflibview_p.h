@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibview_p.h 755 2012-01-10 10:14:39Z phfaist $ */
+/* $Id: klflibview_p.h 983 2016-12-31 21:03:44Z phfaist $ */
 
 
 /** \file
@@ -549,6 +549,7 @@ public:
 
   /** \warning Caller eventFilter() must ensure not to recurse with fake events ! */  
   virtual bool evDragMove(QDragMoveEvent *de, const QPoint& pos) {
+    Q_UNUSED(pos) ;
     uint fl = pModel->dropFlags(de, thisView());
     klfDbg( "KLFLibDefViewCommon::evDragMove: flags are "<<fl<<"; pos is "<<pos ) ;
     // decide whether to accept the drop or to ignore it
@@ -580,6 +581,7 @@ public:
       //	qApp->sendEvent(object, event);
       // move the objects ourselves because of bug (?) in Qt's handling?
       QPoint delta = pos - mousePressedContentsPos;
+      Q_UNUSED( delta ) ;
       klfDbg( "Delta is "<<delta ) ;
       // and fake a QDragLeaveEvent
       QDragLeaveEvent fakeevent;
@@ -652,6 +654,7 @@ public:
     */
     QModelIndex index;
     QPoint offset = scrollOffset();
+    Q_UNUSED( offset ) ;
     klfDbg( " offset="<<offset ) ;
     int xStart, yStart;
     int xStep, yStep;
@@ -688,13 +691,13 @@ protected:
   QPoint mousePressedContentsPos;
 
   virtual QModelIndexList commonSelectedIndexes() const = 0;
-  virtual void commonInternalDrag(Qt::DropActions a) = 0;
+  //  virtual void commonInternalDrag(Qt::DropActions a) = 0;
   virtual QAbstractItemView *thisView() = 0;
   virtual const QAbstractItemView *thisConstView() const = 0;
   virtual QPoint scrollOffset() const = 0;
 
   /** Returns contents position */
-  virtual QPoint eventPos(QObject *object, QDragEnterEvent *event, int horoffset, int veroffset) {
+  QPoint eventPosBase(QObject *object, QDragEnterEvent *event, int horoffset, int veroffset) {
     if (object == thisView()->viewport())
       return event->pos() + QPoint(horoffset, veroffset);
     if (object == thisView())
@@ -792,13 +795,13 @@ public slots:
 
 protected:
   QModelIndexList commonSelectedIndexes() const { return selectedIndexes(); }
-  void commonInternalDrag(Qt::DropActions) {  }
+  // void commonInternalDrag(Qt::DropActions) {  }
   QAbstractItemView *thisView() { return this; }
   const QAbstractItemView *thisConstView() const { return this; }
   QPoint scrollOffset() const { return QPoint(horizontalOffset(), verticalOffset()); }
 
   QPoint eventPos(QObject *object, QDragEnterEvent *event) {
-    return KLFLibDefViewCommon::eventPos(object, event, horizontalOffset(), verticalOffset());
+    return eventPosBase(object, event, horizontalOffset(), verticalOffset());
   }
 
   void startDrag(Qt::DropActions supportedActions) {
@@ -875,13 +878,13 @@ public:
 
 protected:
   virtual QModelIndexList commonSelectedIndexes() const { return selectedIndexes(); }
-  virtual void commonInternalDrag(Qt::DropActions a) { internalDrag(a); }
+  //  virtual void commonInternalDrag(Qt::DropActions a) { internalDrag(a); }
   virtual QAbstractItemView *thisView() { return this; }
   virtual const QAbstractItemView *thisConstView() const { return this; }
   virtual QPoint scrollOffset() const { return QPoint(horizontalOffset(), verticalOffset()); }
 
-  virtual QPoint eventPos(QObject *object, QDragEnterEvent *event) {
-    return KLFLibDefViewCommon::eventPos(object, event, horizontalOffset(), verticalOffset());
+  QPoint eventPos(QObject *object, QDragEnterEvent *event) {
+    return eventPosBase(object, event, horizontalOffset(), verticalOffset());
   }
 
   bool inPaintEvent;

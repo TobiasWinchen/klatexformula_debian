@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfconfigbase.h 866 2013-11-24 13:56:22Z phfaist $ */
+/* $Id: klfconfigbase.h 991 2017-01-04 09:15:43Z phfaist $ */
 
 
 #ifndef KLFCONFIGBASE_H_
@@ -124,7 +124,7 @@ public:
   {
     return value();
   }
-  Type operator()() const
+  const Type operator()() const
   {
     return value();
   }

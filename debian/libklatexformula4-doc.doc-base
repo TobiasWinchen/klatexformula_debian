@@ -1,0 +1,13 @@
+Document: libklatexformula4-doc
+Title: KLatexFormula API Documentation
+Author: Philippe Faist
+Abstract: API documentation for the libraries klftools and klfbackend.
+ Klftools is a collection of tools that were written for KLatexFormula, but
+ could be useful in other Qt5 applications as well. Klfbackend provides
+ the functionality to convert LaTeX expressions into images (QImage, PS,
+ PNG, PDF, etc.).
+Section: Programming/C++
+
+Format: HTML
+Index: /usr/share/doc/libklatexformula4-doc/index.html
+Files: /usr/share/doc/libklatexformula4-doc/*/html/*.html

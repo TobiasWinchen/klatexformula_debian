@@ -1,16 +1,25 @@
 Source: klatexformula
 Section: tex
-Priority: extra
+Priority: optional
 Maintainer: Tobias Winchen <tobias@winchen.de>
-Build-Depends: debhelper (>= 9), cmake, qtbase5-dev, qtbase5-dev-tools, qttools5-dev, libqt5svg5-dev, libqt5x11extras5-dev, chrpath, help2man
-Standards-Version: 4.0.0
-Vcs-git: https://github.com/TobiasWinchen/klatexformula_debian.git
+Build-Depends: cmake,
+               debhelper (>= 10),
+               help2man,
+               jdupes,
+               libqt5svg5-dev,
+               libqt5x11extras5-dev,
+               qtbase5-dev,
+               qtbase5-dev-tools,
+               qttools5-dev
+Build-Depends-Indep: doxygen, graphviz
+Standards-Version: 4.1.0
+Vcs-Git: https://github.com/TobiasWinchen/klatexformula_debian.git
 Vcs-Browser: https://github.com/TobiasWinchen/klatexformula_debian
-Homepage: http://klatexformula.sourceforge.net/
+Homepage: https://klatexformula.sourceforge.io/
 
 Package: klatexformula
 Architecture: any
-Depends: libqt5sql5-sqlite, ${shlibs:Depends}, ${misc:Depends}
+Depends: libqt5sql5-sqlite, ${misc:Depends}, ${shlibs:Depends}
 Description: GUI to easily get an image from a LaTeX formula or equation
  With klatexformula, just enter a formula and click "Evaluate" to get an image
  of a LaTeX formula. You can drag&drop, copy or save the resulting image
@@ -21,24 +30,46 @@ Description: GUI to easily get an image from a LaTeX formula or equation
 Package: libklatexformula4
 Section: libs
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Multi-Arch: same
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Runtime libraries for klatexformula
  With Klatexformula, just enter a formula and click "Evaluate" to get an image
  of a LaTeX formula. You can drag&drop, copy or save the resulting image
  directly from the GUI, which makes klatexformula a very convenient tool for
  presentations. Klatexformula also provides also tools for equation prototyping
  in LaTeX and a user-library of used equations.
+ .
  This package provides the libraries klatexformula is based on.
 
 Package: libklatexformula4-dev
-Architecture: any
 Section: libdevel
-Depends: ${shlibs:Depends}, ${misc:Depends}, libklatexformula4 (= ${binary:Version})
+Architecture: any
+Multi-Arch: same
+Depends: libklatexformula4 (= ${binary:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
+Suggests: libklatexformula4-doc
 Description: Runtime libraries for klatexformula, development files
  With Klatexformula, just enter a formula and click "Evaluate" to get an image
  of a LaTeX formula. You can drag&drop, copy or save the resulting image
  directly from the GUI, which makes klatexformula a very convenient tool for
  presentations. Klatexformula also provides also tools for equation prototyping
  in LaTeX and a user-library of used equations.
- This package contains the header files and static libraries to build the
- klatexformula libraries.
+ .
+ This package contains the header files for klatexformula libraries, and a Qt
+ Designer plugin to help developers use the provided user interface elements.
+
+Package: libklatexformula4-doc
+Section: doc
+Architecture: all
+Multi-Arch: foreign
+Depends: ${misc:Depends}
+Description: Runtime libraries for klatexformula, API documentation
+ With Klatexformula, just enter a formula and click "Evaluate" to get an image
+ of a LaTeX formula. You can drag&drop, copy or save the resulting image
+ directly from the GUI, which makes klatexformula a very convenient tool for
+ presentations. Klatexformula also provides also tools for equation prototyping
+ in LaTeX and a user-library of used equations.
+ .
+ This package contains API documentation for developers who wish to use the
+ klatexformula libraries klftools and klfbackend.

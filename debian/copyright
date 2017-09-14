@@ -1,10 +1,10 @@
-Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: klatexformula
 Upstream-Contact: Philippe Faist <philippe.faist@bluewin.ch>
-Source: http://klatexformula.sourceforge.net/
+Source: https://klatexformula.sourceforge.io/
 
 Files: *
-Copyright: 2005, Philippe Faist <philippe.faist@bluewin.ch>
+Copyright: 2005-2017, Philippe Faist <philippe.faist@bluewin.ch>
 License: GPL-2+
 
 Files: src/klftools/qtcolortriangle.cpp src/klftools/qtcolortriangle.h
@@ -55,10 +55,11 @@ License: X11-License
 
 
 Files: debian/*
-Copyright: 2010, Tobias Winchen <tobias.winchen@physik.rwth-aachen.de>
+Copyright: 2010-2017, Tobias Winchen <tobias.winchen@physik.rwth-aachen.de>
+           2017, Juhani Numminen <juhaninumminen0@gmail.com>
 License: GPL-3+
  On Debian systems, the full text of the GNU General Public
- License version 2 can be found in the file
+ License version 3 can be found in the file
  `/usr/share/common-licenses/GPL-3'.
 
 License: GPL-2+

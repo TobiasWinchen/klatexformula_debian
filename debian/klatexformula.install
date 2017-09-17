@@ -1,7 +1,8 @@
+src/klatexformula.svg usr/share/icons/hicolor/scalable/apps/
 usr/bin/klatexformula
 usr/bin/klatexformula_cmdl
-usr/share/applications/*
-usr/share/mime/*
-usr/share/man/*
-usr/share/pixmaps/*
-
+usr/share/applications/
+usr/share/icons/
+usr/share/klatexformula/
+usr/share/man/
+usr/share/mime/

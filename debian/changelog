@@ -1,3 +1,9 @@
+klatexformula (4.0.0-2) unstable; urgency=medium
+
+  * Added patch providing skeletons for OS dependent functions (Closes: #876291) 
+
+ -- Tobias Winchen <tobias@winchen.de>  Thu, 21 Sep 2017 19:52:59 +0200
+
 klatexformula (4.0.0-1) unstable; urgency=medium
 
   [ Tobias Winchen ]

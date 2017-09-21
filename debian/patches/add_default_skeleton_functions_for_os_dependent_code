@@ -1,0 +1,55 @@
+Description: Add skeleton functions for os dependent code.
+Bug: https://sourceforge.net/p/klatexformula/bugs/37/
+Author: Tobias Winchen <tobias@winchen.de>
+Last-Update: 2017-09-21
+
+
+
+--- a/src/klftools/CMakeLists.txt
++++ b/src/klftools/CMakeLists.txt
+@@ -149,6 +149,9 @@
+       )
+   else()
+     # no platform-specific definitions
++    target_sources(klftools PRIVATE
++      klfdefs_otheros.cpp
++      )
+   endif()
+ 
+ 
+--- /dev/null
++++ b/src/klftools/klfdefs_otheros.cpp
+@@ -0,0 +1,33 @@
++#include <klfdefs.h>
++#include <klfsysinfo.h>
++
++KLF_EXPORT QString klf_defs_sysinfo_arch()
++{
++  return QString::fromLatin1("Unknown architecture and OS");
++}
++
++
++KLF_EXPORT KLFSysInfo::BatteryInfo _klf_otheros_battery_info()
++{
++  KLFSysInfo::BatteryInfo info;
++
++  klfWarning("Could not get battery status.") ;
++  info.islaptop = false;
++  info.onbatterypower = false;
++  return info;
++}
++
++KLF_EXPORT bool _klf_otheros_is_laptop()
++{
++  KLFSysInfo::BatteryInfo info;
++  info = _klf_otheros_battery_info();
++  return info.islaptop;
++}
++
++KLF_EXPORT bool _klf_otheros_is_on_battery_power()
++{
++  KLFSysInfo::BatteryInfo info;
++  info = _klf_otheros_battery_info();
++  return info.onbatterypower;
++}
++

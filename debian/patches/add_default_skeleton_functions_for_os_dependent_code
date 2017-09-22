@@ -1,5 +1,6 @@
 Description: Add skeleton functions for os dependent code.
 Bug: https://sourceforge.net/p/klatexformula/bugs/37/
+Bug-Debian: https://bugs.debian.org/876291
 Author: Tobias Winchen <tobias@winchen.de>
 Last-Update: 2017-09-21
 

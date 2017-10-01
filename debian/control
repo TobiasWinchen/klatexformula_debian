@@ -48,6 +48,8 @@ Multi-Arch: same
 Depends: libklatexformula4 (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
+Breaks: libklatexformula3-dev
+Replaces: libklatexformula3-dev
 Suggests: libklatexformula4-doc
 Description: Runtime libraries for klatexformula, development files
  With Klatexformula, just enter a formula and click "Evaluate" to get an image

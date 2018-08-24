@@ -1,3 +1,4 @@
 add_keywords_entry_to_desktop_file
 add_useful_whatis_entry_to_manpage
 add_default_skeleton_functions_for_os_dependent_code
+ftbfs_missing_include

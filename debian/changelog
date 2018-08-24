@@ -1,3 +1,10 @@
+klatexformula (4.0.0-4) unstable; urgency=medium
+
+  [ Juhani Numminen ]
+  * Patch to add missing include (Closes: #907000)
+
+ -- Tobias Winchen <tobias@winchen.de>  Fri, 24 Aug 2018 09:34:23 +0200
+
 klatexformula (4.0.0-3) unstable; urgency=medium
 
   * libklatexformula4-dev breaks+replaces libklatexformula3-dev (Closes: #876457)

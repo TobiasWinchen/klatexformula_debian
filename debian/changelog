@@ -1,5 +1,9 @@
 klatexformula (4.0.0-4) unstable; urgency=medium
 
+  [ Tobias Winchen ]
+  * Updated to standards version 4.2.0
+  * Switched to debhelper compat 11
+
   [ Juhani Numminen ]
   * Patch to add missing include (Closes: #907000)
 

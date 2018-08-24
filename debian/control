@@ -3,7 +3,7 @@ Section: tex
 Priority: optional
 Maintainer: Tobias Winchen <tobias@winchen.de>
 Build-Depends: cmake,
-               debhelper (>= 10),
+               debhelper (>= 11),
                help2man,
                jdupes,
                libqt5svg5-dev,
@@ -12,7 +12,7 @@ Build-Depends: cmake,
                qtbase5-dev-tools,
                qttools5-dev
 Build-Depends-Indep: doxygen, graphviz
-Standards-Version: 4.1.0
+Standards-Version: 4.2.0
 Vcs-Git: https://github.com/TobiasWinchen/klatexformula_debian.git
 Vcs-Browser: https://github.com/TobiasWinchen/klatexformula_debian
 Homepage: https://klatexformula.sourceforge.io/

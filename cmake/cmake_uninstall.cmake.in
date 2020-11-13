@@ -1,6 +1,6 @@
 # CMake Instructions for uninstall
 # ================================
-# $Id: cmake_uninstall.cmake.in 977 2016-12-31 04:38:49Z phfaist $
+# $Id$
 
 
 # Based on the code from Kitware at

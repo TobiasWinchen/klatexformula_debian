@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfprogerr.cpp 995 2017-01-10 19:57:24Z phfaist $ */
+/* $Id$ */
 
 #include <QRegExp>
 #include <QSizePolicy>

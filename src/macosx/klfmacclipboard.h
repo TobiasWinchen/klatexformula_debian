@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmacclipboard.h 971 2016-12-30 04:24:56Z phfaist $ */
+/* $Id$ */
 
 
 #ifndef KLFMACCLIPBOARD_H
@@ -47,6 +47,8 @@ public:
   QString mimeFor(QString flav);
 
 };
+
+
 
 
 #endif

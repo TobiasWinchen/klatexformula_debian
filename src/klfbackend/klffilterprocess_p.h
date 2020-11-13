@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klffilterprocess_p.h 978 2016-12-31 05:16:11Z phfaist $ */
+/* $Id$ */
 
 #ifndef KLFFILTERPROCESS_P_H
 #define KLFFILTERPROCESS_P_H

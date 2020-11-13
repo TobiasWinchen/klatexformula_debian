@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klffactory.h 673 2011-07-27 13:45:42Z phfaist $ */
+/* $Id$ */
 
 #ifndef KLFFACTORY_H
 #define KLFFACTORY_H

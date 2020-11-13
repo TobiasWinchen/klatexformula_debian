@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmainwin_p.h 1006 2017-02-02 22:20:05Z phfaist $ */
+/* $Id$ */
 
 #ifndef KLFMAINWIN_P_H
 #define KLFMAINWIN_P_H
@@ -77,7 +77,7 @@ public:
   virtual QString getFullHtml()
   {
     QString html;
-    QString fn = klfFindTranslatedDataFile(":/data/"+pBaseFName, ".html");
+    QString fn = klfFindTranslatedDataFile(pBaseFName, ".html");
 
     QFile f(fn);
     f.open(QIODevice::ReadOnly);
@@ -891,6 +891,9 @@ public:
 #endif
 
     pCmdIface = NULL;
+
+    is_quitting = false;
+    qapp_quit_called = false;
   }
 
 
@@ -966,6 +969,9 @@ public:
   QList<QAction*> pExportProfileQuickMenuActionList;
 
   bool ignore_close_event;
+
+  bool is_quitting;
+  bool qapp_quit_called;
 
   //   /** "last" window status flags are used in eventFilter() to detect individual dialog
   //    * geometries resetting */

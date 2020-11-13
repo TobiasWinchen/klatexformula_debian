@@ -5,7 +5,7 @@
 #
 # Usage: i18nupdate.pl <filename_XX.ts>
 #
-# $Id: i18nupdate.pl 952 2016-12-26 07:36:43Z phfaist $
+# $Id$
 
 use Getopt::Long qw /:config bundling /;
 
@@ -26,13 +26,13 @@ if ($#ARGV < 0 || $tsfile eq "") {
 }
 
 
-$sourceslist = "../*.cpp ../klftools/*.cpp ../klfbackend/*.cpp ../plugins/skin/*.cpp ../plugins/systrayicon/*.cpp";
+$sourceslist = "../*.cpp ../klftools/*.cpp ../klfbackend/*.cpp";
 $sourceslist .= " obsolete/*.cpp"  if ($use_obsolete);
 
-$headerslist = "../*.h ../klftools/*.h ../klfbackend/*.h ../plugins/skin/*.h ../plugins/systrayicon/*.h";
+$headerslist = "../*.h ../klftools/*.h ../klfbackend/*.h";
 $headerslist .= " obsolete/*.h"  if ($use_obsolete);
 
-$formslist = "../*.ui ../klftools/*.ui ../plugins/skin/*.ui ../plugins/systrayicon/*.ui";
+$formslist = "../*.ui ../klftools/*.ui";
 $formslist .= " obsolete/*.ui"  if ($use_obsolete);
 
 # Now scan XML files for translatable texts
@@ -46,9 +46,10 @@ $xmltrrules =
 						  TAGS => [ "category-title", "keywords" ]
 					   } ,
    "../conf/latexfontdefs.d/*.xml" => { SCOPE => "latexfontdefs" ,
-				      TAGS => [ "title" ] } ,
-   "../plugins/skin/skins/*.xml" => { SCOPE => "pluginskins" ,
-				      TAGS => [ "name", "description" ] }
+				      TAGS => [ "title" ] }
+# ,
+#   "../plugins/skin/skins/*.xml" => { SCOPE => "pluginskins" ,
+#				      TAGS => [ "name", "description" ] }
   } ;
 
 $xmltrfile = "temp_xmltr_$tsfile.cxx";

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibbrowser.cpp 1004 2017-02-02 20:07:10Z phfaist $ */
+/* $Id$ */
 
 #include <QDebug>
 #include <QUrl>
@@ -54,7 +54,13 @@ KLFLibBrowser::KLFLibBrowser(QWidget *parent)
 #else
 	    parent /* 0 */
 #endif
-	    , Qt::Window)
+	    ,
+#if defined(KLF_WS_MAC)
+            Qt::Dialog /* to forbid windows from tabbing together */
+#else
+            Qt::Window
+#endif
+      )
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
   Q_UNUSED(parent) ;

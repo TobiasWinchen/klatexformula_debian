@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfrelativefont.h 660 2011-07-07 22:19:41Z phfaist $ */
+/* $Id$ */
 
 #ifndef KLFRELATIVEFONT_H
 #define KLFRELATIVEFONT_H

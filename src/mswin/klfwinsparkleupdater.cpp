@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfwinsparkleupdater.cpp 916 2014-08-24 22:17:20Z phfaist $ */
+/* $Id$ */
 
 #include <string> // C++ wide string for win_sparkle_set_app_details
 

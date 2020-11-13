@@ -19,10 +19,12 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfconfig.h 969 2016-12-29 07:44:24Z phfaist $ */
+/* $Id$ */
 
 #ifndef KLFCONFIG_H
 #define KLFCONFIG_H
+
+#include <assert.h>
 
 #include <qglobal.h>
 #include <QDebug>
@@ -227,6 +229,8 @@ class KLFConfig;
 class KLF_EXPORT KLFConfig : public KLFConfigBase
 {
 public:
+  KLFConfig();
+  virtual ~KLFConfig();
 
   QString homeConfigDir;
   QString globalShareDir;
@@ -399,6 +403,10 @@ public:
   /** returns TRUE if the executable paths are valid. */
   bool checkExePaths();
 
+
+  /** will be called before QApplication etc. are destroyed */
+  void prepareDestruction();
+
 private:
   int readFromConfig_v2(const QString& fname);
   int readFromConfig_v1();
@@ -408,7 +416,16 @@ private:
 
 
 
-KLF_EXPORT extern KLFConfig klfconfig;
+extern KLFConfig * klf_the_config;
+
+template<typename T>
+inline T * klf_get_ptr_assert_not_null(T * ptr) {
+  assert(ptr != NULL);
+  return ptr;
+}
+
+#define klfconfig					\
+  (*klf_get_ptr_assert_not_null(klf_the_config))
 
 
 

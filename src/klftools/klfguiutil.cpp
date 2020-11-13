@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfguiutil.cpp 963 2016-12-27 11:28:39Z phfaist $ */
+/* $Id$ */
 
 #include <cmath>
 

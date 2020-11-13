@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfsettings_p.h 984 2016-12-31 21:11:52Z phfaist $ */
+/* $Id$ */
 
 /** \file
  * This header contains (in principle private) auxiliary classes for
@@ -91,6 +91,8 @@ public:
 		     KLFPathChooser *destination);
 
 
+  QString getSelectedUserScriptName();
+
   QHash<QString,QWidget*> userScriptConfigWidgets;
   QWidget * getUserScriptConfigWidget(const KLFUserScriptInfo& usinfo, const QString& uifile);
   QVariantMap getUserScriptConfig(QWidget *w);
@@ -119,6 +121,8 @@ public slots: // well "public" only for us... :)
   void reloadUserScripts();
   void refreshUserScriptList();
   void refreshUserScriptSelected();
+
+  void slotUserScriptSettingsQueryDefaults();
 
   void slotChangeFontPresetSender();
   void slotChangeFontSender();

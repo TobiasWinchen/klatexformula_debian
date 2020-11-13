@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfuiloader.cpp 892 2014-07-27 16:01:10Z phfaist $ */
+/* $Id$ */
 
 #include "klfuiloader.h"
 #include "klfuiloader_p.h"

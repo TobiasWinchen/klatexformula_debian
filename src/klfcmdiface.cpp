@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfcmdiface.cpp 952 2016-12-26 07:36:43Z phfaist $ */
+/* $Id$ */
 
 #include <QUrl>
 #include <QUrlQuery>

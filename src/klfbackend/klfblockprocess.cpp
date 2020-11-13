@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfblockprocess.cpp 1013 2017-02-07 03:02:14Z phfaist $ */
+/* $Id$ */
 
 #include <QProcess>
 #include <QCoreApplication>
@@ -136,6 +136,8 @@ bool KLFBlockProcess::startProcess(QStringList cmd, QStringList env)
 
 bool KLFBlockProcess::startProcess(QStringList cmd, QByteArray stdindata, QStringList env)
 {
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+
   klfDbg("Running: "<<cmd<<", stdindata/size="<<stdindata.size());
 
   _runstatus = 0;

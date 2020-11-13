@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmainwin.h 994 2017-01-10 01:09:40Z phfaist $ */
+/* $Id$ */
 
 
 #ifndef KLFMAINWIN_H

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfflowlistwidget_p.h 667 2011-07-24 15:44:22Z phfaist $ */
+/* $Id$ */
 
 /** \file
  * This file contains internal definitions for file klfflowlistwidget.cpp.

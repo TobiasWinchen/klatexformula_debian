@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdbus.cpp 689 2011-08-01 12:06:27Z phfaist $ */
+/* $Id$ */
 
 #include "klfmainwin.h"
 #include "klfdbus.h"

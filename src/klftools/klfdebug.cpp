@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdebug.cpp 1007 2017-02-05 23:19:46Z phfaist $ */
+/* $Id$ */
 
 
 // All definitions are in klfdefs.cpp. I may choose to move them here in the future.

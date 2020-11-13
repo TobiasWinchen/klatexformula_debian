@@ -1,7 +1,7 @@
 # #################################### #
 # CMake project file for klatexformula #
 # #################################### #
-# $Id: CMakeLists.txt 1019 2017-02-07 06:20:02Z phfaist $
+# $Id$
 # #################################### #
 cmake_minimum_required(VERSION 3.1)
 
@@ -54,8 +54,7 @@ if(NOT KLF_WELCOME_MSG_SILENT)
    For more options and help:
       - look at the stored cache variable documentation (displayed eg. by cmake-gui
         and ccmake, or directly in the CMakeCache.txt file)
-      - take a look at
-http://klatexformula.sourceforge.net/klfwiki/index.php/User_Manual:Downloading_%26_Installing
+      - take a look at https://klatexformula.sourceforge.io/doc/install
 
    And have a lot of fun!
 
@@ -310,7 +309,7 @@ if(KLF_MACOSX_BUNDLES)
   set(default_KLF_BUNDLE_QT_PLUGINS
     Qt5::QCocoaIntegrationPlugin
     Qt5::QGifPlugin
-    Qt5::QDDSPlugin
+    #Qt5::QDDSPlugin
     Qt5::QGifPlugin
     Qt5::QICNSPlugin
     Qt5::QICOPlugin

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflatexsymbols.h 997 2017-01-15 09:55:24Z phfaist $ */
+/* $Id$ */
 
 #ifndef KLFLATEXSYMBOLS_H
 #define KLFLATEXSYMBOLS_H

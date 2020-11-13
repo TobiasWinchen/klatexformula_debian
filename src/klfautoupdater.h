@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfautoupdater.h 909 2014-08-10 17:58:33Z phfaist $ */
+/* $Id$ */
 
 #ifndef KLFAUTOUPDATER_H
 #define KLFAUTOUPDATER_H

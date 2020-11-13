@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfuserscript.cpp 1019 2017-02-07 06:20:02Z phfaist $ */
+/* $Id$ */
 
 #include <QFileInfo>
 #include <QDir>
@@ -38,7 +38,7 @@
 
 /** \page pageUserScript User Scripts
  *
- * Doc here: http://klatexformula.sourceforge.net/doc/user-scripts-devel
+ * Doc here: https://klatexformula.sourceforge.io/doc/user-scripts-devel
  *
  */
 
@@ -844,6 +844,7 @@ struct KLFUserScriptFilterProcessPrivate
 
   KLFUserScriptInfo * usinfo;
 
+  // log of user script output
   static QStringList log;
 };
 
@@ -853,7 +854,7 @@ QStringList KLFUserScriptFilterProcessPrivate::log = QStringList();
 
 KLFUserScriptFilterProcess::KLFUserScriptFilterProcess(const QString& userScriptFileName,
 						       const KLFBackend::klfSettings * settings)
-  : KLFFilterProcess("User Script " + userScriptFileName, settings)
+  : KLFFilterProcess("User Script " + userScriptFileName, settings, QString(), true)
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME);
   klfDbg("userScriptFileName= "<<userScriptFileName) ;

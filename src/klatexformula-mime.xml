@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- MIME types for KLatexFormula  -->
-<!-- $Id: klatexformula-mime.xml 560 2010-11-18 22:43:35Z philippe $ -->
+<!-- $Id$ -->
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
   <mime-type type="application/x-klatexformula">
     <comment>KLatexFormula Library Export</comment>

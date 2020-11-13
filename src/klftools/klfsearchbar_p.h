@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfsearchbar_p.h 756 2012-01-15 13:11:41Z phfaist $ */
+/* $Id$ */
 
 #ifndef KLFSEARCHBAR_P_H
 #define KLFSEARCHBAR_P_H

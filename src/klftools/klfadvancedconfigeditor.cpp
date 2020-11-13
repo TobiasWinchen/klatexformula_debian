@@ -19,8 +19,9 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfadvancedconfigeditor.cpp 866 2013-11-24 13:56:22Z phfaist $ */
+/* $Id$ */
 
+#include <QAction>
 #include <QStandardItemModel>
 #include <QStyledItemDelegate>
 #include <QItemEditorFactory>

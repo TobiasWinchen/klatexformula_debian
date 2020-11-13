@@ -21,6 +21,7 @@
     <file>pics/iconify.png</file>
     <file>pics/bullet22.png</file>
     <file>pics/helpdialogbg.png</file>
+    <file>pics/help_dialog_bg.svg</file>
     <file>pics/symbols.png</file>
     <file>pics/symbols.svg</file>
     <file>pics/actions.png</file>
@@ -33,6 +34,7 @@
     <file>pics/smallclose.png</file>
     <file>pics/delete.png</file>
     <file>pics/help.png</file>
+    <file>pics/help.svg</file>
     <file>pics/resetdefaults.png</file>
     <file>pics/ok.png</file>
     <file>pics/apply.png</file>
@@ -74,6 +76,7 @@
     <file>data/cmdl-help.txt</file>
     <file>data/about.html</file>
     <file>data/whats-new-4.0.html</file>
+    <file>data/whats-new-4.1.html</file>
     <file>data/base_symbolspixmapcache-klf3.3</file>
     <file>data/base_symbolspixmapcache@2x-klf3.3</file>
     <file>data/defaultlibrary.klf</file>
@@ -87,11 +90,17 @@
   <qresource>
     <file>data/cmdl-help_fr.txt</file>
     <file>data/about_fr.html</file>
-    <file>data/whats-new-3.3_fr.html</file>
+    <file>data/whats-new-4.0_fr.html</file>
+    <file>data/whats-new-4.1_fr.html</file>
   </qresource>
   <qresource>
     <file>data/cmdl-help_cs.txt</file>
     <file>data/about_cs.html</file>
     <file>data/whats-new-3.2_cs.html</file>
+  </qresource>
+  <qresource>
+    <file>data/cmdl-help_uk.txt</file>
+    <file>data/about_uk.html</file>
+    <file>data/whats-new-4.0_uk.html</file>
   </qresource>
 </RCC>

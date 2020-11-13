@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfstylemanager.h 604 2011-02-27 23:34:37Z phfaist $ */
+/* $Id$ */
 
 #ifndef KLFSTYLEMANAGER_H
 #define KLFSTYLEMANAGER_H

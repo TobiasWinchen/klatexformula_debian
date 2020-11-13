@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflibentryeditor.cpp 698 2011-08-08 08:28:12Z phfaist $ */
+/* $Id$ */
 
 
 #include <QWidget>

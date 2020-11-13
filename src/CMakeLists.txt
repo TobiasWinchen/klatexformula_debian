@@ -1,7 +1,7 @@
 # ######################################## #
 # CMake project file for klatexformula/src #
 # ######################################## #
-# $Id: CMakeLists.txt 1021 2017-02-07 06:44:42Z phfaist $
+# $Id$
 # ######################################## #
 
 
@@ -120,6 +120,7 @@ if(KLF_BUILD_GUI)
   set(klatexformula_TSS
     i18n/klf_fr.ts
     i18n/klf_cs.ts
+    i18n/klf_uk.ts
     )
   # Resources
   set(klatexformula_QRCS
@@ -416,7 +417,7 @@ if(KLF_BUILD_GUI)
     set(LDPATHDEFS "export LD_LIBRARY_PATH='${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/klfbackend:${CMAKE_CURRENT_BINARY_DIR}/klftools':\"$LD_LIBRARY_PATH\" ")
     add_custom_command(OUTPUT "klatexformula.1"
       COMMAND
-      "sh" "-c" "${LDPATHDEFS}; ${HELP2MAN} -h --help='\"&1\"' -v --version='\"&1:klatexformula %k\"' --no-info $<TARGET_FILE:klatexformula> -o '${CMAKE_CURRENT_BINARY_DIR}/klatexformula.1'"
+      "sh" "-c" "${LDPATHDEFS}; ${HELP2MAN} -h --help='\"&1\"' -v --version='\"&1:klatexformula %k\"' -n 'GUI and CLI to generate images from LaTeX formulas' --no-info $<TARGET_FILE:klatexformula> -o '${CMAKE_CURRENT_BINARY_DIR}/klatexformula.1'"
       COMMENT "Generating man page for klatexformula"
       DEPENDS "${klatexformula}"
       VERBATIM
@@ -544,6 +545,8 @@ if(KLF_BUILD_GUI)
         )
     endif()
     if(KLF_INSTALL_ICON_THEME)
+      install(FILES klatexformula.svg
+        DESTINATION "${KLF_INSTALL_ICON_THEME}/scalable/apps/")
       install(FILES klatexformula-128.png
         DESTINATION "${KLF_INSTALL_ICON_THEME}/128x128/apps/" RENAME "klatexformula.png")
       install(FILES klatexformula-64.png

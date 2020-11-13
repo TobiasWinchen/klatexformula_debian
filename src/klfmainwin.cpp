@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmainwin.cpp 1008 2017-02-05 23:22:01Z phfaist $ */
+/* $Id$ */
 
 #include <stdio.h>
 #include <math.h>
@@ -387,6 +387,9 @@ KLFMainWin::KLFMainWin()
 
   slotReloadUserScripts();
 
+  // need currentSettings() to set PYTHONPATH etc. correctly
+  KLFBackend::klfSettings settings = currentSettings();
+
   // and set up the default config, if the user script can provide a default config
   klfDbg("About to load default settings for user scripts, if necessary.  Currently user script config = "
          << klfconfig.UserScripts.userScriptConfig) ;
@@ -398,7 +401,8 @@ KLFMainWin::KLFMainWin()
       if (usinfo.canProvideDefaultSettings()) {
         // set defaults
         klfDbg("setting default config for user script " << us) ;
-        klfconfig.UserScripts.userScriptConfig[usinfo.userScriptPath()] = usinfo.queryDefaultSettings(&d->settings);
+        klfconfig.UserScripts.userScriptConfig[usinfo.userScriptPath()]
+	  = usinfo.queryDefaultSettings( & settings );
         klfDbg("user script config is now " << klfconfig.UserScripts.userScriptConfig[usinfo.userScriptPath()]) ;
       }
     }
@@ -728,10 +732,12 @@ void KLFMainWin::startupFinished()
 
   /// \todo autoupdate: Add a UI item to enable/disable auto-check for updates, check now, etc.
 
-  if (klfconfig.UI.enableRealTimePreview) {
-    d->pLatexPreviewThread->start();
-    d->pLatexPreviewThread->setPriority(QThread::LowestPriority);
-  }
+  //if (klfconfig.UI.enableRealTimePreview) {
+  d->pLatexPreviewThread->start();
+  d->pLatexPreviewThread->setPriority(QThread::LowestPriority);
+
+  d->pContLatexPreview->setEnabled( klfconfig.UI.enableRealTimePreview );
+  //}
 }
 
 
@@ -863,16 +869,7 @@ void KLFMainWin::saveSettings()
   u->btnSetExportProfile->setEnabled(klfconfig.ExportData.menuExportProfileAffectsDrag ||
 				     klfconfig.ExportData.menuExportProfileAffectsCopy);
   
-  if (klfconfig.UI.enableRealTimePreview) {
-    if ( ! d->pLatexPreviewThread->isRunning() ) {
-      d->pLatexPreviewThread->start();
-      d->pLatexPreviewThread->setPriority(QThread::LowestPriority);
-    }
-  } else {
-    if ( d->pLatexPreviewThread->isRunning() ) {
-      d->pLatexPreviewThread->stop();
-    }
-  }
+  d->pContLatexPreview->setEnabled( klfconfig.UI.enableRealTimePreview );
 
   u->txtLatex->setWrapLines(klfconfig.UI.editorWrapLines);
   u->txtLatex->setTabChangesFocus(!klfconfig.UI.editorTabInsertsTab);
@@ -2478,7 +2475,17 @@ void KLFMainWin::hideApplication()
 
 void KLFMainWin::quit()
 {
+  // a slot which basically calls qApp->quit() (and can safely be called several
+  // times in the quitting process)
+
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+
+  if (d->is_quitting) {
+    // already called.
+    klfDbg("already quitting.") ;
+    return;
+  }
+  d->is_quitting = true;
 
   u->frmDetails->showSideWidget(false);
   u->frmDetails->sideWidgetManager()->waitForShowHideActionFinished();
@@ -2493,7 +2500,11 @@ void KLFMainWin::quit()
     d->mStyleManager->hide();
   if (d->mSettingsDialog)
     d->mSettingsDialog->hide();
-  qApp->quit();
+
+  if (!d->qapp_quit_called) {
+    d->qapp_quit_called = true;
+    qApp->quit();
+  }
 }
 
 bool KLFMainWin::event(QEvent *e)
@@ -2582,6 +2593,11 @@ bool KLFMainWin::eventFilter(QObject *obj, QEvent *e)
   // ----
   if ( obj == QApplication::instance() ) {
     klfDbg("Application event: type="<<e->type()) ;
+    if ( e->type() == QEvent::Close && ! d->qapp_quit_called ) {
+      // intercept close-event, which means that qApp->quit() was called directly
+      d->qapp_quit_called = true;
+      quit();
+    }
   }
   if ( obj == QApplication::instance() && e->type() == QEvent::FileOpen ) {
     // open a URL or file
@@ -2819,16 +2835,15 @@ void KLFMainWinPrivate::updatePreviewThreadInput()
       && KLFSysInfo::isLaptop()) {
     // update battery status
     bool onbattery = KLFSysInfo::isOnBatteryPower();
-    bool running = pLatexPreviewThread->isRunning();
-    if (running && onbattery) {
+    bool enabled = pContLatexPreview->enabled();
+    if (enabled && onbattery) {
       // we need to stop the preview thread
-      klfDbg("Stopping preview thread because we're on battery power") ;
-      pLatexPreviewThread->stop();
-    } else if (!running && !onbattery) {
+      klfDbg("Disabling continuous preview because we're on battery power") ;
+      pContLatexPreview->setEnabled(false);
+    } else if (!enabled && !onbattery) {
       // we can restart the preview thread, as we're back on power.
-      klfDbg("Restarting preview thread because we're no longer on battery power") ;
-      pLatexPreviewThread->start();
-      pLatexPreviewThread->setPriority(QThread::LowestPriority);
+      klfDbg("Re-enabling continuous preview because we're no longer on battery power") ;
+      pContLatexPreview->setEnabled(true);
     }
   }
 
@@ -2949,7 +2964,8 @@ QVariantMap KLFMainWinPrivate::collectUserScriptInput() const
   QList<QWidget*> inwidgets = scriptInputWidget->findChildren<QWidget*>(QRegExp("^INPUT_.*"));
   Q_FOREACH (QWidget *inw, inwidgets) {
     QString n = inw->objectName();
-    KLF_ASSERT_CONDITION(n.startsWith("INPUT_"), "?!? found child widget "<<n<<" that is not INPUT_*?",
+    KLF_ASSERT_CONDITION(n.startsWith("INPUT_"),
+                         "?!? \"found\" child widget "<<n<<" that is not INPUT_*?",
 			 continue; ) ;
     n = n.mid(strlen("INPUT_"));
     // get the user property
@@ -2958,7 +2974,8 @@ QVariantMap KLFMainWinPrivate::collectUserScriptInput() const
       userPropName = "plainText";
     } else {
       QMetaProperty userProp = inw->metaObject()->userProperty();
-      KLF_ASSERT_CONDITION(userProp.isValid(), "user property of widget "<<n<<" invalid!", continue ; ) ;
+      KLF_ASSERT_CONDITION(userProp.isValid(),
+                           "user property of widget "<<n<<" invalid!", continue ; ) ;
       userPropName = userProp.name();
     }
     QVariant value = inw->property(userPropName.constData());
@@ -3734,7 +3751,15 @@ void KLFMainWin::slotCopy()
       d->pExporterManager,
       d->output
       );
+
+  klfDbg("created mime data object.") ;
+
+  // On Mac, Qt's clipboard support doesn't allow to query the data later and
+  // gets all data now (that works only for drag & drop) (WHY?!?!?!?!?!?).  But
+  // I can't see any other solution...
   QApplication::clipboard()->setMimeData(mimedata, QClipboard::Clipboard);
+
+  klfDbg("set MIME data.") ;
 
   KLFMimeExportProfile profile = d->pMimeExportProfileManager.findExportProfile(
       klfconfig.ExportData.copyExportProfile
@@ -3815,14 +3840,17 @@ void KLFMainWin::slotSave(const QString& suggestfname)
 				       &selectedfilter);
 
   if (fname.isEmpty()) {
+    klfDbg("Aborted by user.") ;
     return;
   }
+
+  klfDbg("Selected filter = " << selectedfilter) ;
 
   QFileInfo fi(fname);
   // save this path as default to suggest next time
   klfconfig.UI.lastSaveDir = fi.absolutePath();
 
-  // first test if it's an extern-format
+  // selected filter should match to an exporter
   if ( exporterByFilterName.contains(selectedfilter) ) {
     // use an external output-saver
     QString formatname = formatsByFilterName[selectedfilter];
@@ -3832,6 +3860,8 @@ void KLFMainWin::slotSave(const QString& suggestfname)
       klfWarning("Internal error: exporter is NULL!");
       return;
     }
+
+    klfDbg( "Saving using exporter `" << exporter->exporterName() << "' with format `" << formatname << "'" ) ;
 
     QByteArray data = exporter->getData(formatname, d->output);
     if (data.isEmpty()) {
@@ -3970,6 +4000,8 @@ KLFBackend::klfSettings KLFMainWin::currentSettings() const
     settings.lborderoffset = u->spnMarginLeft->valueInRefUnit();
   }
 
+  klfDbg("settings.execenv = "<<settings.execenv);
+
   klfDbg("backendsettings.setTexInputs = "<<klfconfig.BackendSettings.setTexInputs());
   if (!klfconfig.BackendSettings.setTexInputs().isEmpty()) {
     klfDbg("old environment is"<<settings.execenv);
@@ -3980,6 +4012,16 @@ KLFBackend::klfSettings KLFMainWin::currentSettings() const
 			  KlfEnvPathPrepend|KlfEnvPathNoDuplicates);
     klfDbg("added "<<newitems<<" to TEXINPUTS, new environment is "<<settings.execenv) ;
   }
+  // also add the userscripts paths (to expose our `pyklfuserscript` utility or any users'
+  // library) to the PYTHONPATH for python scripts
+  QStringList pypaths;
+  pypaths << klfconfig.globalShareDir+"/userscripts"
+          << klfconfig.homeConfigDirUserScripts ;
+  klfSetEnvironmentPath(&settings.execenv, pypaths, QLatin1String("PYTHONPATH"),
+                        KlfEnvPathPrepend|KlfEnvPathNoDuplicates);
+  klfDbg("Added "<<pypaths<<" to PYTHONPATHS for user scripts to access our python libraries") ;
+
+  klfDbg("now settings.execenv = "<<settings.execenv);
 
   KLFBackend::klfInput input = currentInputState();
   // setup user script configuration
@@ -4132,7 +4174,8 @@ void KLFMainWin::slotLoadStyle(const KLFStyle& style)
   } else {
     u->spnLatexFontSize->setValue((int)(style.fontsize + 0.5));
   }
-  slotSetPreamble(style.preamble); // to preserve text edit undo/redo, don't use txtPreamble->setText()
+  // to preserve text edit undo/redo, don't use txtPreamble->setText():
+  slotSetPreamble(style.preamble);
   u->spnDPI->setValue(style.dpi);
   u->spnVectorScale->setValue(style.vectorscale * 100.0);
   u->chkVectorScale->setChecked(fabs(style.vectorscale - 1.0) > 0.00001);
@@ -4146,7 +4189,8 @@ void KLFMainWin::slotLoadStyle(const KLFStyle& style)
   }
   if (idx == u->cbxLatexFont->count()) {
     // didn't find font
-    QMessageBox::warning(this, tr("Can't find font"), tr("Sorry, I don't know about font `%1'.").arg(style.fontname));
+    QMessageBox::warning(this, tr("Can't find font"),
+                         tr("Sorry, I don't know about font `%1'.").arg(style.fontname));
   }
 
 
@@ -4167,26 +4211,43 @@ void KLFMainWin::slotLoadStyle(const KLFStyle& style)
   // check for user script input
   QWidget * scriptInputWidget = u->stkScriptInput->currentWidget();
   if (scriptInputWidget != u->wScriptInputEmptyPage) {
+    klfDbg("Setting user script input widgets to corresponding values...") ;
     QVariantMap data = style.userScriptInput();
     // find the input widgets
     QList<QWidget*> inwidgets = scriptInputWidget->findChildren<QWidget*>(QRegExp("^INPUT_.*"));
     Q_FOREACH (QWidget *inw, inwidgets) {
       QString n = inw->objectName();
-      KLF_ASSERT_CONDITION(n.startsWith("INPUT_"), "?!? found child widget "<<n<<" that is not INPUT_*?",
+      KLF_ASSERT_CONDITION(n.startsWith("INPUT_"),
+                           "?!? \"found\" child widget "<<n<<" that is not INPUT_*?",
 			   continue; ) ;
       n = n.mid(strlen("INPUT_"));
+
+      // find this widget in our list of input values
+      KLF_ASSERT_CONDITION(data.contains(n), "No value given for input widget "<<n, continue ; );
+      QVariant value = data[n];
+
       // find the user property
       QByteArray userPropName;
       if (inw->inherits("KLFLatexEdit")) {
 	userPropName = "plainText";
+      } else if (inw->inherits("QComboBox") and inw->property("editable").toBool() == false) {
+        // special handling for setting a string in a non-editable combo box,
+        // need to call setCurrentIndex()
+        QString strvalue = value.toString();
+        QComboBox * comboboxwidget = dynamic_cast<QComboBox*>(inw);
+        const int idx = comboboxwidget->findText(strvalue);
+        KLF_ASSERT_CONDITION(idx != -1, "Invalid value "<<strvalue<<" for input widget "<<n,
+                             continue; );
+        value = QVariant(idx);
+        userPropName = "currentIndex";
       } else {
 	QMetaProperty userProp = inw->metaObject()->userProperty();
-	KLF_ASSERT_CONDITION(userProp.isValid(), "user property of widget "<<n<<" invalid!", continue ; ) ;
+	KLF_ASSERT_CONDITION(userProp.isValid(),
+                             "user property of widget "<<n<<" invalid!",
+                             continue ; ) ;
 	userPropName = userProp.name();
       }
-      // find this widget in our list of input values
-      KLF_ASSERT_CONDITION(data.contains(n), "No value given for input widget "<<n, continue ; );
-      QVariant value = data[n];
+
       inw->setProperty(userPropName.constData(), value);
     }
   }
@@ -4319,6 +4380,7 @@ void KLFMainWin::closeEvent(QCloseEvent *event)
   }
 
   event->accept();
+
   quit();
 }
 

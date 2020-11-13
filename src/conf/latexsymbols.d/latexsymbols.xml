@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!-- Latex Symbol List for KLatexFormula symbol palette -->
-<!-- $Id: latexsymbols.xml 933 2014-09-21 11:45:29Z phfaist $ -->
+<!-- $Id$ -->
 <klf-symbol-list minklfversion="3.3.0a">
   <!-- Notes   ** note format changes since version 3.3 **
     * Symbols are grouped in categories, which will be shown on different
@@ -38,7 +38,7 @@
     <sym><latex>\cup</latex><keywords>set union</keywords></sym>
     <sym><latex>\bigtriangleup</latex></sym>
     <sym><latex>\ominus</latex></sym>
-    <sym><latex>\times</latex><keywords>multiplication product</keywords></sym>
+    <sym><latex>\times</latex><keywords>multiplication product cross cartesian</keywords></sym>
     <sym><latex>\uplus</latex></sym>
     <sym><latex>\bigtriangledown</latex></sym>
     <sym><latex>\otimes</latex><keywords>tensor product</keywords></sym>
@@ -147,6 +147,7 @@
     <sym><usepackage name="amssymb"/><latex>\barwedge</latex></sym>
     <sym><usepackage name="amssymb"/><latex>\veebar</latex></sym>
     <sym><usepackage name="amssymb"/><latex>\doublebarwedge</latex></sym>
+    <sym><usepackage name="amssymb"/><latex>\Box</latex><keywords>square, QED</keywords></sym>
     <sym><usepackage name="amssymb"/><latex>\boxminus</latex></sym>
     <sym><usepackage name="amssymb"/><latex>\boxtimes</latex></sym>
     <sym><usepackage name="amssymb"/><latex>\boxdot</latex></sym>
@@ -509,7 +510,8 @@
     <sym><latex>\rangle</latex></sym>
     <sym><latex numargs="1">\overbrace</latex><preview-latex>\overbrace{xyz}</preview-latex></sym>
     <sym><latex numargs="1">\underbrace</latex><preview-latex>\underbrace{xyz}</preview-latex></sym>
-    <sym><latex numargs="1">\overline</latex><preview-latex>\overline{xyz}</preview-latex></sym>
+    <sym><latex numargs="1">\overline</latex><preview-latex>\overline{xyz}</preview-latex>
+         <keywords>line bar average mean complex conjugate</keywords></sym>
     <sym><latex numargs="1">\underline</latex><preview-latex>\underline{xyz}</preview-latex></sym>
     <sym><latex numargs="1">\overleftarrow</latex><preview-latex>\overleftarrow{xyz}</preview-latex></sym>
     <sym><latex numargs="1">\overrightarrow</latex><preview-latex>\overrightarrow{xyz}</preview-latex></sym>

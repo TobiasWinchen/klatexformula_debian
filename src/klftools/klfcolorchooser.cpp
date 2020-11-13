@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfcolorchooser.cpp 987 2017-01-01 09:36:28Z phfaist $ */
+/* $Id$ */
 
 #include <stdio.h>
 

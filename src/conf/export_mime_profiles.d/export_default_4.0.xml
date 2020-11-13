@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 
 <!-- Default MimeType Export Profiles for KLatexFormula
-     $Id: export_default_4.0.xml 1006 2017-02-02 22:20:05Z phfaist $
+     $Id$
   -->
 
 <!-- version: specifies klf compatibility version, currently "4.0" -->
@@ -54,7 +54,10 @@
       <mime-type>image/svg+xml</mime-type>
       <win-format>SVG</win-format>
       <win-format>image/svg+xml</win-format>
-      <mac-flavor>public.svg-image</mac-flavor>
+      <!-- NOTE: Inkscape can be really slow if the X11 server has to be
+           started, so don't provide it by default on Mac OS X, especially since
+           Qt doesn't support "Lazy" clipboard data setting on Mac OS X -->
+      <!-- <mac-flavor>public.svg-image</mac-flavor> -->
     </export-type>
     <!-- ... or from the svg-dvisvgm user script. -->
     <export-type exporter="UserScript:svg-dvisvgm" format="svg">
@@ -74,7 +77,7 @@
     </export-type>
 
     <!-- Never hurts to include HTML (eg. for Thunderbird, GMail, ...) -->
-    <export-type exporter="KLFHtmlDataExporter" format="html">
+    <export-type exporter="KLFHtmlDataExporter" format="html-png">
       <default-qt-formats type="html" />
     </export-type>
 
@@ -85,12 +88,13 @@
       <mime-type>application/x-emf</mime-type>
       <mime-type>image/x-emf</mime-type>
       <win-format>CF_ENHMETAFILE</win-format>
-      <!-- no known mac flavor?? anyone?? -->
+      <!-- mac flavor??  ### not necessary: plus, starting X11 is really slow,
+           so don't provide it in the default selection -->
     </export-type>
 
     <!-- OpenOffice.org format -->
     <export-type exporter="KLFOpenOfficeDrawExporter" format="odg">
-      <mime-type>application/x-openoffice-drawing</mime-type>
+      <mime-type>application/x-openoffice-drawing;windows_formatname="Drawing Format"</mime-type>
       <win-format>Drawing Format</win-format>
       <!-- see "KLFOpenOfficeDrawExporter" profile below for notes on dynamic UTIs -->
       <mac-flavor>dyn.ah62d4rv4gu80c6durvy0g2pyrf106p52fz11a3psr7xgq4pdqy00k6xbs7y06335s7y063dts73z83xtsm00c7dsqf00n1b7emche2p1rf1gskcgr73g42pyek</mac-flavor>
@@ -135,25 +139,60 @@
 
   </profile>
 
-  <!-- A special format for InDesign - AICB - allows to change color etc. inside InDesign -->
-  <profile name="for_adobe_indesign">
-    <in-submenu>Specific Applications</in-submenu>
-    <description>AICB for Adobe InDesign</description>
-    <!-- AICB: just use the EPS data and advertize it as AICB (for Adobe Indesign) -->
-    <export-type exporter="KLFBackendFormatsExporter" format="EPS">
-      <win-format>AICB????</win-format>
-      <mac-flavor>com.adobe.illustrator.aicb</mac-flavor>
+  <!-- Simple image. Let Qt do the job -->
+  <profile name="simple-image-via-qt">
+    <description>Simple Image (via Qt)</description>
+    <export-type exporter="KLFBackendFormatsExporter" format="PNG">
+      <default-qt-formats type="image" />
     </export-type>
   </profile>
 
-  <!-- An HTML fragment for pasting into gmail or thunderbird -->
-  <profile name="html-fragment">
-    <description>HTML fragment</description>
+  <!-- An HTML fragment for pasting into gmail or thunderbird, with PNG data -->
+  <profile name="html-png-fragment">
+    <description>HTML fragment (PNG)</description>
     <!-- HTML fragment for Thunderbird, GMail, ... -->
+    <export-type exporter="KLFHtmlDataExporter" format="html-png">
+      <default-qt-formats type="html" />
+    </export-type>
+  </profile>
+
+  <!-- Source code for HTML fragment with PNG data: advertized as plain text -->
+  <profile name="html-png-fragment-text">
+    <in-submenu>More HTML fragments</in-submenu>
+    <description>HTML fragment (PNG), as text</description>
+    <export-type exporter="KLFHtmlDataExporter" format="html-png">
+      <default-qt-formats type="text" />
+    </export-type>
+  </profile>
+
+  <!-- An HTML fragment with a hack for displaying SVG, with PNG fallback -->
+  <profile name="html-fragment">
+    <in-submenu>More HTML fragments</in-submenu>
+    <description>HTML fragment (SVG/PNG)</description>
     <export-type exporter="KLFHtmlDataExporter" format="html">
       <default-qt-formats type="html" />
     </export-type>
   </profile>
+
+  <!-- An HTML fragment with vector SVG data -->
+  <profile name="html-svg-fragment">
+    <in-submenu>More HTML fragments</in-submenu>
+    <description>HTML fragment (SVG)</description>
+    <export-type exporter="KLFHtmlDataExporter" format="html-svg">
+      <default-qt-formats type="html" />
+    </export-type>
+  </profile>
+
+  <!-- An HTML fragment with reference to a temporary PNG file -->
+  <profile name="KLFTempImgRefHtmlExporter-html">
+    <in-submenu>More HTML fragments</in-submenu>
+    <description>HTML fragment (temp. PNG file)</description>
+    <export-type exporter="KLFTempImgRefHtmlExporter" format="html">
+      <default-qt-formats type="html" />
+    </export-type>
+  </profile>
+
+
 
   <!-- Just plain simple PNG -->
   <profile name="png">
@@ -164,6 +203,19 @@
       <mac-flavor>public.png</mac-flavor>
     </export-type>
   </profile>
+
+
+  <!-- A special format for InDesign - AICB - allows to change color etc. inside InDesign -->
+  <profile name="for_adobe_indesign">
+    <!--<in-submenu>Specific Applications</in-submenu>-->
+    <description>Copy to Adobe InDesign (AICB)</description>
+    <!-- AICB: just use the EPS data and advertize it as AICB (for Adobe Indesign) -->
+    <export-type exporter="KLFBackendFormatsExporter" format="EPS">
+      <win-format>AICB</win-format><!-- What's the correct name ?????? -->
+      <mac-flavor>com.adobe.illustrator.aicb</mac-flavor>
+    </export-type>
+  </profile>
+
 
 
   <!-- Temporary files -->
@@ -231,18 +283,11 @@
       <mime-type>application/x-tex</mime-type>
     </export-type>
   </profile>
-  <profile name="KLFTempImgRefHtmlExporter-html">
-    <in-submenu>Specific Formats</in-submenu>
-    <description>HTML with ref. to temp. image file</description>
-    <export-type exporter="KLFTempImgRefHtmlExporter" format="html">
-      <default-qt-formats type="html" />
-    </export-type>
-  </profile>
   <profile name="KLFOpenOfficeDrawExporter-odg">
     <in-submenu>Specific Formats</in-submenu>
     <description>OpenOffice Draw</description>
     <export-type exporter="KLFOpenOfficeDrawExporter" format="odg">
-      <mime-type>application/x-openoffice-drawing</mime-type>
+      <mime-type>application/x-openoffice-drawing;windows_formatname="Drawing Format"</mime-type>
       <win-format>Drawing Format</win-format>
 
       <!-- Notes: read https://alastairs-place.net/blog/2012/06/06/utis-are-better-than-you-think-and-heres-why/
@@ -255,6 +300,7 @@
            transv = string.maketrans(v2, v)
            base64.b32decode(s.translate(transv)+'='*(-len(s)%8), True)
            -->
+      <!-- this decodes to '?0=6:4=application/x-openoffice-drawing;windows_formatname\\="Drawing Format"' -->
       <mac-flavor>dyn.ah62d4rv4gu80c6durvy0g2pyrf106p52fz11a3psr7xgq4pdqy00k6xbs7y06335s7y063dts73z83xtsm00c7dsqf00n1b7emche2p1rf1gskcgr73g42pyek</mac-flavor>
     </export-type>
   </profile>
@@ -291,10 +337,4 @@
    - to GIMP
    - to Inkscape
 
-  On Linux:
-   - to LibreOffice/OpenOffice
-   - to GIMP
-   - to Thunderbird
-   - to Inkscape
-
-  -->
+  On Linux: - to LibreOffice/OpenOffice - to GIMP - to Thunderbird - to Inkscape -->

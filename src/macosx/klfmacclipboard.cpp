@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmacclipboard.cpp 981 2016-12-31 08:09:13Z phfaist $ */
+/* $Id$ */
 
 #include <QMacPasteboardMime>
 #include <QTextCodec>
@@ -131,5 +131,7 @@ QString KLFMacPasteboardMime::mimeFor(QString flav)
 
   //  return QString::fromLatin1(KLF_MIME_PROXY_MAC_FLAVOR_PREFIX) + flav;
 }
+
+
 
 

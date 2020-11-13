@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klffilterprocess.h 994 2017-01-10 01:09:40Z phfaist $ */
+/* $Id$ */
 
 
 #ifndef KLFFILTERPROCESS_H
@@ -49,6 +49,8 @@ class KLF_EXPORT KLFFilterProcess
 public:
   KLFFilterProcess(const QString& pTitle = QString(), const KLFBackend::klfSettings *settings = NULL,
                    const QString& rundir = QString());
+  KLFFilterProcess(const QString& pTitle, const KLFBackend::klfSettings *settings,
+                   const QString& rundir, bool inheritProcessEnvironment);
   virtual ~KLFFilterProcess();
 
 
@@ -138,7 +140,6 @@ public:
   {
     return do_run(indata, outdatalist);
   }
-
 
 protected:
 

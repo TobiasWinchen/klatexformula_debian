@@ -1,0 +1,14 @@
+#
+# standard ignores
+#
+*~
+build/
+build-*
+
+#
+# Ignores imported from svn:ignore properties
+#
+
+# /src/i18n/
+src/i18n/temp_xmltr_klf_fr.ts.cxx
+src/i18n/temp_tr_pro_klf_fr.ts.pro

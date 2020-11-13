@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmainwin_mac.mm 953 2016-12-27 00:13:10Z phfaist $ */
+/* $Id$ */
 
 
 // Qt5 always uses Cocoa

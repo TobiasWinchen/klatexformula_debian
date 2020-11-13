@@ -20,7 +20,7 @@
 #   Free Software Foundation, Inc.,
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
-#   $Id: svg-dvisvgm.py 995 2017-01-10 19:57:24Z phfaist $
+#   $Id$
 
 from __future__ import print_function
 
@@ -30,7 +30,7 @@ import sys
 import argparse
 import subprocess
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+#sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..')) -- no longer needed
 import pyklfuserscript
 
 
@@ -69,17 +69,14 @@ if format not in ('svg', 'svgz'):
 #debug environment
 #print(repr(os.environ))
 
-dvisvgm = ""
-if "KLF_USCONFIG_dvisvgm" in os.environ:
-    dvisvgm = os.environ["KLF_USCONFIG_dvisvgm"];
-
+dvisvgm = os.environ.get("KLF_USCONFIG_dvisvgm")
 if not dvisvgm:
     print("Warning: dvisvgm config not set", file=sys.stderr)
-    dvisvgm = "/usr/bin/dvisvgm";
+    dvisvgm = "/usr/bin/dvisvgm"
 
 print("Using dvisvgm path: {}".format(dvisvgm), file=sys.stderr)
 
-pyklfuserscript.ensure_configured_executable(dvisvgm, exename='dvisvgm', userscript=__name__)
+pyklfuserscript.ensure_configured_executable(dvisvgm, exename='dvisvgm', userscript=__file__)
 
 print("Converting file {}\n".format(dvifile), file=sys.stderr)
 
@@ -94,17 +91,17 @@ if format == 'svgz':
 
     gzip = ""
     if "KLF_USCONFIG_gzip" in os.environ:
-        gzip = os.environ["KLF_USCONFIG_gzip"];
+        gzip = os.environ["KLF_USCONFIG_gzip"]
     if not gzip:
         print("Warning: gzip config not set", file=sys.stderr)
-        gzip = "/usr/bin/gzip";
+        gzip = "/usr/bin/gzip"
 
-    pyklfuserscript.ensure_configured_executable(gzip, exename='gzip', userscript=__name__)
+    pyklfuserscript.ensure_configured_executable(gzip, exename='gzip', userscript=__file__)
 
     # CalledProcessError is raised if an error occurs.
     output2 = subprocess.check_output(args=[gzip, '-Sz', svgfile], shell=False)
     print("Output from {}: \n{}".format(gzip, output2.decode('utf-8')))
 
-sys.exit(0);
+sys.exit(0)
 
 

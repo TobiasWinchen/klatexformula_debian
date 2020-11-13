@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdefs_mac.mm 844 2012-12-22 15:30:14Z phfaist $ */
+/* $Id$ */
 
 /** \file
  *
@@ -67,11 +67,14 @@ KLF_EXPORT KLFSysInfo::BatteryInfo _klf_mac_battery_info()
   CFTypeRef blob;
   CFArrayRef sources;
 
+  klfDbg("_klf_mac_battery_info()") ;
+
   bool have_battery = init_power_sources_info(&blob, &sources);
 
   KLFSysInfo::BatteryInfo info;
 
   if(!have_battery) {
+    klfDbg("_klf_mac_battery_info(): unable to get battery info. Probably don't have a battery.") ;
     info.islaptop = false;
     info.onbatterypower = false;
     return info;
@@ -81,7 +84,7 @@ KLF_EXPORT KLFSysInfo::BatteryInfo _klf_mac_battery_info()
 
   bool powerConnected = [(NSString*)[(NSDictionary*)pSource objectForKey:@kIOPSPowerSourceStateKey]
 				     isEqualToString:@kIOPSACPowerValue];
-  klfDbg("power is connected: "<<(bool)powerConnected) ;
+  klfDbg("power is connected?: "<<(bool)powerConnected) ;
 
   //BOOL outputCharging = [[(NSDictionary*)pSource objectForKey:@kIOPSIsChargingKey] boolValue];
 

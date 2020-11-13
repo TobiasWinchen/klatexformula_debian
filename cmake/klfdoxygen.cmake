@@ -1,6 +1,6 @@
 # CMake definitions for building doxygen API documentation
 # ========================================================
-# $Id: klfdoxygen.cmake 1009 2017-02-06 01:06:54Z phfaist $
+# $Id$
 
 
 # Configure doxygen targets

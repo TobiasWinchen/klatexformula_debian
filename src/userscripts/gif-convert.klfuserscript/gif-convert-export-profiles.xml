@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 
 <!-- Export Profile for GIF via ImageMagick's convert
-     $Id: gif-convert-export-profiles.xml 979 2016-12-31 05:41:32Z phfaist $
+     $Id$
   -->
 
 <!-- version: specifies klf compatibility version, currently "4.0" -->

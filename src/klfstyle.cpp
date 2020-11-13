@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfstyle.cpp 999 2017-01-23 19:40:57Z phfaist $ */
+/* $Id$ */
 
 #include <math.h>
 

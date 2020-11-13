@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfapp.cpp 1011 2017-02-06 19:54:48Z phfaist $ */
+/* $Id$ */
 
 #include <QSessionManager>
 #include <QMessageBox>

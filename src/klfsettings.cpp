@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfsettings.cpp 1011 2017-02-06 19:54:48Z phfaist $ */
+/* $Id$ */
 
 #include <stdlib.h>
 
@@ -295,6 +295,7 @@ KLFSettings::KLFSettings(KLFMainWin* parent)
 
   connect(u->lstUserScripts, SIGNAL(itemSelectionChanged()), d, SLOT(refreshUserScriptSelected()));
   connect(u->btnReloadUserScripts, SIGNAL(clicked()), d, SLOT(reloadUserScripts()));
+  connect(u->btnUserScriptSettingsQueryDefaults, SIGNAL(clicked()), d, SLOT(slotUserScriptSettingsQueryDefaults()));
 
   // --- 
 
@@ -754,41 +755,49 @@ void KLFSettingsPrivate::refreshUserScriptList()
   if (_klf_block_broken_by)
 
 
-void KLFSettingsPrivate::refreshUserScriptSelected()
+QString KLFSettingsPrivate::getSelectedUserScriptName()
 {
   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
 
   QTreeWidgetItem * item = K->u->lstUserScripts->currentItem();
   klfDbg("item="<<item) ;
 
+  if (item == NULL) {
+    return QString();
+  }
+
+  QVariant v = item->data(0, KLFSETTINGS_ROLE_USERSCRIPT);
+  if (!v.isValid()) {
+    return QString();
+  }
+
+  return v.toString();
+}
+
+
+void KLFSettingsPrivate::refreshUserScriptSelected()
+{
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+
+  QString usname = getSelectedUserScriptName();
+  klfDbg("usname = " << usname) ;
+
   bool ok = true;
 
-  QString usname;
-
-  if (item == NULL) {
-    K->u->lblUserScriptInfo->setText(tr("No user script selected.", "[[user script info label]]"));
+  if (!usname.size()) {
     K->u->lblUserScriptInfo->setText(tr("No user script selected.", "[[user script info label]]"));
     ok = false;
-  } else {
-    QVariant v = item->data(0, KLFSETTINGS_ROLE_USERSCRIPT);
-    if (!v.isValid()) {
-      K->u->lblUserScriptInfo->setText(tr("No user script selected.",
-                                          "[[user script info label]]"));
-      ok = false;
-    } else {
-      usname = v.toString();
-      klfDbg("usname = " << usname) ;
-      if (!KLFUserScriptInfo::hasScriptInfoInCache(usname)) {
-        klfDbg("not in cache -- there's an error.") ;
-        KLFUserScriptInfo errinfo(usname);
-        K->u->lblUserScriptInfo->setText(tr("User script info error: %1",
-                                            "[[user script info label]]").arg(errinfo.scriptInfoErrorString()));
-        ok = false;
-      }
-    }
+  } else if (!KLFUserScriptInfo::hasScriptInfoInCache(usname)) {
+    klfDbg("not in cache -- there's an error.") ;
+    KLFUserScriptInfo errinfo(usname);
+    K->u->lblUserScriptInfo->setText(tr("User script info error: %1",
+                                        "[[user script info label]]").arg(errinfo.scriptInfoErrorString()));
+    ok = false;
   }
+
   if (!ok) {
     K->u->stkUserScriptSettings->setCurrentWidget(K->u->wStkUserScriptSettingsEmptyPage);
+    K->u->btnUserScriptSettingsQueryDefaults->hide();
     return;
   }
 
@@ -813,8 +822,10 @@ void KLFSettingsPrivate::refreshUserScriptSelected()
     QWidget * scriptconfigwidget = getUserScriptConfigWidget(usinfo, uifile);
     K->u->stkUserScriptSettings->setCurrentWidget(scriptconfigwidget);
     klfDbg("Set script config UI. uifile="<<uifile) ;
+    K->u->btnUserScriptSettingsQueryDefaults->setVisible( usinfo.canProvideDefaultSettings() );
   } else {
     K->u->stkUserScriptSettings->setCurrentWidget(K->u->wStkUserScriptSettingsEmptyPage);
+    K->u->btnUserScriptSettingsQueryDefaults->hide();
   }
 }
 
@@ -882,11 +893,14 @@ void KLFSettingsPrivate::displayUserScriptConfig(QWidget *w, const QVariantMap& 
     return;
   }
 
+  klfDbg("user script config is = " << data) ;
+
   // find the input widgets
   QList<QWidget*> inwidgets = w->findChildren<QWidget*>(QRegExp("^INPUT_.*"));
   Q_FOREACH (QWidget *inw, inwidgets) {
     QString n = inw->objectName();
-    KLF_ASSERT_CONDITION(n.startsWith("INPUT_"), "?!? found child widget "<<n<<" that is not INPUT_*?",
+    KLF_ASSERT_CONDITION(n.startsWith("INPUT_"),
+                         "?!? found child widget "<<n<<" that is not INPUT_*?",
 			 continue; ) ;
     n = n.mid(strlen("INPUT_"));
     // find the user property
@@ -895,16 +909,54 @@ void KLFSettingsPrivate::displayUserScriptConfig(QWidget *w, const QVariantMap& 
       userPropName = "plainText";
     } else {
       QMetaProperty userProp = inw->metaObject()->userProperty();
-      KLF_ASSERT_CONDITION(userProp.isValid(), "user property of widget "<<n<<" invalid!", continue ; ) ;
+      KLF_ASSERT_CONDITION(userProp.isValid(),
+                           "user property of widget "<<n<<" invalid!", continue ; ) ;
       userPropName = userProp.name();
     }
     // find this widget in our list of input values
-    KLF_ASSERT_CONDITION(data.contains(n), "No value given for config widget "<<n, continue ; );
+    KLF_ASSERT_CONDITION(data.contains(n),
+                         "No value given for config widget "<<n,
+                         continue ; );
     QVariant value = data[n];
     inw->setProperty(userPropName.constData(), value);
     klfDbg("Set config widget for " << n << " to " << value);
   }
 }
+
+
+
+void KLFSettingsPrivate::slotUserScriptSettingsQueryDefaults()
+{
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+
+  QString usname = getSelectedUserScriptName();
+  if (!usname.size()) {
+    klfWarning("No user script selected.");
+    return;
+  }
+
+  KLFUserScriptInfo usinfo(usname);
+  if (!usinfo.canProvideDefaultSettings()) {
+    klfWarning("Userscipt " << usname << " can't provide default settings.") ;
+    return;
+  }
+
+  if ( ! userScriptConfigWidgets.contains(usinfo.userScriptPath()) ) {
+    klfWarning("Widget not in cache, can't populate it!") ;
+  }
+
+  QWidget * w = userScriptConfigWidgets[usinfo.userScriptPath()];
+
+  // use currentSettings() to pick up the PYTHONPATH, etc.
+  KLFBackend::klfSettings backendsettings = mainWin->currentSettings();
+
+  QMap<QString,QVariant> config = usinfo.queryDefaultSettings( &backendsettings );
+  
+  // set the widget values
+  displayUserScriptConfig(w, config) ;
+}
+
+
 
 
 void KLFSettingsPrivate::reloadUserScripts()

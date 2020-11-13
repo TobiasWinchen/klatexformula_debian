@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfbackend.cpp 1009 2017-02-06 01:06:54Z phfaist $ */
+/* $Id$ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -93,12 +93,13 @@
 #if defined(Q_OS_WIN32) || defined(Q_OS_WIN64)
 QStringList progLATEX = QStringList() << "latex.exe";
 QStringList progDVIPS = QStringList() << "dvips.exe";
-QStringList progGS = QStringList() << "gswin32c.exe" << "mgs.exe";
+QStringList progGS = QStringList() << "gswin32c.exe" << "gswin64c.exe" << "mgs.exe";
 //QStringList progEPSTOPDF = QStringList() << "epstopdf.exe";
 static const char * standard_extra_paths[] = {
   EXTRA_PATHS_PRE
   "C:\\Program Files*\\MiKTeX*\\miktex\\bin",
-  "C:\\Program Files*\\gs\\gs*\\bin",
+  "C:\\texlive\\*\\bin\\win*",
+  "C:\\Program Files*\\gs*\\gs*\\bin",
   NULL
 };
 #elif defined(KLF_WS_MAC)
@@ -425,7 +426,7 @@ KLF_EXPORT KLFStringSet klfbackend_dependencies(const QString& fmt, bool recursi
   if (fmt == QLatin1String("tex") || fmt == QLatin1String("latex")) {
     // no dependency
   } else if (fmt == QLatin1String("dvi")) {
-    s << "tex";
+    s << "latex";
   } else if (fmt == QLatin1String("eps-raw")) {
     s << "dvi";
   } else if (fmt == QLatin1String("eps-bbox")) {
@@ -719,7 +720,6 @@ KLFBackend::klfOutput KLFBackend::getLatexFormula(const klfInput& input, const k
     addenv
       // program executables
       << "KLF_TEMPDIR=" + settings.tempdir
-      << "KLF_TEMPFNAME=" + tempfname // the base name for all our temp files
       << "KLF_LATEX=" + settings.latexexec
       << "KLF_DVIPS=" + settings.dvipsexec
       << "KLF_GS=" + settings.gsexec
@@ -730,10 +730,12 @@ KLFBackend::klfOutput KLFBackend::getLatexFormula(const klfInput& input, const k
       // more advanced settings
       << klfSettingsToEnvironmentForUserScript(settings)
       // file names (all formed with same basename...) to access by the script
+      << "KLF_TEMPFNAME=" + tempfname // the base name for all our temp files
       << "KLF_FN_TEX=" + fnTex
       << "KLF_FN_LATEX=" + fnTex
       << "KLF_FN_DVI=" + fnDvi
       << "KLF_FN_EPS_RAW=" + fnRawEps
+      << "KLF_FN_EPS_BBOX=" + fnBBoxEps
       << "KLF_FN_EPS_PROCESSED=" + fnProcessedEps
       << "KLF_FN_PNG=" + fnRawPng
       << "KLF_FN_PDFMARKS=" + fnPdfMarks
@@ -942,6 +944,16 @@ KLFBackend::klfOutput KLFBackend::getLatexFormula(const klfInput& input, const k
     p.resErrCodes[KLFFP_NODATA] = KLFERR_DVIPS_NOOUTPUT;
     p.resErrCodes[KLFFP_DATAREADFAIL] = KLFERR_DVIPS_OUTPUTREADFAIL;
 
+    QFileInfo dvipsinf(settings.dvipsexec);
+    if (!dvipsinf.filePath().isEmpty()) {
+      // add the explicit dvips path to the PATH environment, in case dvips needs to
+      // execute helpers such as mktexpk
+      p.addExecEnviron(QStringList() << (
+                           QLatin1String("PATH=") + dvipsinf.absoluteFilePath() + QLatin1String(":") +
+                           QProcessEnvironment::systemEnvironment().value("PATH")
+                           )) ;
+    }
+
     p.setArgv(QStringList() << settings.dvipsexec << "-E" << QDir::toNativeSeparators(fnDvi)
 	      << "-o" << QDir::toNativeSeparators(fnRawEps));
 
@@ -1127,6 +1139,7 @@ KLFBackend::klfOutput KLFBackend::getLatexFormula(const klfInput& input, const k
      *     but do that cleverly; ie. make sure that the EPS was indeed vector-scaled up. Possibly
      *     run the EPS generator twice, once to scale it up, the other for PNG conversion reference.
      */
+    // ### wait... do we want vector scaling to apply to the PNG as well??
 
     p.setArgv(QStringList() << settings.gsexec
 	      << "-dNOPAUSE" << "-dSAFER" << "-dTextAlphaBits=4" << "-dGraphicsAlphaBits=4"
@@ -2014,8 +2027,10 @@ KLF_EXPORT QStringList klfInputToEnvironmentForUserScript(const KLFBackend::klfI
       << "KLF_INPUT_BG_COLOR_WEB=" + QColor(in.bg_color).name()
       << "KLF_INPUT_BG_COLOR_RGBA=" + bgcol
       << "KLF_INPUT_DPI=" + QString::number(in.dpi)
+      << "KLF_INPUT_VECTORSCALE=" + klfFmt("%.6g", in.vectorscale)
       << "KLF_INPUT_USERSCRIPT=" + in.userScript
-      << "KLF_INPUT_BYPASS_TEMPLATE=" + QString::number(in.bypassTemplate);
+      << "KLF_INPUT_BYPASS_TEMPLATE=" + QString::number(in.bypassTemplate)
+    ;
   
   // and add custom user parameters
   QMap<QString,QString>::const_iterator cit;

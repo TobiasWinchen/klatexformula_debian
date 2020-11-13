@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfmime.cpp 988 2017-01-02 09:25:34Z phfaist $ */
+/* $Id$ */
 
 #include <QDebug>
 #include <QApplication>
@@ -734,7 +734,7 @@ QString KLFMimeDataPrivate::winFormatFromProxyMime(const QString& proxyMime) con
   if (proxyMime.startsWith(prefix)) {
     return proxyMime.mid(prefix.size());
   }
-  klfWarning(proxyMime << " is not a mac flavor proxy mime type !") ;
+  klfWarning(proxyMime << " is not a win flavor proxy mime type !") ;
   return QString();
 }
 

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfsparkleupdater.mm 1010 2017-02-06 07:07:00Z phfaist $ */
+/* $Id$ */
 
 
 #include <QWidget>

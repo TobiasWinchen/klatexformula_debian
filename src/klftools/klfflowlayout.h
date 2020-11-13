@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfflowlayout.h 962 2016-12-27 10:25:56Z phfaist $ */
+/* $Id$ */
 
 #ifndef KLFFLOWLAYOUT_H
 #define KLFFLOWLAYOUT_H

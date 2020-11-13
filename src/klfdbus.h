@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdbus.h 965 2016-12-28 04:55:03Z phfaist $ */
+/* $Id$ */
 
 #ifndef KLFDBUS_H
 #define KLFDBUS_H

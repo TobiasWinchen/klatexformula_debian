@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfconfig.cpp 1014 2017-02-07 03:26:28Z phfaist $ */
+/* $Id$ */
 
 #include <iostream>
 
@@ -117,9 +117,9 @@ static QString klf_home_config_dir_abspath()
 
 
 
-// global variable to access our config
-// remember to initialize it in main() in main.cpp !
-KLFConfig klfconfig;
+// global variable to access our config remember to instantiate &
+// initialize it in main() in main.cpp !
+KLFConfig * klf_the_config = NULL;
 
 
 
@@ -171,6 +171,30 @@ static QList<T> settings_read_list(QSettings& s, const QString& basename, const 
     fcode = QFont(f, fps);						\
     found_fcode = true;							\
   }
+
+
+// beware: initialized statically!
+KLFConfig::KLFConfig()
+{
+}
+KLFConfig::~KLFConfig()
+{
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+}
+void KLFConfig::prepareDestruction()
+{
+  KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+  
+  // unset font members -- fix Qt segfault on exit
+  UI.applicationFont = QFont();  
+  UI.latexEditFont = QFont();
+  UI.preambleEditFont = QFont();
+  defaultCMUFont = QFont();
+  defaultStdFont = QFont();
+  defaultTTFont = QFont();
+}
+
+
 
 void KLFConfig::loadDefaults()
 {
@@ -334,17 +358,8 @@ void KLFConfig::loadDefaults()
   KLFCONFIGPROP_INIT(ExportData.menuExportProfileAffectsDrag, true) ;
   KLFCONFIGPROP_INIT(ExportData.menuExportProfileAffectsCopy, true) ;
   KLFCONFIGPROP_INIT(ExportData.oooExportScale, 1.6) ;
-  KLFCONFIGPROP_INIT(ExportData.htmlExportDpi, 150);
-  // query display DPI
-  int dispdpi = 96;
-  /*  if (qApp->inherits("QApplication")) {
-      QDesktopWidget *w = QApplication::desktop();
-      if (w != NULL) {
-      // dispdpi = (w->physicalDpiX() + w->physicalDpiY()) / 2;
-      dispdpi = w->physicalDpiX();
-      }
-      } */
-  KLFCONFIGPROP_INIT(ExportData.htmlExportDisplayDpi, dispdpi);
+  KLFCONFIGPROP_INIT(ExportData.htmlExportDpi, 180);
+  KLFCONFIGPROP_INIT(ExportData.htmlExportDisplayDpi, 180);
 
   KLFCONFIGPROP_INIT(SyntaxHighlighter.enabled, true) ;
   KLFCONFIGPROP_INIT(SyntaxHighlighter.highlightParensOnly, false) ;
@@ -638,7 +653,8 @@ int KLFConfig::readFromConfig_v2(const QString& fname)
   klf_config_read(s, "wantpdf", &BackendSettings.wantPDF);
   klf_config_read(s, "wantsvg", &BackendSettings.wantSVG);
   klf_config_read(s, "userscriptaddpath", &BackendSettings.userScriptAddPath);
-  klf_config_read(s, "userscriptinterpreters", &BackendSettings.userScriptInterpreters);
+  klf_config_read(s, "userscriptinterpreters", &BackendSettings.userScriptInterpreters,
+                  "QString" /*listOrMapType*/);
   s.endGroup();
 
   s.beginGroup("LibraryBrowser");

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdatautil_p.h 991 2017-01-04 09:15:43Z phfaist $ */
+/* $Id$ */
 
 /** \file
  * This header contains (in principle private) auxiliary classes for

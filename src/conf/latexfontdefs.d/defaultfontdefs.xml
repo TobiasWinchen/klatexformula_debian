@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!-- Default Latex Font Selection Definitions for KLatexFormula -->
-<!-- $Id: defaultfontdefs.xml 995 2017-01-10 19:57:24Z phfaist $ -->
+<!-- $Id$ -->
 <latex-font-defs-list version="1.0" minklfversion="3.3.0alpha">
 
   <font-def>
@@ -53,6 +53,16 @@
   </font-def>
 
   <font-def>
+    <identifier>BaskervilleF</identifier>
+    <title>BaskervilleF</title>
+    <latexdefs>\usepackage[T1]{fontenc}
+\usepackage{baskervillef}
+\usepackage[baskerville,vvarbb]{newtxmath}
+\usepackage[cal=boondoxo]{mathalfa}</latexdefs>
+  </font-def>
+
+
+  <font-def>
     <identifier>Linux Libertine</identifier>
     <title>Linux Libertine</title>
     <latexdefs>\usepackage{libertine}
@@ -60,9 +70,26 @@
   </font-def>
 
   <font-def>
+    <identifier>Cochineal</identifier>
+    <title>Cochineal</title>
+    <latexdefs>\usepackage[p,osf]{cochineal}
+\usepackage[cochineal]{newtxmath}</latexdefs>
+  </font-def>
+
+  <font-def>
     <identifier>Stix</identifier>
     <title>Stix</title>
     <latexdefs>\usepackage{stix}</latexdefs>
+  </font-def>
+
+  <font-def>
+    <identifier>Erewhon</identifier>
+    <title>Erewhon</title>
+    <latexdefs>
+  \usepackage[proportional,scaled=1.064]{erewhon}
+\usepackage[erewhon,vvarbb,bigdelims]{newtxmath}
+\usepackage[T1]{fontenc}
+\renewcommand*\oldstylenums[1]{\textosf{#1}}</latexdefs>
   </font-def>
 
   <font-def>
@@ -74,13 +101,13 @@
   <font-def>
     <identifier>kp-fonts</identifier>
     <title>kp-fonts</title>
-    <latexdefs>\usepackage{kpfonts}</latexdefs>
+    <latexdefs>\usepackage{kpfonts}\usepackage[T1]{fontenc}</latexdefs>
   </font-def>
 
   <font-def>
     <identifier>kp-fonts-sans</identifier>
     <title>kp-fonts (sans serif)</title>
-    <latexdefs>\usepackage[sfmath]{kpfonts}</latexdefs>
+    <latexdefs>\usepackage[sfmath]{kpfonts}\usepackage[T1]{fontenc}</latexdefs>
   </font-def>
     
   <font-def>

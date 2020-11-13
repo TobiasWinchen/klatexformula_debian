@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfitemviewsearchtarget.cpp 829 2012-08-20 22:45:18Z phfaist $ */
+/* $Id$ */
 
 #include <QList>
 #include <QMap>

@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflatexedit.cpp 973 2016-12-30 07:38:23Z phfaist $ */
+/* $Id$ */
 
 #include <QObject>
 #include <QWidget>

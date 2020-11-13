@@ -24,37 +24,57 @@
 
 from __future__ import print_function
 
-import re;
-import os;
-import sys;
-import subprocess;
+import re
+import os
+import sys
+import subprocess
 
-if (sys.argv[1] == "--help"):
-    print("       "+os.path.basename(sys.argv[0])+" <tex input file>\n");
-    exit(0);
+import pyklfuserscript
 
-latexfname = sys.argv[1];
+
+args = pyklfuserscript.backend_engine_args_parser(can_query_default_settings=True).parse_args()
+
+if args.query_default_settings:
+
+    dvipng = pyklfuserscript.find_executable(['dvipng'], [
+        "/usr/texbin/",
+        "/usr/local/texbin/",
+        "/Library/TeX/texbin/",
+        # add more non-trivial paths here (but not necessary to include /usr/bin/
+        # because we do a PATH search anyway
+    ])
+    if dvipng is not None:
+        print("dvipng={}".format(dvipng))
+
+    sys.exit(0)
+
+
+latexfname = args.texfile
 dvifname = os.environ["KLF_FN_DVI"]
 pngfname = os.environ["KLF_FN_PNG"]
 
-# run latex
+#
 
 latexexe = os.environ["KLF_LATEX"]
 
-dvipng = os.environ.get("KLF_USCONFIG_dvipng", "dvipng")
+if not latexexe:
+    sys.stderr.write("Error: latex executable not found.\n")
+    sys.exit(1)
 
-if (len(latexexe) == 0):
-    sys.stderr.write("Error: latex executable not found.\n");
-    sys.exit(1);
+dvipng = os.environ.get("KLF_USCONFIG_dvipng")
 
-tempdir = os.path.dirname(os.environ["KLF_TEMPFNAME"]);
+print("Using dvipng path: {}".format(dvipng), file=sys.stderr)
+pyklfuserscript.ensure_configured_executable(dvipng, exename='dvipng', userscript=__file__)
+
+
+tempdir = os.path.dirname(os.environ["KLF_TEMPFNAME"])
 
 def run_cmd(do_cmd, ignore_fail=False):
     print("Running " + " ".join(["'%s'"%(x) for x in do_cmd]) + "  [ in %s ]..." %(tempdir) + "\n")
-    res = subprocess.call(do_cmd, cwd=tempdir);
+    res = subprocess.call(do_cmd, cwd=tempdir)
     if (not ignore_fail and res != 0):
-        print("%s failed, res=%d" %(do_cmd[0], res));
-        sys.exit(res>>8);
+        print("%s failed, res=%d" %(do_cmd[0], res))
+        sys.exit(res>>8)
 
 # run latex first to get DVI
 # --------------------------
@@ -89,10 +109,9 @@ run_cmd([
 
 
 print("To dump all KLF environment variables (user script interface debugging), comment "
-      "out the early 'sys.exit(0)' instruction in this script.")
+      "out the 'sys.exit(0)' instruction in this script after this message.")
 
 sys.exit(0); # comment this line to debug KLF_ env variables values
-
 
 
 #
@@ -131,7 +150,6 @@ dump_env_vars([
     ],
     [
         "KLF_TEMPDIR",
-        "KLF_TEMPFNAME",
         "KLF_LATEX",
         "KLF_DVIPS",
         "KLF_GS",
@@ -147,6 +165,7 @@ dump_env_vars([
         "KLF_SETTINGS_WANT_SVG",
     ],
     [
+        "KLF_TEMPFNAME",
         "KLF_FN_TEX",
         "KLF_FN_LATEX",
         "KLF_FN_DVI",

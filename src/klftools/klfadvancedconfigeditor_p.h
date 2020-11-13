@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfadvancedconfigeditor_p.h 988 2017-01-02 09:25:34Z phfaist $ */
+/* $Id$ */
 
 /** \file
  * This header contains (in principle private) auxiliary classes for

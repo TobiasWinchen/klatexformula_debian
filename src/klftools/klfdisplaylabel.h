@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klfdisplaylabel.h 960 2016-12-27 05:15:17Z phfaist $ */
+/* $Id$ */
 
 #ifndef KLFDISPLAYLABEL_H
 #define KLFDISPLAYLABEL_H

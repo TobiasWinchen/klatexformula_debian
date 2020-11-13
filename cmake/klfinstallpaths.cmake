@@ -1,6 +1,6 @@
 # CMake Install Instructions
 # ==========================
-# $Id: klfinstallpaths.cmake 995 2017-01-10 19:57:24Z phfaist $
+# $Id$
 
 
 

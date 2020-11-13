@@ -19,7 +19,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/* $Id: klflatexedit_p.h 953 2016-12-27 00:13:10Z phfaist $ */
+/* $Id$ */
 
 #include "klflatexedit.h"
 

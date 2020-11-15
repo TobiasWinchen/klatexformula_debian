@@ -1,10 +1,7 @@
-Description: Add missing keywords entry to the .desktop file 
-Last-Update: 2015-11-16
-
 --- a/src/klatexformula.desktop.in
 +++ b/src/klatexformula.desktop.in
-@@ -5,6 +5,7 @@
- Comment[fr]=Générez une image d'une équation LaTeX
+@@ -6,6 +6,7 @@
+ Comment[uk]=Створення зображень на основі рівнянь LaTeX
  Categories=@KLF_INSTALL_DESKTOP_CATEGORIES@
  MimeType=application/x-klatexformula;application/x-klatexformula-db;
 +Keywords=LaTeX equations;

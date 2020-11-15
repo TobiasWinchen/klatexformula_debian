@@ -1,0 +1,10 @@
+--- a/src/klftools/klfflowlistwidget_p.h
++++ b/src/klftools/klfflowlistwidget_p.h
+@@ -38,6 +38,7 @@
+ #include <QHoverEvent>
+ #include <QTimer>
+ #include <QPixmap>
++#include <QPainterPath>
+ 
+ #include <klfdefs.h>
+ 

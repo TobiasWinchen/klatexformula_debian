@@ -1,3 +1,11 @@
+klatexformula (4.1.0-1) unstable; urgency=medium
+
+  * New upstream release. Closes: #974546
+  * Switched to debhelper compat 13
+  * Updated to standards version 4.5.0
+
+ -- Tobias Winchen <tobias@winchen.de>  Fri, 13 Nov 2020 21:24:47 +0100
+
 klatexformula (4.0.0-4) unstable; urgency=medium
 
   [ Tobias Winchen ]

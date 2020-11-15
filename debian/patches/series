@@ -1,1 +1,2 @@
 add_keywords_entry_to_desktop_file
+add_missing_QPainterPath_include

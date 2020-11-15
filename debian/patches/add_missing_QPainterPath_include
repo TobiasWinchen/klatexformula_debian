@@ -1,3 +1,6 @@
+Description: Add missing include
+Last-Update: 2020-11-15
+
 --- a/src/klftools/klfflowlistwidget_p.h
 +++ b/src/klftools/klfflowlistwidget_p.h
 @@ -38,6 +38,7 @@

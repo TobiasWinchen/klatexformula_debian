@@ -1,3 +1,6 @@
+Description: Add missing tag
+Last-Update: 2020-11-15
+
 --- a/src/klatexformula.desktop.in
 +++ b/src/klatexformula.desktop.in
 @@ -6,6 +6,7 @@

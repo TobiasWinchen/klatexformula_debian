@@ -1,0 +1,75 @@
+Description: Use preferred specification for the Python 3 interpreter
+Last-Update: 2020-12-15
+
+--- a/src/userscripts/custom-latex-cmd.klfuserscript/custom-latex-cmd.py
++++ b/src/userscripts/custom-latex-cmd.klfuserscript/custom-latex-cmd.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
+ # custom-latex-cmd.py
+ #   This file is part of the KLatexFormula Project.
+--- a/src/userscripts/customtemplate.klfuserscript/customtemplate.py
++++ b/src/userscripts/customtemplate.klfuserscript/customtemplate.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
+ # customtemplate.py
+ #   This file is part of the KLatexFormula Project.
+--- a/src/userscripts/dvipng-backend.klfuserscript/dvipng-backend.py
++++ b/src/userscripts/dvipng-backend.klfuserscript/dvipng-backend.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
+ # dvipng-backend.py
+ #   This file is part of the KLatexFormula Project.
+--- a/src/userscripts/gif-convert.klfuserscript/gif-convert.py
++++ b/src/userscripts/gif-convert.klfuserscript/gif-convert.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
+ # gif-convert.py
+ #   This file is part of the KLatexFormula Project.
+--- a/src/userscripts/inkscapeformats.klfuserscript/inkscapeformats.py
++++ b/src/userscripts/inkscapeformats.klfuserscript/inkscapeformats.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
+ # inkscapeformats.py
+ #   This file is part of the KLatexFormula Project.
+--- a/src/userscripts/klffeynmf.klfuserscript/klffeynmf.py
++++ b/src/userscripts/klffeynmf.klfuserscript/klffeynmf.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
+ # klffeynmf.py
+ #   This file is part of the KLatexFormula Project.
+--- a/src/userscripts/runpdflatex.klfuserscript/runpdflatex.py
++++ b/src/userscripts/runpdflatex.klfuserscript/runpdflatex.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
+ # runpdflatex.py
+ #   This file is part of the KLatexFormula Project.
+--- a/src/userscripts/svg-dvisvgm.klfuserscript/svg-dvisvgm.py
++++ b/src/userscripts/svg-dvisvgm.klfuserscript/svg-dvisvgm.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
+ # svg-dvisvgm.py
+ #   This file is part of the KLatexFormula Project.
+--- a/src/userscripts/applepagesexport.klfuserscript/applepagesexport.py
++++ b/src/userscripts/applepagesexport.klfuserscript/applepagesexport.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
+ # applepagesexport.py
+ #   This file is part of the KLatexFormula Project.

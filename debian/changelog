@@ -4,6 +4,8 @@ klatexformula (4.1.0-1) unstable; urgency=medium
   * Patch to add missing include (Closes: #974546)
   * Switched to debhelper compat 13
   * Updated to standards version 4.5.0
+  * Add python version to userscripts and python3 to recommended packages
+  * Added dependency on texlive-latex-base
 
  -- Tobias Winchen <tobias@winchen.de>  Fri, 13 Nov 2020 21:24:47 +0100
 

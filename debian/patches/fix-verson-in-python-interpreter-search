@@ -1,0 +1,25 @@
+Description: Prevents using arbitrary programs starting with python*
+Last-Update: 2020-12-26
+
+--- a/src/klfbackend/klfblockprocess.cpp
++++ b/src/klfbackend/klfblockprocess.cpp
+@@ -120,7 +120,7 @@
+   KLF_DEBUG_BLOCK(KLF_FUNC_NAME) ;
+   klfDbg("ext = " << ext) ;
+   if (ext == "py") {
+-    return detectInterpreterPath("python");
++    return detectInterpreterPath("python3");
+   } else if (ext == "sh") {
+     return detectInterpreterPath("bash");
+   } else if (ext == "rb") {
+--- a/src/klfconfig.cpp
++++ b/src/klfconfig.cpp
+@@ -482,7 +482,7 @@
+       BackendSettings.wantSVG.setDefaultValue(defaultsettings.wantSVG);
+   }
+ 
+-  ensure_interp_exe(BackendSettings.userScriptInterpreters, "py", "python");
++  ensure_interp_exe(BackendSettings.userScriptInterpreters, "py", "python3");
+   ensure_interp_exe(BackendSettings.userScriptInterpreters, "sh", "bash");
+ }
+ 

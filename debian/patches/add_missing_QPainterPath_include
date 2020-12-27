@@ -1,5 +1,7 @@
 Description: Add missing include
 Last-Update: 2020-11-15
+Author: Tobias Winchen <tobias@winchen.de>
+Forwarded: https://github.com/klatexformula/klatexformula/issues/53
 
 --- a/src/klftools/klfflowlistwidget_p.h
 +++ b/src/klftools/klfflowlistwidget_p.h

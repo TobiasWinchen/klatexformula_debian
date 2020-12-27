@@ -1,5 +1,7 @@
 Description: Prevents using arbitrary programs starting with python*
 Last-Update: 2020-12-26
+Author: Tobias Winchen <tobias@winchen.de>
+Forwarded: https://github.com/klatexformula/klatexformula/issues/57
 
 --- a/src/klfbackend/klfblockprocess.cpp
 +++ b/src/klfbackend/klfblockprocess.cpp
